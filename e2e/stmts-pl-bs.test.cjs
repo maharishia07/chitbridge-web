@@ -26,6 +26,7 @@ const cx = vm.createContext({
   document: { getElementById: () => null },
   api: async () => reply
 });
+vm.runInContext(require('fs').readFileSync('public/app/ui-money.js', 'utf8'), cx); /* RW1-07: bkPct reads the one percent rule, CBUiMoney.percentText */
 vm.runInContext(liftFns('public/app/cap-books.js', ['bkPct', 'bkSpan', 'bkFig', 'bkDrillLink', 'bkPeriodBar', 'bkStmtCss', 'bkStRow', 'bkPlGroups', 'bkPL', 'bkPlQuery', 'bkPlDates', 'bkRefused', 'bkPlLeadHTML', 'bkPlHeadHTML', 'bkPlCompareHTML', 'bkPlTotalRow', 'bkPlSectionTotal', 'bkBsSide', 'bkBS', 'bkBsLeadHTML', 'bkBsRange', 'bkBsBalancedChip', 'bkBsHasChange', 'bkBsWas', 'bkChange', 'bkOverNote', 'bkDrCr', 'bkTable', 'bkTB', 'bkTbRowHTML', 'bkTbBarHTML', 'bkTbTotalRowHTML', 'bkRefused', 'bkTbPicksHTML']) +
   '\nthis.bkPL=bkPL;this.bkBS=bkBS;this.bkTB=bkTB;this.BK={tbDay:""};this.BK_PL={preset:"ytd",step:0,from:"",to:"",compare:"year"};this.BK_BS={kind:"today",step:0,asOf:""};', cx);
 

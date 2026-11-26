@@ -966,6 +966,9 @@
     'Your access does not include costs, so the bank statements are hidden.': "Votre accès n’inclut pas les coûts, les relevés bancaires sont donc masqués.",
     '{count} product\u0005one': '{count} produit',
     '{count} product\u0005other': '{count} produits',
+    '{count} month to lock\u0005one': '{count} mois à verrouiller',
+    '{count} month to lock\u0005other': '{count} mois à verrouiller',
+    'Signed off': 'Validé',
     /* MACHINE-WRITTEN (loc17, 2026-11-17), NOT REVIEWED BY A NATIVE SPEAKER: needs a native read before a customer sees them */
     'Accounts': 'Comptes',
     'Acting for': 'Vous agissez pour',
@@ -1148,7 +1151,7 @@
     'books began part-way': 'livres commencés en cours d\'exercice',
     'no bank statement signed': 'aucun relevé bancaire validé',
     'no statement kept': 'aucun relevé conservé',
-    'not signed off yet': 'pas encore validé',
+    'not signed off': 'pas encore validé',
     'nothing unexplained': 'rien d\'inexpliqué',
     'unexplained {a}': '{a} inexpliqué',
     '{a} unexplained': '{a} inexpliqué',
@@ -1159,5 +1162,7 @@
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {
     if (typeof renderApp === 'function') renderApp();
-  } catch (_) {}
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('strings-fr: the screen was not repainted with the new words', failure);
+  }
 })();

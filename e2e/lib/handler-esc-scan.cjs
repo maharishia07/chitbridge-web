@@ -58,7 +58,7 @@ function simulate(src, start, d) {
 }
 
 /** every inline on*= handler in src with an esc( inside a single-quoted JS string of the handler: [{ line, expr }] */
-const SAFE_WRAPPER = /^(?:escJs|testJs|cbAttachSafe)\(/; /* escJs (helpers.js) and testJs (cap-testing.js) JS-escape; cbAttachSafe keeps [A-Za-z0-9_.:-] only */
+const SAFE_WRAPPER = /^(?:escJs|cbAttachSafe)\(/; /* escJs (helpers.js) JS-escapes; cbAttachSafe keeps [A-Za-z0-9_.:-] only */
 function scanHandlerEsc(src, opts) {
   const raw = !!(opts && opts.raw); /* raw: EVERY expression that is not escJs(...) inside a quoted JS string of a handler, one hit each (the P1 class: item.key, supName(x).replace(...)); default: esc( only, one per handler */
   const found = [];

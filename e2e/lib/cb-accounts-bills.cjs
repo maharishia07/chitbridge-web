@@ -13,7 +13,7 @@ async function billsInPlace({ S, p, ctx, ok, nav }) {
   ok(await p.evaluate(() => typeof openChitSheet === 'function' && !!document.getElementById('chitsheet') && document.getElementById('chitsheet').open) && ctx.pages().length === tabs0, 'a bill opens the chit sheet in Accounts (openChitSheet is defined here), not a new tab');
   await p.keyboard.press('Escape');
   /* BD-F-02: nothing is open on the Received side, 300000 paise is owed on the Issued side (the books' Dues): a fresh visit opens the side that has something, never "Nothing open" over a Dues figure */
-  S.sideFilter = true;
+  S.sideFilter = true; S.suppliersSettled = true;   /* the premise: nothing owed to a supplier, so Received has nothing in the books either */
   S.bills['a0000000-0000-5000-8000-000000002100'] = [];
   S.bills['a0000000-0000-5000-8000-000000001300'] = [];
   S.folders[1].total = 2;
@@ -26,6 +26,6 @@ async function billsInPlace({ S, p, ctx, ok, nav }) {
   await p.click('[data-testid="bills-tab-B-2100"]');
   await p.waitForSelector('[data-testid="bills-list"]');
   ok(await p.locator('[data-testid="bills-tab-B-2100"]').getAttribute('aria-pressed') === 'true', 'BD-F-02: a tab the owner picks stays, even when empty');
-  S.sideFilter = false;
+  S.sideFilter = false; S.suppliersSettled = false;
 }
 module.exports = { billsInPlace };

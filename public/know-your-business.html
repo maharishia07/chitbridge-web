@@ -69,7 +69,7 @@
 <body>
 <div class="wrap">
   <h1>📊 Know your business</h1>
-  <div class="sub">What we can tell you from data you&rsquo;ve already given &mdash; each fact with how much to trust it. Not a governance feature; the outward panel always says &ldquo;verify at the source.&rdquo;</div>
+  <div class="sub">What we can tell you from data you&rsquo;ve already given &mdash; each fact with how much to trust it. Always check it at the source.</div>
   <div id="app"><div class="card"><div class="empty">Loading…</div></div></div>
 </div>
 <div id="netpill" class="netpill"></div>
@@ -452,9 +452,8 @@ async function runField() {
 if (window.CBOffline) {
   CBOffline.configure({
     apiBase: API,
-    token: function () {
-      return TOK;
-    },
+    token: function () { return TOK; },
+    entity: function () { var held = window.CBFrame && CBFrame.session ? CBFrame.session() : null; return held ? held.actorId || held.entityId || '' : ''; }, /* EL-web-screens-20#L72: every queued write carries who queued it (SEC-140), as app.html does, so it never replays under the next person */
     onChange: paintPill
   });
   CBOffline.registerSW();

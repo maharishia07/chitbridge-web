@@ -55,6 +55,7 @@ async function signedContext(browser, S, serviceWorkers) {
       const token = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-folders', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
       localStorage.setItem('cb_sess', JSON.stringify({ token, role: 'entity', name: 'Folders Shop' }));
     } catch (_) { /* a page without storage cannot sign in; the leg then fails loud */ }
+    window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; these walks drive the app shell */
   });
   return ctx;
 }

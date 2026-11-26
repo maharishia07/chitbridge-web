@@ -25,7 +25,7 @@ function liftFns(relativeFile, names, indent) {
 /** run a whole public/ script in a vm sandbox that looks enough like a window (no browser); returns the sandbox, so sandbox.CBCart etc. are the real objects */
 function loadScript(relativeFile, extras) {
   const vm = require('vm');
-  const sb = Object.assign({ console, setTimeout, clearTimeout, Date, Math, JSON, Promise }, extras || {});
+  const sb = Object.assign({ console, setTimeout, clearTimeout, Date, Math, JSON, Promise, addEventListener() {} /* cap-admin forgets a minted key on pagehide (p2wave-sec, bdad61a57) */ }, extras || {});
   sb.window = sb; sb.globalThis = sb;
   sb.document = { getElementById: () => null, createElement: () => ({ style: {} }), querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, head: { appendChild() {} }, body: { appendChild() {} }, documentElement: {} };
   vm.createContext(sb);

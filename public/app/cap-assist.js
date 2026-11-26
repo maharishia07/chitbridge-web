@@ -88,13 +88,18 @@
   function readOnly() {
     return !!(A.may && A.may.ok === false && !A.may.unknown);
   }
+  /** RW3-24: the owner's one line in plain words, chosen by the server's CODE (why = not_helpdesk), not by parsing its sentence; any other refusal keeps the server's own sentence */
+  function readOnlyWords() {
+    if (A.may.why === 'not_helpdesk') return T('Our support team keeps these answers up to date. You can read them here.');
+    return A.may.say || A.may.why || '';
+  }
   /** the review heading: refine a saved answer, or read what Assist drafted */
   function reviewTitleWords() {
     return A.qa && A.qa.id ? 'Refine this answer' : 'What Assist drafted';
   }
   function reviewHTML() {
     var q = A.qa || {};
-    if (readOnly()) return '<div class="sub" data-testid="ca-readonly">' + esc(A.may.say || A.may.why || '') + '</div>';
+    if (readOnly()) return '<div class="sub" data-testid="ca-readonly">' + esc(readOnlyWords()) + '</div>';
     return (
       '<div class="tk-h">' +
       esc(T(reviewTitleWords())) +

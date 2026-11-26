@@ -28,6 +28,13 @@ function bkWaitModel(w) {
     return bkQuiet('bill-sheet', failure, null);
   }
 }
+/** FW-38: the bill number of a waiting row — the sheet's own when the chit holds one, else the books' own reference for the bill (the one Dues prints, e.g. S068-22); "walkin:…" and other typed refs are never a bill number */
+function bkWaitNo(w) {
+  var billModel = bkWaitModel(w);
+  if (billModel && billModel.no) return billModel.no;
+  var ref = w && w.job !== 'day' && w.ref != null ? String(w.ref).trim() : '';
+  return ref && ref.length <= 40 && ref.indexOf(':') < 0 && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(ref) ? ref : '';
+}
 /** a walk-in DAY waiting (job 'day': no bill of its own) — its counter and day, read from the server's own source ref "walkin:<counter>:<day>" (WX-R2R:
     those rows said "— · —", so the owner could not tell which day of which counter was stuck) */
 function bkWaitDay(w) {
@@ -48,7 +55,7 @@ function bkWaitCols() {
       cell: function (waitingRow) {
         var billModel = bkWaitModel(waitingRow),
           waitDay = bkWaitDay(waitingRow);
-        return billModel && billModel.who ? esc(billModel.who) : waitDay ? esc(tx('Walk-in day') + ' · ' + tx('Counter') + ' ' + waitDay.counter) : dash;
+        return billModel && billModel.who ? esc(billModel.who) : waitDay ? esc(tx('Walk-in day') + ' · ' + counterWord(waitDay.counter)) : dash;
       }
     },
     /* FX-F10W2: Party · Bill no · Amount · Step keep their place at ≥ 1024 px — the bill number was the first to go at 1366 */
@@ -60,8 +67,8 @@ function bkWaitCols() {
       w: 170,
       html: true,
       cell: function (waitingRow) {
-        var billModel = bkWaitModel(waitingRow);
-        return billModel && billModel.no ? '<span class="mono">' + esc(billModel.no) + '</span>' : dash;
+        var billNo = bkWaitNo(waitingRow);
+        return billNo ? '<span class="mono">' + esc(billNo) + '</span>' : dash;
       }
     },
     {

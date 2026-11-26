@@ -986,7 +986,7 @@
       });
       Object.keys(root.localStorage)
         .filter(function (item) {
-          return /^cb_nav(@|$)/.test(item);
+          return /^cb_nav(@|$)/.test(item) || /^cb_bankrec:[^:]*:stmt:/.test(item); /* P2WAVE-SEC L-sec-web-screens-04#L46: the bank statement's full text (cap-bank bkbSave 'stmt:') is a person's data on a device someone else may use next; the marks and rules (no statement text) stay */
         })
         .forEach(function (item) {
           root.localStorage.removeItem(item);
@@ -1186,7 +1186,13 @@
     if (!s || typeof s !== 'object') return null;
     var r = s.role,
       label = r === 'entity' ? 'Owner' : r === 'actor' ? 'Co-assist' : r === 'customer' ? 'Customer' : r || '';
-    return { name: s.name || '', role: label + (s.entity ? ' · ' + s.entity : ''), entity: s.entity || '', owner: r === 'entity', token: s.token || '' };
+    var entity = entityWord(s.entity);
+    return { name: s.name || '', role: label + (entity ? ' · ' + entity : ''), entity: entity, owner: r === 'entity', token: s.token || '' };
+  }
+  /** FW-42: a session's entity is a name on a shop seat and an object ({ id, name, … }) on a practice seat; a menu line prints the NAME, never "[object Object]" */
+  function entityWord(e) {
+    if (e && typeof e === 'object') return String(e.name || e.legal_name || e.display_name || '');
+    return e ? String(e) : '';
   }
   function sessionPerson() {
     try {

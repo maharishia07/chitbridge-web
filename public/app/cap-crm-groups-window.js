@@ -11,7 +11,8 @@ var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec:
 function crmShopUrl() {
   /* the same id Your online shop shows (user id, else bridge id), so the screen offers one link and it is the one that opens */
   var id = (SHOW.me && (SHOW.me.user_id || SHOW.me.bridge_id)) || SESSION.bridgeId || '';
-  return location.origin + '/shop.html?s=' + encodeURIComponent(id);
+  /* RW3-15: no id, no link: a link that ends in "?s=" opens nothing, so the screen says so and greys the buttons (crmShopLiveRead) */
+  return id ? location.origin + '/shop.html?s=' + encodeURIComponent(id) : '';
 }
 /** A-F-60: why the public cannot open the shop yet, in the owner's words ('' = nothing known against it). Same rule as Your online shop (cap-admin.js `live`). */
 function crmShopWhyNot(me) {
@@ -22,19 +23,36 @@ function crmShopWhyNot(me) {
   if (vis === 'network' && me.network_public_count === 0) return tx('Nothing under you is public yet, so customers see "Shop not found".');
   return '';
 }
-/** read the shop's own state and say plainly what is missing before the link is shared; the link then shows the id that opens */
-async function crmShopLiveRead() {
+/** read the shop's own /me into SHOW.me; false when there is nothing to read or it could not be read (then the page says nothing false) */
+async function crmShopMeRead() {
   try {
-    if (typeof meNow !== 'function') return;
-    SHOW.me = await meNow();
+    /* RW3-15: crm.html has no meNow (app.html's); its start reads /me once (CRM.meRead) and the handle (user_id) is in that answer */
+    var read = typeof meNow === 'function' ? meNow() : window.CRM && window.CRM.meRead;
+    if (!read) return false;
+    var reply = await read;
+    SHOW.me = (reply && reply.entity) || reply || null;
+    return true;
   } catch (failure) {
     if (typeof cbQuiet === 'function') cbQuiet('crm: the shop read for the window link failed, the link stays as it was', failure);
-    return; /* unreadable: say nothing false */
+    return false; /* unreadable: say nothing false */
   }
-  var note = document.getElementById('crm_sc_notlive');
-  if (note) note.textContent = crmShopWhyNot(SHOW.me);
+}
+/** read the shop's own state and say plainly what is missing before the link is shared; the link then shows the id that opens */
+async function crmShopLiveRead() {
+  if (!(await crmShopMeRead())) return;
+  var note = document.getElementById('crm_sc_notlive'),
+    shopWhyNot = crmShopWhyNot(SHOW.me) || (crmShopUrl() ? '' : tx('Your shop has no web address yet, so there is no link to share.'));
+  if (note) note.textContent = shopWhyNot;
+  /* RW1-21: a link offered must open. While the public would meet "Shop not found", the three ways to send it are greyed on the spot (the hint above says why; the title repeats it); no page cover */
+  ['crm-sc-copy', 'crm-sc-group', 'crm-sc-q'].forEach(function (tid) {
+    var node = document.querySelector('[data-testid="' + tid + '"]');
+    if (!node) return;
+    node.disabled = !!shopWhyNot;
+    if (shopWhyNot) node.setAttribute('title', shopWhyNot);
+    else node.removeAttribute('title');
+  });
   var url = document.querySelector('[data-testid="crm-sc-url"]');
-  if (url) url.textContent = crmShopUrl();
+  if (url) url.textContent = (crmShopUrl() || tx('Not available yet'));
 }
 /** paint the Shop window screen: template chooser, preview and the share-with-a-party / group controls */
 function crmShowcase(frame) {
@@ -58,7 +76,7 @@ function crmShowcase(frame) {
     '<div class="kv"><b>' +
     esc(tx('Link')) +
     '</b><span class="mono" data-testid="crm-sc-url">' +
-    esc(crmShopUrl()) +
+    esc((crmShopUrl() || tx('Not available yet'))) +
     '</span></div>' +
     '<div class="supacts"><button data-cbsid="CRM008-B04" type="button" class="act sm quiet" data-crm="sccopy" data-testid="crm-sc-copy">' +
     esc(tx('Copy link')) +
@@ -201,6 +219,7 @@ function crmShareVerdict() {
 /** copy the shop's link; where the clipboard is not there, show the link itself so it can be copied by hand */
 function crmShopLinkCopy() {
   var shopUrl = crmShopUrl();
+  if (!shopUrl) return toast(tx('Your shop has no web address yet, so there is no link to share.'));
   (navigator.clipboard ? navigator.clipboard.writeText(shopUrl) : Promise.reject(new Error('no clipboard'))).then(
     function () {
       toast(tx('Link copied'));
@@ -216,7 +235,7 @@ function crmSharePicked(key) {
     return row.key === key;
   })[0];
   closeModal();
-  if (group) crmSendOpen(group, { text: txf('Have a look at our shop window: {url}', { url: crmShopUrl() }) });
+  if (group && crmShopUrl()) crmSendOpen(group, { text: txf('Have a look at our shop window: {url}', { url: crmShopUrl() }) });
 }
 /** the clicks of the Shop window (the share box and its link); true when this module answered, false for an action that is not its own */
 function crmShareClick(action, node) {
@@ -263,7 +282,7 @@ function crmSharePaint() {
 /** the share: the shop's own phone sends it (wa.me, the device), and the out message is LOGGED through the gated route — the server decides again */
 function crmShareGo(btn) {
   var party = SHOW.party;
-  if (!party) return;
+  if (!party || !crmShopUrl()) return;
   var phone = String(party.phone || '').replace(/[^0-9]/g, ''),
     text = txf('Have a look at our shop window: {url}', { url: crmShopUrl() });
   return CBAction.run(

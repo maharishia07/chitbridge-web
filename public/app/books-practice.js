@@ -215,7 +215,7 @@
       filterOf('advice', 'Advice', [['cash_low', 'Cash running low'], ['sales_down', 'Sales down'], ['loss', 'Making a loss'], ['late_debtors', 'Late debtors']], function (r, v) { return !!(r.grant && r.grant.can_see_costs) && ((r.health && r.health.codes) || []).indexOf(v) >= 0; }),
       heldFilterOf(filterOf),
       filterOf('role', 'Role', [['adviser', 'Accountant'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
-      filterOf('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
+      filterOf('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['no_run', 'Signed, no unbroken run'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
       filterOf('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['over14', 'Waiting over 14 days'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'over14' ? r.queries.waiting_over_14 === true : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
       filterOf('bas', 'Return due', [['overdue', 'Overdue'], ['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'overdue' ? !!r.bas.overdue : v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
       filterOf('checked', 'Checked', [['behind', 'Some not checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
@@ -262,7 +262,10 @@
   /** the columns a band opens with, and the Saved column once the firm's flags have answered and are on */
   function colsOf(bandKey) {
     var cols = (BAND_COLS[bandKey] || BAND_COLS.pipeline).slice();
-    if (holdersOn()) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
+    /* W4-06: a column no row has anything in is not drawn (never 149 blank cells): Year end only when some client has a year to close or a blocker; Held by only when some client is held (the tick bar still assigns) */
+    var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
+    if (!rows.some(function (r) { return r.year_end || r.stage_blocker; })) cols = cols.filter(function (key) { return key !== 'yend'; });
+    if (holdersOn() && rows.some(function (r) { return Array.isArray(r.holders) && r.holders.length; })) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
     return cols.concat(flagsOn() ? ['saved'] : []);
   }
   /** ASSIGN-1: did the server send who holds each client (an answer with a `holders` list on any row) */
@@ -338,7 +341,13 @@
       '.bp-yend{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-stage{display:none}@media(max-width:700px){.bp-stage{display:inline;font-weight:600}}.bp-last{background:var(--amber-t,#FDF3DC)}.bp-chip{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);font-size:12px;font-weight:600;white-space:nowrap}' +
       '@media(min-width:701px){.cbl .cbl-row.bp-r>.cbl-cell,.cbl .cbl-row.bp-r>.cbl-lead{padding-block:2px}}' +
       '.bp-pic{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex:none;height:30px}.bp-pic svg{width:calc(var(--pw) * 1px)!important;height:30px!important;max-width:none;flex:none}.bp-pic .sub{font-size:12px;white-space:nowrap}.bp-strip{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-strip svg{max-width:340px}.bp-pair{grid-column:1/-1;display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}.bp-pair svg{max-width:340px}.bp-cmp{grid-column:span 3;display:flex;flex-direction:column;gap:0;min-width:0;overflow:hidden}.bp-cmp .sub{font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp-cmp-row{display:flex;gap:12px}.bp-cmp svg{flex:none;max-width:none}@media(max-width:700px){.bp-cmp{grid-column:span 2}}@media(max-width:700px){.bp-pic .sub{display:none}}.bp-tile.on{outline:2px solid var(--accent,#1b4d3e)}.bp-tile.help b{color:var(--red,#9b1c1c)}.bp-tile.watch b{color:var(--amber,#8a5a00)}.bp-tile.good b{color:var(--green,#1b5e20)}.bp-tile.held{cursor:default;opacity:.85;border-style:dashed}' +
-      '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;flex-wrap:wrap;gap:2px 8px;min-width:0}.bp-fig>b,.bp-fig>a{min-width:0;overflow-wrap:anywhere}#bp_list{height:min(70vh,640px);min-height:320px}@media(max-width:700px){#bp_list{height:80vh}}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}';
+      '.bp-detail{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 16px;padding:8px 4px}.bp-fig{display:flex;justify-content:space-between;flex-wrap:wrap;gap:2px 8px;min-width:0}.bp-fig>b,.bp-fig>a{min-width:0;overflow-wrap:anywhere}#bp_list{min-height:320px}.bp-rule{margin:4px 0 8px}.bp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;margin:0 0 6px}.bp-head h2{margin:0}' +
+      /* AT-01 (Athi 25 Nov): the controls are a strip, the list is the content. Title · tabs · counts share one row; the counts are slim pills (the same buttons, the same filters); the views and the toolbar share the next (list-ctl-css) */
+      '#bp_practice{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;margin:0 0 8px}#bp_practice>*{flex:1 1 100%;min-width:0}#bp_practice>.bp-head,#bp_practice>.bp-bandbox{flex:0 1 auto;margin:0}#bp_practice>.bp-bandbox{flex:1 1 auto}' +
+      '.bp-bandbox{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}.bp-bandbox>.bp-note{flex:1 1 100%}.bp-bandbox .bp-bands{margin:0}.bp-bandbox .bp-band{display:flex;flex-wrap:wrap;gap:6px;margin:0}' +
+      '.bp-bandbox .bp-tile{flex-direction:row;align-items:baseline;gap:6px;min-height:32px;padding:3px 12px;border-radius:999px}.bp-bandbox .bp-tile b{font-size:15px}.bp-bandbox .bp-tile span{font-size:13px}' +
+      '.bp-bandbox .bp-cmp{grid-column:auto;flex:1 1 280px}' +
+      '@media(max-width:700px){#bp_practice{gap:2px 8px;margin-bottom:6px}#bp_practice h2{font-size:16px;line-height:1.2}.bp-bandbox .bp-tile{min-height:32px;padding:3px 10px}.bp-bandbox .bp-tile span{font-size:12px;line-height:1.15}.bp-bandbox .bp-band{display:contents}.bp-bandbox .bp-bandtab{padding:3px 10px}#bp_practice h2 .sub{font-size:12px}.bp-head .bp-pic{margin-inline-start:0;height:24px}.bp-head .bp-pic svg{height:24px!important}}';
     root.document.head.appendChild(styleNode);
   }
   function draw() {

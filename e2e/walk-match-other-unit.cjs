@@ -57,7 +57,7 @@ W.run('match-other-unit', async (w) => {
     if (p === '/api/till/match') { S.reads++; return S.down ? json(500, { error: 'Failed', message: 'Could not read the match just now.' }) : json(200, ORDERS); }
     return json(200, {});
   };
-  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Books Shop', 'Books Shop'));
+  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Books Shop', 'Books Shop'));
   await ctx.route('**/api/**', answer);
   await page.goto(base + '/app.html#/app');
   await page.waitForFunction(() => typeof ensureCap === 'function' && typeof renderApp === 'function', null, { timeout: 30000 });
@@ -102,7 +102,7 @@ W.run('match-other-unit', async (w) => {
   await w.step('M6', 'Match in the pseudo-language (qps) -> the other-unit cell and the chips come from the string layer, none hard-wired', async () => {
     const c = await w.contextAt();
     await c.addInitScript(() => { try { localStorage.setItem('cb_lang', 'qps'); localStorage.setItem('cb_langs', 'qps'); localStorage.setItem('cb_locale', 'en-IN'); localStorage.setItem('cb_region', 'IN'); } catch (_) {} });
-    await c.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Books Shop', 'Books Shop'));
+    await c.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Books Shop', 'Books Shop'));
     await c.route('**/api/**', async (route) => {
       if (new URL(route.request().url()).pathname === '/api/entities/me') return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ entity: { display_name: 'Books Shop', currency_code: 'INR', country: 'IN', locale_prefs: { lang: 'qps', langs: 'qps' } } }) });
       return answer(route);

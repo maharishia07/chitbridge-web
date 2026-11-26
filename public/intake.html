@@ -10,6 +10,7 @@
 <script src="/config.js"></script><script src="/app/api-base.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/app/cb-words.js"></script>   <!-- failWords · bodyWords: a server answer is painted as its own words, never raw -->
+<script src="/app/page-frame.js"></script>   <!-- CBFrame.session(): who saved a draft (p2wave-sec); mounts nothing here -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge — Intake inbox</title>
 <style>
@@ -310,9 +311,8 @@ async function dismiss(id) {
 if (window.CBOffline) {
   CBOffline.configure({
     apiBase: API,
-    token: function () {
-      return TOK;
-    },
+    token: function () { return TOK; },
+    entity: function () { var held = window.CBFrame && CBFrame.session ? CBFrame.session() : null; return held ? held.actorId || held.entityId || '' : ''; }, /* EL-web-screens-20#L72: every queued write carries who queued it (SEC-140), as app.html does, so it never replays under the next person */
     onChange: paintPill
   });
   CBOffline.registerSW();

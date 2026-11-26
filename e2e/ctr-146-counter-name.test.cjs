@@ -11,13 +11,13 @@ const vm = require('vm');
 const { liftFns } = require('./lib/lift-fn.cjs');
 
 const store = {}; let id = 'C5';
-const sandbox = { String, ls: { get: (k, d) => (k in store ? store[k] : d) }, shopLs: (k) => 'shop:' + k, tillId: () => id, cbQuiet() {} };
+const sandbox = { String, ls: { get: (k, d) => (k in store ? store[k] : d) }, shopLs: (k) => 'shop:' + k, tillId: () => id, cbQuiet() {}, personOn: () => false, onAgent: () => false, tillGivenKey: () => 'shop:cb_till_given', TILL_CLAIM: null };
 vm.createContext(sandbox);
-vm.runInContext(liftFns('public/till.html', ['counterName', 'counterPill', 'counterTitle']) + '\nthis.counterName = counterName; this.counterPill = counterPill; this.counterTitle = counterTitle;', sandbox);
+vm.runInContext(liftFns('public/till.html', ['leftoverCounter', 'counterName', 'counterPill', 'counterTitle']) + '\nthis.counterName = counterName; this.counterPill = counterPill; this.counterTitle = counterTitle;', sandbox);
 
 let bad = 0;
 const ok = (m, c, info) => { console.log((c ? '  ok   ' : '  FAIL ') + m + (c || !info ? '' : ' -> ' + info)); if (!c) bad++; };
-const set = (own, stored, tid) => { Object.keys(store).forEach((k) => delete store[k]); if (own) store['shop:cb_till_counter_name'] = own; if (stored) store.cb_till_name = stored; id = tid; };
+const set = (own, stored, tid) => { Object.keys(store).forEach((k) => delete store[k]); store['shop:cb_till_given'] = tid; /* RW2-09: a number is a name only when the shop gave it */ if (own) store['shop:cb_till_counter_name'] = own; if (stored) store.cb_till_name = stored; id = tid; };
 
 set('', '', 'C5');
 ok('number C5 -> "Counter 5"', sandbox.counterName() === 'Counter 5', sandbox.counterName());
@@ -35,4 +35,8 @@ set('', '', 'DQLG');
 ok('the header pill and the title are the same answer ("Counter")', sandbox.counterPill() === 'Counter' && sandbox.counterTitle() === 'Counter', sandbox.counterPill() + '/' + sandbox.counterTitle());
 set('Front till', '', 'C5');
 ok('the pill gives the shop\'s own name too', sandbox.counterPill() === 'Front till' && sandbox.counterTitle() === 'Front till', sandbox.counterPill());
+process.exitCode = bad ? 1 : 0;
+
+set('', '', 'C5'); delete store['shop:cb_till_given'];
+ok('RW2-09: a number the shop never gave this shop is not named (Settings says 0 counters)', sandbox.counterName() === 'Counter', sandbox.counterName());
 process.exitCode = bad ? 1 : 0;

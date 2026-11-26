@@ -9,9 +9,9 @@
  */
 (function (root) {
   'use strict';
-  var STATUS = { need: 'Needs you', ready: 'Ready to add', in: 'In your books', done: 'Added', books: 'Not on the statement', lock: 'Month locked' };
+  var STATUS = { need: 'Needs you', ready: 'Ready to add', in: 'In your books', done: 'Added', books: 'Not on the statement', lock: 'Month locked', signed: 'Signed off' };
   /** pending first: what a person must still answer sits at the top */
-  var ORDER = { lock: 0, need: 0, ready: 1, books: 2, done: 3, in: 4 };
+  var ORDER = { lock: 0, need: 0, ready: 1, books: 2, done: 3, signed: 4, in: 4 };
   /** the chip's words on a phone, where four full words do not fit on one row */
   var SHORT = { in: 'In books', ready: 'Ready', need: 'Needs you', books: 'Not on statement' };
   var KIND_WORDS = {
@@ -197,7 +197,7 @@
         columns: [
           { key: 'status', label: sayText('Status'), prio: 1, keep: true, w: 44, sort: 'status', html: true, cell: function (row) { var icon = labKit.statusIcon({ status: row.status, name: sayText(STATUS[row.status]) }); return extra.wrapStatus ? extra.wrapStatus(row, icon) : icon; } },
           { key: 'date', label: sayText('Date'), prio: 2, w: 112, sort: 'date', cell: function (row) { return root.CBBankPreview.dateText(row.date); } },
-          { key: 'payee', label: sayText('Payee as the bank wrote it'), prio: 3, w: 380, html: true, cell: function (row) { return '<span class="bl-pay" data-testid="bank-payee">' + root.esc(row.narration) + '</span>'; } },
+          { key: 'payee', label: sayText('Payee or note'), prio: 3, w: 380, html: true, cell: function (row) { return '<span class="bl-pay" data-testid="bank-payee">' + root.esc(row.narration) + '</span>'; } },
           { key: 'out', label: sayText('Out'), prio: 4, keep: true, num: true, w: 140, sort: 'amount', html: true, cell: amountCell(true) },
           { key: 'in', label: sayText('In'), prio: 4, keep: true, num: true, w: 140, html: true, cell: amountCell(false) }
         ].concat(extra.columns || []),

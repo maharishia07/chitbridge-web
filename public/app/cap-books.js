@@ -202,6 +202,8 @@ function bkCss() {
     '#bk_body input[type=date].inp,#bk_body select.inp,#bk_body .supacts .inp{width:auto}',
     /* the primary button of a pane's action row (Pay · Receive · Edit · Lock …) — once here, so accounts.html, crm.html and the app read the same */
     '.supacts button.supact-pri,#bk_body .supacts button.supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,var(--on-accent))}',
+    /* FW-33: a primary button the server greys (Close before the quarter ends) LOOKS grey: the filled accent never shows on a disabled one, and the sentence under it says why */
+    '#bk_body .supacts button:disabled,#bk_body .supacts button.supact-pri:disabled{background:var(--card);border:1px dashed var(--line);color:var(--grey);cursor:not-allowed;filter:none}',
     /* ⭐ THE MONEY INPUT (bkMoneyInput): the symbol sits inside the field, the figure runs to the end; the box is the field's, so the symbol never wraps off */
     '.mi{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;width:auto;max-width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}',
     '.mi:focus-within{border-color:var(--blue)}',
@@ -272,6 +274,7 @@ function bkCssLedgersPage() {
     '#bk_lt .lg-facts{display:flex;flex-wrap:wrap;gap:2px 0;color:var(--grey);font-size:var(--fs-1);margin:8px 0 0}',
     '#bk_lt .lg-facts > span:not(:last-child)::after{content:"·";margin:0 7px;opacity:.7}', LG_HEAD_CSS,
     /* phone: the tree is page one, the ledger page two (list → detail → back); no squeezed side panel */
+    '@container lt (max-width:620px){#bk_lt .lt-asof{padding:4px 10px 0}#bk_lt .lt-segs{padding:2px 8px 4px}#bk_lt .lt-seg{min-height:28px}}',   /* a phone's page one keeps its head to 30% of the window: the "Balance at" line and the switch (ACC-367) are one slim band */
     '@container lt (max-width:620px){#bk_lt .lt-tree{width:100%;border-top:0}#bk_lt .lt-rz,#bk_lt [data-lt="fold"]{display:none}#bk_lt.has-sel .lt-tree{display:none}#bk_lt:not(.has-sel) .lt-pane{display:none}#bk_lt .tn{min-height:44px;padding-block:10px}#bk_lt .tn.band{min-height:40px}#bk_lt .lt-tools{padding:8px 16px}#bk_lt .cbl-nrow > span:not(:first-child){width:auto!important;min-width:76px;padding-inline-start:10px;white-space:nowrap}',
     /* the ledger page's title row on a phone: ‹ title … bell · home · avatar on line one (R06: the bell takes ~36 px of it); the period, the figures and the notice on line two (the slot dissolves so each of its buttons takes its own place) */
     '#bk_lt .cbl-title .cbl-slot{display:contents!important}#bk_lt .cbl-title h1{flex:1 1 calc(100% - 186px);min-width:0;order:0}#bk_lt .cbl-title .cbb-btn{min-width:0;height:34px;padding:0 6px;font-size:15px;line-height:1}#bk_lt .cbl-title [data-lt="back"]{order:-1}#bk_lt .cbl-title .who{order:1}#bk_lt .cbl-title [data-lt="statement"],#bk_lt .cbl-title > .cbl-anchor,#bk_lt .cbl-title > .cbl-chip{order:2}}',
@@ -762,7 +765,7 @@ function bkTime(ts) {
 /** the small line under a Day book entry: an adviser's "Posted by Pat Lee, Bayside Bookkeeping" (the api's posted_by), else the shop's own person who made it "Made by Ravi" (the api's made_by, the entry's created_by named; a bill the counter rang already says who rang it) */
 function bkPostedByHTML(e) {
   var words = typeof CBBooksActing !== 'undefined' ? CBBooksActing.postedByWords(e) : '';
-  if (!words && e && e.made_by && !(e.source && e.source.by)) words = txf('Made by {name}', { name: e.made_by });
+  if (!words && e && e.made_by && e.made_by !== SESSION.entity && !(e.source && e.source.by)) words /* RW1-14: a made_by that is the shop's own name says nothing a person made: no line, so the row stays two lines */ = txf('Made by {name}', { name: e.made_by });
   return words ? '<div class="sub" data-testid="db-posted-by">' + esc(words) + '</div>' : '';
 }
 /**
@@ -788,7 +791,7 @@ function bkRecordedHTML(e, tid) {
   return (
     ' <span data-testid="' +
     esc(tid) +
-    '-rec" style="color:var(--grey);font-weight:400">' +
+    '-rec" style="color:var(--grey);font-weight:400;white-space:nowrap">' +
     esc(txf('recorded {date}', { date: day(rec || post, { day: '2-digit', month: 'short' }) })) +
     '</span>'
   );
@@ -2185,6 +2188,17 @@ function bkDvGroupSummary(entries, c) {
   });
   return parts.join(' · ');
 }
+/** the Day book's Bill cell: a walk-in day's count link, else the bill it came from, else what the entry says (the dash when it says nothing) */
+function bkDvBillCell(e, dash) {
+  var s = e.source || {},
+    t = 'db-src-' + e.entry_no;
+  if (s.kind === 'day')
+    return (
+      esc(tx('Walk-in day')) + (s.count != null ? ' · ' + bkDayBillsLink(s, t) : '')
+    ); /* M132: the count opens the bills list, as the statement rows do */
+  if (s.ref || s.chit_id) return bkBillPart(s, t) + bkRecordedHTML(e, t) + bkPostedByHTML(e);
+  return esc(s.kind === 'receipt' ? tx('Received') : e.narration || e.what || e.event_type || '') + bkRecordedHTML(e, t) + bkPostedByHTML(e) || dash;
+}
 /** what the Day book says about an entry — one fact a column (Athi, 2026-10-02: date · entry no · kind · party · bill · tender · counter · amount); the unit draws the caret, the header and the widths */
 function bkDvCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>';
@@ -2241,19 +2255,13 @@ function bkDvCols(c) {
       label: tx('Bill'),
       prio: 4,
       w: 230,
+      grow: true /* RW1-14: in Lines the description takes the room that is left and wraps in itself, so the buttons after it stay on its line */,
       html: true,
       tid: function (e) {
         return 'db-head-' + e.entry_no;
       },
       cell: function (e) {
-        var s = e.source || {},
-          t = 'db-src-' + e.entry_no;
-        if (s.kind === 'day')
-          return (
-            esc(tx('Walk-in day')) + (s.count != null ? ' · ' + bkDayBillsLink(s, t) : '')
-          ); /* M132: the count opens the bills list, as the statement rows do */
-        if (s.ref || s.chit_id) return bkBillPart(s, t) + bkRecordedHTML(e, t) + bkPostedByHTML(e);
-        return esc(s.kind === 'receipt' ? tx('Received') : e.narration || e.what || e.event_type || '') + bkRecordedHTML(e, t) + bkPostedByHTML(e) || dash;
+        return bkDvBillCell(e, dash);
       }
     },
     {
@@ -2574,7 +2582,9 @@ function bkDvHead() {
     dayRange = view.range,
     todoCounts = view.todo,
     period = BK.dbp || bkDbPeriod('fy');
-  var sales = bkDaySales((reply && reply.entries) || [], dayRange.to),
+  /* RW3-10: a day that has not happened is owed nothing — a range that runs on (1 Oct – 31 Dec) is read to the shop's TODAY, so the notice never names a day in the future */
+  var stripDay = dayRange.to > bkToday() ? bkToday() : dayRange.to;
+  var sales = bkDaySales((reply && reply.entries) || [], stripDay),
     chips = [],
     notices = [];
   sales.counters.forEach(function (x) {
@@ -2587,7 +2597,7 @@ function bkDvHead() {
     chips.push({ tid: 'strip-tender-' + x.how, text: tx(x.how) + ' ' + bkMoney(x.amount_minor, currency) });
   });
   /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the strip is not the whole day yet, and says so (the counter holds the fix) */
-  if (!sales.day_closed) notices.push(bkNoCloseNotice(sales, dayRange.to));
+  if (!sales.day_closed) notices.push(bkNoCloseNotice(sales, stripDay));
   notices = notices.concat(bkDvTodoNotices(todoCounts));
   var askWaiting = bkMarkChips(notices, (reply && reply.entries) || []);
   if (!todoCounts.accept && !todoCounts.supplier && !todoCounts.overdue && !todoCounts.cheques && !todoCounts.waiting && !askWaiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
@@ -2697,7 +2707,7 @@ function bkDvFilters(entries) {
       options: seen.map(function (item) {
         return {
           v: item,
-          label: x[0] === 'counter' ? tx('Counter') + ' ' + item : x[0] === 'by' ? item + (bkIsShopName(item) ? ' ' + tx('(owner)') : '') : tx(item)
+          label: x[0] === 'counter' ? counterWord(item) : x[0] === 'by' ? item + (bkIsShopName(item) ? ' ' + tx('(owner)') : '') : tx(item)
         };
       })
     };
@@ -2803,8 +2813,22 @@ function bkDvNextCell(e, currency, ctx) {
 }
 /** Reverse this entry: insert-only — adds the mirror entry, never edits (cap-entry.js enReverse asks first); none when the page has no enReverse */
 function bkDvActions() {
+  /* RW1-27: a sale (a bill, not a walk-in day's one entry) offers Credit note: the till's one return sheet opens at that bill; a bill credited in full says so instead (CBSheet.creditNote) */
+  var credit = {
+    id: 'credit',
+    icon: '↩',
+    label: 'Credit note',
+    tid: 'db-credit',
+    when: function (e) {
+      return !!(e.source && e.source.kind === 'bill' && e.source.chit_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal' && window.CBSheet && CBSheet.creditNote);
+    },
+    run: function (e) {
+      CBSheet.creditNote(e.source.chit_id);
+    }
+  };
   return typeof enReverse === 'function'
     ? [
+        credit,
         {
           id: 'reverse',
           icon: '↩',
@@ -2818,7 +2842,7 @@ function bkDvActions() {
           }
         }
       ]
-    : undefined;
+    : [credit];
 }
 /** declare the Day book's list once per read: its columns, grouping, five filters (Kind · Tender · Counter · Person · Evidence), sorts, search, next level, CSV — the page paints nothing else */
 function bkDvMount(el) {
@@ -4315,7 +4339,7 @@ function bkLgFilters() {
       options: seen(function (l) {
         return (l.source || {}).counter;
       }).map(function (item) {
-        return { v: item, label: tx('Counter') + ' ' + item };
+        return { v: item, label: counterWord(item) };
       })
     },
     {
@@ -4583,10 +4607,7 @@ var BK_BS = { kind: 'today', step: 0, asOf: '' };
 /** a carried change or share (basis points) as a short percent: "+25.0%" or "12.5%"; "—" when the server had nothing to compare with */
 function bkPct(bp, signed) {
   if (bp == null) return '<span style="color:var(--grey)">—</span>';
-  var n = Number(bp) / 100,
-    shown = n.toFixed(1);
-  if (Number(shown) === 0) return '0.0%'; /* a change that rounds to zero prints no sign: never "-0.0%" (critic finding 7) */
-  return esc((signed && n > 0 ? '+' : '') + shown + '%');
+  return esc(CBUiMoney.percentText(bp, signed)); /* RW1-07: the one rounding rule lives in ui-money.js */
 }
 function bkSpan(from, to) {
   return bkDate(from) + ' – ' + bkDate(to);
@@ -4986,6 +5007,7 @@ function bkDuesCols(c) {
       prio: 1,
       sort: 'party',
       w: 230,
+      stretch: true /* RW1-15: the name is the column that takes the room, so a party reads on one line beside its arrow */,
       html: true,
       cell: function (p) {
         return esc(bkPartyLabel(p.party_id, p.name) || tx('Unnamed party'));
@@ -5484,14 +5506,14 @@ function bkPbTableHTML(pid, pbState, answer, currency) {
   var sortable = on !== 'needs';
   var spec = [
     { k: 'date', label: 'Date', w: 92, sort: sortable, ln: 1, cell: function (row) { return esc(bkDate(row.date)); } },
-    { k: 'bill', label: 'Bill', sort: sortable, ln: 1, cell: function (row, index) { return bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true); } },
+    { k: 'bill', label: 'Bill', w: 104, sort: sortable, ln: 1, /* FW-43: a floor, so Date and Bill never print on one another when the side panel narrows the grid */ cell: function (row, index) { return bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true); } },
     { k: 'status', label: on === 'needs' ? 'Why' : 'Status', w: 200, ln: 1, cell: function (row) { return bkBillStatus(row, on); } },
     { k: 'due', label: 'Due date', w: 104, sort: sortable, ln: 2, cell: function (row) { return row.no_terms && row.status !== 'paid' ? bkSetTermsLink(pid) : row.due_date ? esc(bkDate(row.due_date)) : '—'; } },
     { k: 'days', label: 'Days overdue', w: 96, r: true, sort: sortable, ln: 2, cell: function (row) { return row.status === 'paid' ? '—' : row.days_overdue == null ? esc(tx('not due')) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue)); } },
     { k: 'amount', label: 'Amount', w: 100, r: true, sort: sortable, ln: 0, only: 'all', cell: function (row) { return moneyOf(row.amount_minor); } },
     { k: 'owed', label: 'Still owed', w: 104, r: true, sort: sortable, ln: 2, end: true, cell: function (row) { return row.owed_minor == null ? '<span style="' + grey + '">—</span>' : '<b data-b="owed">' + moneyOf(row.owed_minor) + '</b>'; } },
     {
-      k: 'reviewed', label: 'Reviewed', w: 90, ln: 0,
+      k: 'reviewed', label: 'Reviewed', w: 150, ln: 0, /* FW-43: wide enough for its chips ("Question from…" was cut at the right edge) */
       cell: function (row) {
         var held = row.mark && (row.mark.class === 'hold' || row.mark.kind === 'on_hold'); /* answer hold is said ONCE, in Status; Reviewed holds the tick (and answer query) only */
         return !held && marks && row.entry_id && marks.row(row.entry_id) ? marks.chip(row.entry_id) : '<span style="' + grey + '">—</span>';
@@ -5606,14 +5628,16 @@ function bkNeedRank(p) {
 function bkNeedsSum(side) {
   var all = (BK.duesRaw && BK.duesRaw.needs) || {},
     keys = side === 'rcv' ? ['customer'] : side === 'pay' ? ['supplier'] : ['customer', 'supplier'],
-    out = { parties: 0, bills: 0, overdue_minor: 0 };
+    out = { parties: 0, bills: 0, overdue_minor: 0, overdue_sides: [] };
   BK_NEED_ORDER.forEach(function (kind) {
     out[kind] = 0;
   });
   keys.forEach(function (key) {
     var part = all[key];
     if (!part) return;
+    if (Number(part.overdue) > 0) out.overdue_sides.push({ key: key, count: Number(part.overdue), minor: part.overdue_minor == null ? null : Number(part.overdue_minor) }); /* FW-35: each side's own overdue, kept apart */
     Object.keys(out).forEach(function (field) {
+      if (field === 'overdue_sides') return;
       if (part[field] == null) {
         if (field === 'overdue_minor') out[field] = null;
       } else if (out[field] != null) out[field] += Number(part[field]);
@@ -5895,6 +5919,7 @@ async function bkPeriodsLoad() {
   yrs[bkFyNow()] = 1;
   var L = (BK.lk = BK.lk || {});
   L.rows = rows;
+  L.toLock = reply && Number.isInteger(reply.months_to_lock) ? reply.months_to_lock : null; /* W4-13: the server's one count */
   L.info = info;
   L.years = Object.keys(yrs).sort().reverse();
   if (!L.fy || !yrs[L.fy]) L.fy = bkFyNow();

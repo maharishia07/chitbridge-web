@@ -65,6 +65,8 @@ jobs:
           node scripts/price-origin.test.mjs
           node scripts/price-resolve.test.mjs
           node scripts/check-adoption.js
+      - name: Retest 1130 proofs (inline-handler XSS, ?api= allow-list, cart basis, refused save)
+        run: npm run check:retest1130
       - name: One answer to what trade is this shop (vertical-box; REL-7)
         run: node tests/vertical-box.test.cjs
       - name: Misfix 1121 (F-54 menu fits 1366x768, F-67 P&L head to today)

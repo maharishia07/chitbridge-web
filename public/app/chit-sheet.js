@@ -47,6 +47,7 @@
     el: null,
     page: null,
     answered: {},
+    supplier: {} /* FW-29: an expense's supplier id → the name the party record gave (read once, painted on the sheet) */,
     place: 'popup',
     sample: false,
     pushed: false
@@ -105,6 +106,28 @@
   function sheetMoney(value, sheet) {
     return value == null && sheet.costHidden ? T('hidden') : fmtMoney(value, sheet.cur, '—');
   }
+  /** FW-29: an expense's own record (business_json.expense) when the chit is an expense with no lines; else null */
+  function expenseRecord(expenseDoc, text, live) {
+    return expenseDoc && text.expense && typeof text.expense === 'object' && !live.length ? text.expense : null;
+  }
+  /** RW1-27: the server's credited-so-far figure for a bill, when the read carried one; else null */
+  function creditRead(r) {
+    return r && r.credit && typeof r.credit === 'object' ? r.credit : null;
+  }
+  /** who the chit is with, in words: the expense's supplier · the counter's customer · the captured bill's party · the supplier who sent the bill · the other recipients */
+  function whoOf(kind, text, sum, others, senderName) {
+    if (kind.expense && kind.expense.supplier) return CS.supplier[String(kind.expense.supplier)] || T('Supplier');
+    if (kind.counterBill) return (text.customer && text.customer.name) || T('Walk-in');
+    if (kind.captured) return (text.party && text.party.name) || T('Not named');
+    if (kind.billRx) return (sum.bill_received && sum.bill_received.from) || senderName;
+    return (
+      others
+        .map(function (x) {
+          return x.display_name;
+        })
+        .join(', ') || senderName
+    );
+  }
   function model(r) {
     var h = (r && r.header) || r || {},
       det = (r && r.detail) || {};
@@ -141,9 +164,14 @@
       billRx = !!(r && r.doc === 'bill_received'),
       captured = billRx && purpose === 'receipt';
     var counterBill = !billRx && !!(text.till && iSent && !others.length); /* rung up at a counter and sent to nobody else */
+    /* ⭐ FW-29: an EXPENSE is a record the books took at send (the server's own `doc`): it has no lines by design — what it was, how it was paid, what it cost and its GST are in business_json.expense, read here, never worked out */
+    var expenseDoc = !!(r && r.doc === 'expense'),
+      expense = expenseRecord(expenseDoc, text, live);
     var agreement = !!(text.repeat && text.repeat.agreement_id); /* RI1: a repeat-supply agreement (purpose subscription) — its verbs are its own panel's */
     return Object.assign(serverAnswers(r), {
       agreement: agreement,
+      expenseDoc: expenseDoc,
+      expense: expense,
       /* FX-F10W: a captured receipt IS a bill (folder-inventory bill_received), so its step is MY bill_step too (routes/chits.js writes it there);
          the header's status is the sent copy's and never moves — read alone, Accept stayed "To accept" after the server said accepted */
       id: h.chit_id || (r && r.id) || null,
@@ -154,6 +182,7 @@
       cur: cur, costHidden: costHiddenOf(r) /* RAIL-146: the server took the money off this read for a cost-blind co-assist; the total says "hidden" */,
       iSent: iSent,
       counterBill: counterBill,
+      credit: creditRead(r) /* RW1-27: how much of this bill is already credited (the server's read) */,
       billRx: billRx,
       captured: captured,
       hasOther: !iSent || others.length > 0,
@@ -163,31 +192,25 @@
       at: text.billed_at || h.created_at,
       counter: counterOfBill(bill, text.till),
       by: (text.till && text.till.by && text.till.by.name) || '',
-      who: counterBill
-        ? (text.customer && text.customer.name) || T('Walk-in')
-        : captured
-          ? (text.party && text.party.name) || T('Not named')
-          : billRx
-            ? (sum.bill_received && sum.bill_received.from) || senderName
-            : others
-                .map(function (x) {
-                  return x.display_name;
-                })
-                .join(', ') || senderName,
+      who: whoOf({ expense: expense, counterBill: counterBill, captured: captured, billRx: billRx }, text, sum, others, senderName),
       /* a captured bill not yet frozen: the money it carries is THEIR total as the door typed it (read; the server taxes the lines when it posts) */
       lines: live,
       bj: text,
-      money: captured && tb && !text.invoice ? receiptMoney(text, tb) : moneyFor(text, money_, cur, sum),
+      money: captured && tb && !text.invoice ? receiptMoney(text, tb) : moneyFor(text, money_, cur, sum, expense),
       rec: rec,
       order: orderDetails(sum, purpose)
     });
   }
   /* ⭐ WHAT THE CHIT IS FROZEN WITH, in one shape (summary_json.money's names + by_rate · heads · lines): the invoice the
      counter determined, read out by CBTax.moneyOf — else the header's own summary_json.money — else null. A mapping, never a sum. */
-  function moneyFor(bj, summaryMoney, cur, sum) {
+  function moneyFor(bj, summaryMoney, cur, sum, expense) {
     if (bj && bj.invoice && root.CBTax && root.CBTax.moneyOf) return root.CBTax.moneyOf(bj.invoice, cur);
     if (summaryMoney && Object.keys(summaryMoney).length) return summaryMoney;
-    /* O7: an ORDER is not billed yet - the figure it was placed with is the header's own total_value (the same one the Chits list shows), read, never worked out */
+    if (expense && expense.amount != null && !isNaN(Number(expense.amount))) return { total: Number(expense.amount) }; /* FW-29: an expense's figure is the amount it was booked with */
+    return placedTotal(sum);
+  }
+  /** O7: an ORDER is not billed yet - the figure it was placed with is the header's own total_value (the same one the Chits list shows), read, never worked out */
+  function placedTotal(sum) {
     var tv = sum && sum.total_value != null ? sum.total_value : sum && sum.indicative_total != null ? sum.indicative_total : null;
     return tv != null && !isNaN(Number(tv)) ? { total: Number(tv) } : null;
   }
@@ -327,8 +350,16 @@
   }
   /** STD1: the server refused Accept on this bill (actions.accept, rail-actions.forBill) → its sentence; else null */
   function refusedAccept(m) {
-    var a = m && m.billRx ? m.may : null;
-    return a && a.ok === false ? a.say || (serverSaid(m) || {}).why || T('You cannot accept this bill now') : null;
+    var a = m && (m.billRx || m.expenseDoc) ? m.may : null;
+    return a && a.ok === false ? a.say || (serverSaid(m) || {}).why || T(m.expenseDoc ? 'This expense is already in your books' : 'You cannot accept this bill now') : null;
+  }
+  /** RW1-27: a bill already credited in full has nothing left to take back → the sentence the greyed Credit note button carries; else null */
+  function refusedReturn(m) {
+    return m && m.credit && m.credit.full ? T('This bill has already been credited in full, so there is nothing left to take back.') : null;
+  }
+  /** RW1-27: the counter opened at this bill's return (the till reads ?return= once and opens its one return sheet) */
+  function returnAddress(id) {
+    return '/till.html?return=' + encodeURIComponent(id);
   }
   /** FX-F10W2: the server refused Reject on this bill (actions.reject — the level alone) → its sentence; else null. needs: ['reason'] → ask it. */
   function refusedReject(m) {
@@ -353,7 +384,7 @@
     goodsin: ['📥', 'Goods in'],
     done: ['✔', 'Done'],
     print: ['🖨', 'Print'],
-    'return': ['↩', 'Return'],
+    'return': ['↩', 'Credit note'],
     repeat: ['🔁', 'Repeat this…'],
     page: ['↗', 'Open page']
   };
@@ -388,7 +419,24 @@
     if (!frozenLine || frozenLine.tax == null || Number(frozenLine.tax) === 0) return '';
     return '<div class="cs-tax" data-testid="cs-tax-' + index + '">' + esc(T('Tax')) + ' ' + esc(fmtMoney(frozenLine.tax, currency, '—')) + '</div>';
   }
+  /** FW-29: an expense has no lines — what it was · how it was paid · who is owed · the GST it carries, as business_json.expense holds them */
+  function expenseHTML(sheet) {
+    var x = sheet.expense,
+      row = function (label, value, tid) {
+        return '<div class="cs-row" data-testid="' + tid + '"><span>' + esc(T(label)) + '</span><span>' + esc(value) + '</span></div>';
+      },
+      heads = x.input_tax && typeof x.input_tax === 'object' ? Object.keys(x.input_tax).filter(function (k) { return Number(x.input_tax[k]) > 0; }) : [];
+    return (
+      '<div class="cs-sec">' + esc(T('Expense')) + '</div>' +
+      (x.what ? row('What', String(x.what), 'cs-exp-what') : '') +
+      (x.supplier ? row('Owed to', sheet.who, 'cs-exp-who') : '') +
+      (x.mode ? row('Paid', T(HOW[String(x.mode).toLowerCase().replace(/\s+/g, '')] || x.mode), 'cs-exp-mode') : '') +
+      heads.map(function (k) { return row('Includes ' + String(k).toUpperCase(), fmtMoney(x.input_tax[k], sheet.cur, '—'), 'cs-exp-tax-' + k); }).join('') +
+      '<div class="cs-mute" data-testid="cs-exp-booked">' + esc(T('Already in your books')) + '</div>'
+    );
+  }
   function linesHTML(m) {
+    if (m.expense) return expenseHTML(m);
     if (!m.lines.length) return '<div class="cs-mute">' + esc(T('No lines on this chit')) + '</div>';
     var ml = (m.money && m.money.lines) || [];
     return (
@@ -675,7 +723,7 @@
     return TITLE[m.purpose] || (m.purpose ? m.purpose.charAt(0).toUpperCase() + m.purpose.slice(1).replace(/_/g, ' ') : 'Task');
   }
   function kindWord(m) {
-    return m.counterBill ? 'Counter bill' : m.billRx ? 'Supplier bill' : 'Task';
+    return m.counterBill ? 'Counter bill' : m.billRx ? 'Supplier bill' : m.expenseDoc ? 'Expense' : 'Task';
   }
   /* SCREEN-ID: the sheet's kind = its screen code (app/screen-id.js bySheet) — the same code from whichever page opened it */
   function sheetKind(m) {
@@ -795,6 +843,10 @@
     return CS.el && document.body.contains(CS.el) ? CS.el : null;
   }
 
+  /** no GST block on the sheet: for an expense (its own tax lines are shown) and for an order not yet billed (nothing taxed to show) */
+  function noGstBlock(sheet) {
+    return !!(sheet.expense || (sheet.purpose === 'order' && !sheet.counterBill && !(sheet.money && sheet.money.by_rate)));
+  }
   function paint() {
     var node = host();
     if (!node) return;
@@ -833,7 +885,7 @@
       pageNoteHTML() + docHeadHTML(m) + /* AU-F-11: the document head, app/chit-doc-head.js */
       orderHTML(m) +
       linesHTML(m) +
-      (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstBlockHTML(m)) +
+      (noGstBlock(m) ? '' : gstBlockHTML(m)) +
       totalHTML(m) +
       tenderHTML(m) +
       (m.agreement
@@ -898,17 +950,18 @@
   function actsHTML(view) {
     var no = refusedAccept(view),
       noR = refusedReject(view),
+      noCredit = refusedReturn(view),
       items = actsOf(view).filter(function (item) {
         return !(CS.mode === 'page' && item === 'page');
       });
     /* UX-116 R60: a greyed action says why in a line on the page, not only in a tooltip a phone never shows */
-    var line = CS.sample ? '' : (items.indexOf('accept') >= 0 && no) || (items.indexOf('reject') >= 0 && noR) || '';
+    var line = CS.sample ? '' : (items.indexOf('accept') >= 0 && no) || (items.indexOf('reject') >= 0 && noR) || (items.indexOf('return') >= 0 && noCredit) || '';
     if (serverSaid(view) && serverSaid(view).why === line) line = ''; /* the body already says it */
     return (
       (line ? '<p class="cs-why" data-testid="cs-why">' + esc(line) + '</p>' : '') +
       items
         .map(function (item) {
-          var why = CS.sample ? T(SAMPLE_SAY) : item === 'accept' ? no : item === 'reject' ? noR : null,
+          var why = CS.sample ? T(SAMPLE_SAY) : item === 'accept' ? no : item === 'reject' ? noR : item === 'return' ? noCredit : null,
             refused = !!why; /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
           return (
             '<button data-cbsid="SCR050-B04" type="button" class="cs-act" data-testid="cs-act-' +
@@ -1065,15 +1118,38 @@
     }
   }
   async function read(id) {
-    var r = CS.sample ? root.CBChitSheetSample.read() : await api('chit', { params: { id: id } });
+    var r = CS.sample ? root.CBChitSheetSample.read() : await api('chit', { params: { id: id }, query: { with: 'credit' } }); /* w4ctr: ask for the credited figure, the read leaves it out otherwise */
     if (CS.id !== id) return;
     CS.chit = r;
     CS.view = model(r);
     CS.err = null;
+    supplierName(CS.view);
     /* the server's own answer to a move made here wins over a read that still shows the step it left (move) */
     var a = CS.answered[id];
     if (a && stepIn(CS.view.status, 'open') && !stepIn(a, 'open')) CS.view.status = a;
     paint();
+  }
+  /** FW-29: the supplier an expense is owed to, named from the party record (read once; a miss leaves "Supplier", never a guess) */
+  function supplierName(sheet) {
+    var id = sheet && sheet.expense && sheet.expense.supplier ? String(sheet.expense.supplier) : '';
+    if (!id || CS.supplier[id] || CS.sample) return;
+    CS.supplier[id] = '';
+    Promise.resolve()
+      .then(function () {
+        return api('crmParty', { params: { id: id } });
+      })
+      .then(function (rec) {
+        var name = rec && (rec.name || rec.display_name);
+        if (!name) return;
+        CS.supplier[id] = String(name);
+        if (CS.view === sheet) {
+          sheet.who = String(name);
+          paint();
+        }
+      })
+      .catch(function (e) {
+        if (typeof cblog === 'function') cblog('warn', 'chit sheet: the expense supplier name was not read — ' + ((e && e.message) || e));
+      });
   }
   /** seat the dialog where its place wants it: the skeleton's row (pane) or the body (page · popup); a dialog moves only when closed */
   function seat(node, place) {
@@ -1324,6 +1400,11 @@
       .then(function (said) { CS.busy = false; CS.note = said || null; return read(id); })
       .catch(fixFailed);
   }
+  /** Credit note: unless the bill is credited in full (greyed), open the till's own return sheet — one flow, one posting */
+  function openReturn(sheet, id) {
+    if (refusedReturn(sheet)) return;
+    if (root.location && id) root.location.href = returnAddress(id);
+  }
   function act(k) {
     var m = CS.view,
       id = CS.id;
@@ -1362,10 +1443,7 @@
       } catch (_) {}
       return;
     }
-    if (k === 'return') {
-      CS.note = T('Returns are made at the counter, against the bill.');
-      return paint();
-    }
+    if (k === 'return') return openReturn(m, id);
     if (k === 'dispute') return raiseDispute(id);
     if (k === 'repeat') {
       repeatCap().then(function (reply) {
@@ -1424,7 +1502,20 @@
     paint();
   }
 
+  /** RW1-27: Credit note from a page that holds only the bill's id (the Day book's sale entry): read the bill, then say why not (credited in full) or open the till's return — the same two answers as the sheet's button. → the sentence, or null when it opened */
+  function creditNote(id) {
+    return api('chit', { params: { id: id }, query: { with: 'credit' } }).then(function (r) {
+      var why = refusedReturn(model(r));
+      if (why) {
+        if (typeof root.toast === 'function') root.toast(why);
+        return why;
+      }
+      root.location.href = returnAddress(id);
+      return null;
+    });
+  }
   root.CBSheet = {
+    creditNote: creditNote,
     reject: reject,
     reason: function (v) {
       CS.reason = String(v == null ? '' : v);

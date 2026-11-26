@@ -91,7 +91,7 @@ async function run(site, o) {
     const ctx = await b.newContext({ viewport: { width: vw || 1366, height: vh || 800 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', route);
-    if (!o2.signedOut) await ctx.addInitScript((s) => { try { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); localStorage.setItem('cb_sess', s); } } catch (_) {} }, SESSION_INIT(o2.role));
+    if (!o2.signedOut) await ctx.addInitScript((s) => { try { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); localStorage.setItem('cb_sess', s); } } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, SESSION_INIT(o2.role));
     if (o2.prefs) await ctx.addInitScript((kv) => { try { if (!localStorage.getItem('__prefs')) { localStorage.setItem('__prefs', '1'); Object.keys(kv).forEach((k) => localStorage.setItem(k, kv[k])); } } catch (_) {} }, o2.prefs);
     return ctx;
   }

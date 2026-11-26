@@ -22,9 +22,9 @@ ok('group keys read with their tax name in capitals', () => {
   assert.strictEqual(ctx.g('gst_and_statutory'), 'GST and statutory');
   assert.strictEqual(ctx.g('trade_debtors'), 'Trade debtors');
 });
-ok('the Month lock column and the Months list say Income, tax out', () => {
-  assert.ok(/tx\('Income, tax out'\)/.test(app('cap-books-lock.js')) && !/Income before tax/.test(app('cap-books-lock.js')));
-  assert.ok(/'Income, tax out'/.test(app('books-grant-reports.js')) && !/Income before tax/.test(app('books-grant-reports.js')));
+ok('the Month lock column says Profit (FW-05: its cell holds the profit) and the Months list says Profit', () => {
+  assert.ok(/tx\('Profit'\)/.test(app('cap-books-lock.js')) && !/Income before tax/.test(app('cap-books-lock.js')));
+  assert.ok(/'profit_minor', 'Profit'/.test(app('books-grant-reports.js')) && !/Income before tax/.test(app('books-grant-reports.js')));
 });
 ok('a balance-sheet head that is one ledger is said once', () => assert.ok(/mine\.length === 1 && String\(mine\[0\]\.code\) === String\(headGroup\.code\)/.test(app('cap-books.js'))));
 console.log('\n' + n + ' checks');

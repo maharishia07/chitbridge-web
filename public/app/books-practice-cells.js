@@ -115,6 +115,7 @@
   function bankWords(r) {
     var b = r.bank || {};
     if (b.state === 'none') return practiceKit.translate('no bank statement signed');
+    if (b.state === 'no_run') return practiceKit.translate(b.words);
     if (b.state === 'unexplained') return practiceKit.translate('{a} unexplained').replace('{a}', bankLeft(r));
     return b.reconciled_to ? practiceKit.translate('Signed off to {d}').replace('{d}', practiceKit.dayWords(b.reconciled_to)) : practiceKit.translate('bank not to year end');
   }
@@ -168,7 +169,7 @@
   }
   function sheetHTML(client) {
     var y = client.year_end;
-    if (!y) return '<p class="sub" data-testid="practice-sheet-none-' + practiceKit.escapeHtml(client.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate('Books are not on for this client yet.')) + '</p>';
+    if (!y) return '<p class="sub" data-testid="practice-sheet-none-' + practiceKit.escapeHtml(client.entity_id) + '">' + practiceKit.escapeHtml(practiceKit.translate(client.books_on ? 'No financial year has ended yet for this client.' : 'Books are not on for this client yet.')) + '</p>'; /* W4-05: the CLIENT's own switch (books_on), never the firm's: books on and no ended year is not "books not on" */
     var e = y.entries, queryInfo = client.queries, locked = practiceKit.escapeHtml(y.locked) + ' ' + practiceKit.escapeHtml(practiceKit.translate('of')) + ' ' + practiceKit.escapeHtml(y.of);
     return '<div class="bp-sheet" data-testid="practice-sheet-' + practiceKit.escapeHtml(client.entity_id) + '">' +
       sheetLine(client, 'months', 'Months locked', locked, 'periods') +
@@ -191,6 +192,19 @@
     }).join('<br>') : say(tell('Unassigned'));
     return '<div class="bp-fig" data-testid="practice-holder-' + say(client.entity_id) + '"><span class="sub">' + say(tell('Held by')) + '</span><b>' + text + '</b></div>';
   }
+  /** the "Cash for those bills" figure: the withheld word when bills are not shown, "Covers them", or how many days the cash runs out in */
+  function cashForBillsHTML(health, held) {
+    if (health.bills_due_30_minor == null) return practiceKit.escapeHtml(held);
+    if (health.cash_days == null) return practiceKit.escapeHtml(practiceKit.translate('Covers them'));
+    return practiceKit.escapeHtml(practiceKit.translate('Runs out in')) + ' ' + practiceKit.escapeHtml(health.cash_days) + ' ' + practiceKit.escapeHtml(practiceKit.translate('days'));
+  }
+  /** the "Bank" figure in words: no statement · the api's own words for a broken run · reconciled to a date · else what is left unexplained */
+  function bankStateHTML(client) {
+    if (client.bank.state === 'none') return practiceKit.escapeHtml(practiceKit.translate('No statement'));
+    if (client.bank.state === 'no_run') return practiceKit.escapeHtml(practiceKit.translate(client.bank.words));
+    if (client.bank.state === 'reconciled') return practiceKit.escapeHtml(practiceKit.translate('Reconciled')) + ' ' + practiceKit.escapeHtml(practiceKit.translate('to')) + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(client.bank.reconciled_to));
+    return practiceKit.escapeHtml(bankLeft(client)) + ' ' + practiceKit.escapeHtml(practiceKit.translate('unexplained'));
+  }
   function detailHTML(client, band) {
     if (band === 'pipeline') return '<div class="bp-detail" data-testid="practice-detail-' + practiceKit.escapeHtml(client.entity_id) + '">' + holderLine(client) + sheetHTML(client) + practiceKit.stripHTML(client) + practiceKit.pairHTML(client) + whyLine(client) + '</div>';
     var health = client.health, held = withheldWord(client) || practiceKit.translate('Not shown');
@@ -201,9 +215,9 @@
       line('Margin this quarter', figureOrWhy(client, health.gross_margin_pct, practiceKit.escapeHtml(health.gross_margin_pct) + '%')) +
       line('Cash and bank', figureOrWhy(client, health.cash_minor, practiceKit.escapeHtml(practiceKit.money(health.cash_minor, client.currency)), true)) +
       line('Bills due in 30 days', health.bills_due_30_minor == null ? practiceKit.escapeHtml(held) : practiceKit.escapeHtml(practiceKit.money(health.bills_due_30_minor, client.currency))) +
-      line('Cash for those bills', health.bills_due_30_minor == null ? practiceKit.escapeHtml(held) : health.cash_days == null ? practiceKit.escapeHtml(practiceKit.translate('Covers them')) : practiceKit.escapeHtml(practiceKit.translate('Runs out in')) + ' ' + practiceKit.escapeHtml(health.cash_days) + ' ' + practiceKit.escapeHtml(practiceKit.translate('days'))) +
+      line('Cash for those bills', cashForBillsHTML(health, held)) +
       line('Customers owe, over 60 days late', health.receivables_over60_minor == null ? practiceKit.escapeHtml(held) : practiceKit.escapeHtml(practiceKit.money(health.receivables_over60_minor, client.currency)) + (health.receivables_over60_share_pct == null ? '' : ' (' + practiceKit.escapeHtml(health.receivables_over60_share_pct) + '%)')) +
-      line('Bank', client.bank.state === 'none' ? practiceKit.escapeHtml(practiceKit.translate('No statement')) : client.bank.state === 'reconciled' ? practiceKit.escapeHtml(practiceKit.translate('Reconciled')) + ' ' + practiceKit.escapeHtml(practiceKit.translate('to')) + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(client.bank.reconciled_to)) : practiceKit.escapeHtml(bankLeft(client)) + ' ' + practiceKit.escapeHtml(practiceKit.translate('unexplained'))) +
+      line('Bank', bankStateHTML(client)) +
       line('Profit this quarter', figureOrWhy(client, health.profit_quarter_minor, practiceKit.escapeHtml(practiceKit.money(health.profit_quarter_minor, client.currency)))) +
       line('Months not locked', practiceKit.escapeHtml(client.months_unlocked)) +
       line('Access ends', practiceKit.escapeHtml(practiceKit.dayWords(client.grant.expires_at)) + readOnlyChip(client, 'NET001-B10', 'practice-readonly-card')) +
@@ -220,7 +234,8 @@
   function bankCell(r) {
     var b = r.bank;
     if (b.state === 'none') return '<span class="sub">' + practiceKit.escapeHtml(practiceKit.translate('No statement')) + '</span>';
-    var to = practiceKit.escapeHtml(practiceKit.translate('to')) + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(b.reconciled_to));
+    if (b.state === 'no_run') return '<span data-testid="practice-bank-' + practiceKit.escapeHtml(r.entity_id) + '" class="sub">' + practiceKit.escapeHtml(practiceKit.translate(b.words)) + '</span>'; /* W4-02/W4-12: signed months, none in an unbroken run: the one sentence the Bank page and the trial balance use */
+    var to = b.reconciled_to ? practiceKit.escapeHtml(practiceKit.translate('to')) + ' ' + practiceKit.escapeHtml(practiceKit.dayWords(b.reconciled_to)) : practiceKit.escapeHtml(practiceKit.translate(b.words || 'bank not to year end'));
     return b.state === 'unexplained' ? '<span data-testid="practice-bank-' + practiceKit.escapeHtml(r.entity_id) + '">' + practiceKit.escapeHtml(bankLeft(r)) + ' ' + practiceKit.escapeHtml(practiceKit.translate('unexplained')) + '</span><br><span class="sub">' + to + '</span>' : practiceKit.escapeHtml(practiceKit.translate('Reconciled')) + ' <span class="sub">' + to + '</span>';
   }
   /** rank 10: the quiet warning on a row, the server's own count (never added up here): 'N since I checked', or 'N since access began' before the first Mark as checked; a link to the changed entries (the Day book, newest first). Nothing shows when it is 0. */

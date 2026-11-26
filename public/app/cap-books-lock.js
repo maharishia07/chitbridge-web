@@ -44,14 +44,23 @@ function bkLockRule(info, state) {
   return {
     may: mayLock,
     openMay: openMay,
-    byYear: !!(info && info.reopen && info.reopen.by_year), /* YE-F-05: locked by the year close — it opens with the year, so no Reopen month */
+    byYear: bkLockByYear(info), /* YE-F-05: locked by the year close — it opens with the year, so no Reopen month */
     why: lockWhy,
     who: bkLockWho(info, state),
-    blocked: state === 'open' ? !mayLock : state === 'soft_locked' && !openMay,
+    blocked: bkLockBlocked(state, mayLock, openMay),
     blockWhy: state === 'open' ? lockWhy : bkLockWhyWords(info, 'reopen')
   };
 }
-/** a month's income cell: a seat that may not read figures gets a dash, never "No sales" (STAFF-BOOKS) */
+/** was the month locked by the year close (the server's reopen.by_year) */
+function bkLockByYear(info) {
+  return !!(info && info.reopen && info.reopen.by_year);
+}
+/** is the month's button blocked: an open month by its lock rule, a soft-locked month by its reopen rule, any other state never */
+function bkLockBlocked(state, mayLock, openMay) {
+  if (state === 'open') return !mayLock;
+  return state === 'soft_locked' && !openMay;
+}
+/** a month's profit cell (its heading says Profit, FW-05: it held the profit under the words Income, tax out): a seat that may not read figures gets a dash, never "No sales" (STAFF-BOOKS) */
 function bkLockSalesWord(info) {
   if (info && info.sales_minor === undefined) return '—';
   if (info && info.profit_minor !== undefined && info.profit_minor !== null) return bkMoney(info.profit_minor); /* C-F-01: the P&L's income less expenses before tax, a loss month reads its loss */
@@ -202,7 +211,8 @@ function bkLockRowsPaint() {
   if (!el) return;
   if (typeof fxLockLine === 'function') fxLockLine();
   var foot = document.getElementById('lk_foot');
-  if (foot) foot.textContent = !own ? '' : tx('A locked month opens again with a reason, asked when you press Open again. A closed month opens again only if it is the newest closed month: the owner gives a reason and it is logged.');
+  var toLock = BK.lk && BK.lk.toLock; /* W4-13: the server's one count of months to lock, the same the year box and the practice list say */
+  if (foot) foot.textContent = (toLock == null ? '' : txn('{count} month to lock', '{count} months to lock', toLock) + '. ') + (!own ? '' : tx('A locked month opens again with a reason, asked when you press Open again. A closed month opens again only if it is the newest closed month: the owner gives a reason and it is logged.'));
   var rows = bkMonths()
     .map(function (item, index) {
       return bkLockRowHTML(item, index, own);
@@ -218,7 +228,7 @@ function bkLockRowsPaint() {
     '</th><th class="num">' +
     tx('Entries') +
     '</th><th class="num">' +
-    tx('Income, tax out') +
+    tx('Profit') +
     '</th><th></th></tr></thead><tbody>' +
     rows +
     '</tbody></table></div>';
@@ -324,7 +334,7 @@ async function bkLockDo(what, period, reason, amend) {
       key: 'lk-' + fiscalYear + '-' + period,
       out: 'lk_out',
       failed: tx('Could not change it'),
-      confirm: bkLockConfirm(what, monthName, calendarYear),
+      confirm: what === 'unlock' || what === 'reopen' ? undefined : bkLockConfirm(what, monthName, calendarYear), /* opening a month again asks for its REASON in its own popup (bkLockReopen): the Lock question ("Lock Nov 2026?") was being put to the person opening it */
       onFail: function (words, failure) { bkLockRefused(what, period, words, failure); },
       /* after the server answers: flip the one month row, then reload the periods */
       outcome: function (answer) {

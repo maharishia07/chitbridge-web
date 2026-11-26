@@ -45,7 +45,7 @@ W.run('bill-total', async (w) => {
     if (p === '/api/folders') return J(r, 200, { folders: [] });
     return J(r, 200, {});
   });
-  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
+  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Fixture Owner', 'Fixture Shop'));
   const fits = () => page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth, clipped: [...document.querySelectorAll('[data-testid^="bill-not-confirmed"]')].filter((e) => e.scrollWidth > e.clientWidth + 1 && e.dataset.testid === 'bill-not-confirmed').length }));
   /* the Amount column's own cell for a chit (the column is the shopkeeper's pick and needs width: this runs the page's own mapper and cell over the api row and reads what it paints, as text) */
   const amountCell = (key) => page.evaluate((raw) => { const chit = mapApiChit(raw); const html = LISTCOLS.find((col) => col.key === 'amount').cell(chit); const box = document.createElement('div'); box.innerHTML = html; return box.innerText.replace(/s+/g, ' '); }, row(key));

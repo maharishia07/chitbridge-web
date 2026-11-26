@@ -12,7 +12,7 @@ const MONTHS = ['July', 'August', 'September', 'October', 'November', 'December'
 /* ── Month lock: the bar ── */
 function lockCx(info, rows) {
   const cx = vm.createContext({ tx: (s) => s, esc: (s) => String(s), BK: { lk: { fy: '2026-27', rows, info } }, bkMonths: () => MONTHS, bkMountAttribute: () => '', CBLockWords: { whoOf: () => ({ line: '', note: '', all: [] }), whyOf: (x, k) => (x && x[k] && x[k].why) || '' } });
-  vm.runInContext(liftFns('public/app/cap-books-lock.js', ['bkLockWho', 'bkLockWhyWords', 'bkLockRule', 'bkLockBarHTML', 'bkLockOpenButton', 'bkLockButtonsHTML', 'bkLockSoftButtons', 'bkLockHardButton', 'bkLockSoftCount']) + '\nthis.bar = bkLockBarHTML; this.btn = bkLockButtonsHTML;', cx);
+  vm.runInContext(liftFns('public/app/cap-books-lock.js', ['bkLockWho', 'bkLockWhyWords', 'bkLockRule', 'bkLockByYear', 'bkLockBlocked', 'bkLockBarHTML', 'bkLockOpenButton', 'bkLockButtonsHTML', 'bkLockSoftButtons', 'bkLockHardButton', 'bkLockSoftCount']) + '\nthis.bar = bkLockBarHTML; this.btn = bkLockButtonsHTML;', cx);
   return cx;
 }
 const WHY = 'Only the owner may do this.';
@@ -46,5 +46,5 @@ const bank = src('app/cap-bank-home.js');
 const missLines = bank.split('\n').filter((l) => l.includes('bank-stmts-miss-'));
 assert.strictEqual(missLines.length, 2);
 missLines.forEach((l) => { assert.ok(l.includes('class="sr-only"') && l.includes('aria-hidden="true">○'), 'a gap cell shows a mark, the words stay for a screen reader: ' + l.slice(0, 60)); });
-assert.ok(/<div class="pe-note bkh-key"[^\n]*○ ' \+ bkhE\(tx\('Not signed off'\)\)/.test(bank), 'the key says it once');
+assert.ok(/<div class="pe-note bkh-key"[^\n]*○ ' \+ bkhE\(tx\('no statement kept'\)\)/.test(bank), 'the key says it once (RW3-24: the gap cell and the key read the same words)');
 console.log('grey-au-1129: all passed');

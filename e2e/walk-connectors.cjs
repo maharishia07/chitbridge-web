@@ -34,7 +34,7 @@ W.run('connectors', async (w) => {
   await ctx.route('**/api/integrations/catalogue', (r) => r.fulfill(J(catalogue(country))));
   await ctx.route('**/api/integrations/status', (r) => r.fulfill(J({ connectors: [] })));
   await ctx.route('**/api/integrations/download/**', (r) => { downloads.push(r.request().url()); return r.fulfill(J({}, 409)); });
-  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
+  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Fixture Owner', 'Fixture Shop'));
 
   const open = async () => {
     await page.goto(base + '/app.html'); await page.waitForFunction(() => typeof window.navTo === 'function', null, { timeout: 20000 });

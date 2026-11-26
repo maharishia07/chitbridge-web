@@ -3,6 +3,7 @@
 /**
  * bank-truth-1129.test.cjs - fixBankTruth (batch 1129, BANK-SCREEN-TRUTH), no browser.
  *
+ * FINDINGS  BANK-TRUTH b, BANK-TRUTH c, BANK-TRUTH d, BANK-TRUTH e (register ids; retest 1130 names them so the coverage map credits this file).
  * OWNS      the proof that (b) the confirm popup's money is what WILL post: lines in a locked month are held on the proposal, so the REAL vendored engine leaves them out of its own totals
  *           (and the popup names them apart); (c) an opening with no books balance is "none" even when an engine check ran; (d) a trial-balance bank state the page does not know never reads
  *           "nothing unexplained"; (e) a failed Add never says "Every statement line is in the books"; (a) a tax-invoice answer stays on its own line (also in bank-ui-answers.test.cjs).

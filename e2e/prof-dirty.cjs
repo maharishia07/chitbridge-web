@@ -28,7 +28,7 @@ const sandbox = {
   tx: (s) => s, esc: (s) => String(s), toast(){}, modal(){}, closeModal(){},
   renderApp(){}, loadProfile(){}, _capShowDetail(){}, api: async () => ({}),
   MSG: { profileSaved: () => 'ok' }, opt: () => '', CBLocale: { region: () => 'IN' },
-  govCardHTML: () => '', location: { origin: '', host: '' }, setTimeout: () => 0,
+  govCardHTML: () => '', location: { origin: '', host: '' }, setTimeout: () => 0, addEventListener() {} /* cap-admin forgets a minted key on pagehide (p2wave-sec, bdad61a57) */,
   localStorage: { getItem: () => null }, fetch: async () => ({ ok: false }),
 };
 sandbox.window = sandbox; sandbox.globalThis = sandbox;

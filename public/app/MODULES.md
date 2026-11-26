@@ -285,7 +285,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `till-dayrep.js` | — | THE DAY REPORT'S AGGREGATION AND TABLES, a part of the till page (till.html) kept in its own file to hold the page's size row (2026-11-28; no behaviou |
 | `till-slip.js` | — | THE SLIP, a part of the till page (till.html) kept in its own file to hold the page's size row |
 | `ui-field.js` | eager |  |
-| `ui-money.js` | — |  |
+| `ui-money.js` | eager |  |
 | `ui-select.js` | — |  |
 | `ui-standard.js` | — |  |
 | `ui.js` | eager |  |
@@ -310,7 +310,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | page | app/ scripts | what it is |
 |---|---|---|
 | `accounts.html` | 110 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
-| `app.html` | 62 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
+| `app.html` | 63 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 20 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 26 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
 | `bill-print.html` | 3 | the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by |
@@ -325,14 +325,14 @@ Each page is a module of its own (its inline script and header). The count is th
 | `embed.html` | 7 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
 | `employees.html` | 32 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
 | `finance.html` | 70 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
-| `intake.html` | 4 | the intake inbox: captured messages waiting to become chits (/api/capture/pending). |
+| `intake.html` | 5 | the intake inbox: captured messages waiting to become chits (/api/capture/pending). |
 | `iot-howitworks.html` | 0 | the how-IoT-works showcase page: a standalone explainer with no data |
 | `know-your-business.html` | 20 | the Know your business page: the shop's registrations, licences and filings as the server knows them. |
 | `lifecycle-test.html` | 2 | the IoT lifecycle live check: register, connect a device, ingest, verify. |
 | `list-lab.html` | 15 | the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches. |
 | `network-design.html` | 15 | the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), p |
 | `network-shop.html` | 6 | a network member's shop front: the brand's catalogue as this shop sells it (?bridge=). |
-| `network.html` | 53 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
+| `network.html` | 55 | the Network page: the networks this shop is in, the requests to join and the offers across them (may/why per row). |
 | `offer-lab-next.html` | 18 | the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum. |
 | `offer-lab.html` | 0 | the retired old Offer Lab address: it only forwards |
 | `operations.html` | 30 | the Operations page: counters · connectors · the day (open · close) · the queue — what runs in the shop and whether it is well. |

@@ -26,6 +26,13 @@
   if (root.CBSides) return;
   var doc = root.document;
 
+  /* RW3-21 (walk 3): the server's builder words (Constitution, Jurisdiction, Boilerplate, Blueprint) never reach a customer screen: ONE map, applied to every row's name and line */
+  var PLAIN = [[/^Jurisdiction · version not recorded$/, 'Country rules · version not noted'], [/^Constitution$/, 'Your shop rules'], [/^Boilerplate\b/, 'Starting setup'], [/^Blueprint\b/, 'Starting layout'], [/^Jurisdiction$/, 'Country rules'], [/^Standards$/, 'Standards']];
+  function plainWord(text) {
+    var out = String(text == null ? '' : text);
+    PLAIN.forEach(function (rule) { out = out.replace(rule[0], rule[1]); });
+    return out;
+  }
   var W = {
     lean: 'We lean on',
     use: 'Leans on us',
@@ -33,7 +40,7 @@
     subR: 'Who relies on what we hold.',
     g: {
       rules: 'Rules we follow',
-      mould: 'Mould we came from',
+      mould: 'Where we started from',
       content: 'Content we draw on',
       systems: 'Systems we read',
       buy: 'We buy from',
@@ -174,9 +181,9 @@
         '" data-s="' +
         esc(r.s || '') +
         '"><div class="cbsd-tx"><div class="cbsd-nm">' +
-        esc(r.n) +
+        esc(plainWord(r.n)) +
         '</div><div class="cbsd-mt">' +
-        esc(r.m) +
+        esc(plainWord(r.m)) +
         '</div>' +
         act +
         '</div>' +

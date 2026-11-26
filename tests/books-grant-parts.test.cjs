@@ -27,7 +27,7 @@ const t = (name, fn) => {
   } catch (e) { fail(e); }
 };
 
-const PARTS = ['public/app/books-grant-reports.js', 'public/app/books-grant-cells.js', 'public/app/books-grant-marks.js', 'public/app/books-grant-list.js', 'public/app/books-grant-view.js'];
+const PARTS = ['public/app/ui-field.js', 'public/app/ui-money.js', 'public/app/books-grant-reports.js', 'public/app/books-grant-cells.js', 'public/app/books-grant-marks.js', 'public/app/books-grant-list.js', 'public/app/books-grant-view.js'];
 const DOOR = 'public/app/books-clients-door.js', API = 'public/app/books-grant-api.js';
 function load(extra) {
   const root = Object.assign({
@@ -202,6 +202,19 @@ t('FC-M10: Who owes whom ties out to the trial balance from the server tb_contro
   assert.strictEqual(paint({ customer: { list_minor: 100, tb_minor: 100, differs_minor: 0 }, supplier: { list_minor: null, tb_minor: null, differs_minor: null } }).indexOf('Creditors'), -1, 'a side the reader may not see is not said');
   assert.strictEqual(paint(undefined), '', 'no control from the server, no line');
   assert.strictEqual(kit.queryOf(report('dues')).control, '1', 'the dues read asks for the control');
+});
+/* AT-04 (walk 25 Nov): box 9 "Your payment or refund amount" and the header chip "To pay or refund" are ONE figure. Hand figures: 1A 12000 - 1B 8000 = 4000 (A$40.00 to pay); a nil return is 0 in both, never an empty cell. */
+t('the return: box 9 cell and the To pay or refund chip carry the same figure (two carried totals compared)', () => {
+  [[12000, 8000, 4000], [0, 0, 0], [3000, 9000, -6000]].forEach(([oneA, oneB, nine]) => {
+    state({ report: 'bas', answer: { currency: 'AUD', net_minor: nine, boxes: [{ code: '1A', amount_minor: oneA, tax_minor: null }, { code: '1B', amount_minor: oneB, tax_minor: null }, { code: '9', amount_minor: nine, tax_minor: null }] } });
+    const bas = report('bas');
+    const row9 = bas.rows(kit.viewState.answer).filter((b) => b.code === '9')[0];
+    assert.ok(row9, 'box 9 is a row');
+    const cell = kit.figure(row9, bas.cols[2]);
+    const chip = kit.facts(bas).replace(/<[^>]*>/g, '');
+    assert.ok(cell !== '', 'box 9 amount is never an empty cell (' + nine + ')');
+    assert.ok(chip.indexOf(': ' + cell) >= 0, 'chip "' + chip + '" shows the cell figure "' + cell + '"');
+  });
 });
 const doorSource = fs.readFileSync(path.join(__dirname, '..', DOOR), 'utf8');
 t('the clients door reads the grants list once per sign-in and draws nothing without a token', () => {

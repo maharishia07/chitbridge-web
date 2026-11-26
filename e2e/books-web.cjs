@@ -107,6 +107,13 @@ async function route(S, r) {
     }
     if (p === '/api/books/dues') { const d = S.dues(); return J(r, 200, books.dues(d.parties, { asOf: d.as_of })); }
     if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const st = S.statement(x[1]); return J(r, 200, books.statement(x[1], { opening_minor: st.opening_minor, closing_minor: st.closing_minor, lines: st.lines })); }
+    /* GET /party/:id/bills: one party's open bills for the Dues and CRM next levels (W15-107): the tabs' counts, the one ageing (the stand-in's dues put every open bill in 31-60), the on-account line */
+    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/bills$/)) && m === 'GET') {
+      const open = (S.items[x[1]] || []).filter((i) => i.open_minor !== 0), tab = u.searchParams.get('tab') || 'open', needs = open.filter((i) => i.disputed);
+      const rows = (tab === 'needs' ? needs : open).map((i) => ({ entry_id: 'e-' + i.chit, chit_id: i.chit, bill_no: i.bill_no, ref: i.bill_no, date: i.date, due_date: i.due_date, amount_minor: Math.abs(i.orig || i.open_minor), owed_minor: Math.abs(i.open_minor), status: 'unpaid', reasons: i.disputed ? ['disputed'] : [], days_overdue: 0, no_terms: false, mark: null }));
+      const aged = open.filter((i) => !i.disputed).reduce((a, i) => a + Math.abs(i.open_minor), 0);
+      return J(r, 200, { bills: rows, total: rows.length, page: 1, limit: 50, counts: { needs: needs.length, open: open.length, all: open.length, paid: 0, in_order: open.length - needs.length }, bands: aged ? { d31_60: aged } : {}, on_account_minor: 0, currency: 'INR' });
+    }
     const billsOf = (id) => S.items[id].filter((i) => i.open_minor !== 0).map((i) => Object.assign({}, i, { open_minor: Math.abs(i.open_minor) }));
     const nameOf = (id) => ((S.customers.find((c) => c.customer_identity_id === id) || {}).display_name) || ((S.suppliers.find((s) => s.supplier_entity_id === id) || {}).display_name) || 'this party';
     if (p === '/api/books/payments/preview' && m === 'POST') return J(r, 200, books.payPreview(billsOf(body.party_id), body, nameOf(body.party_id)));
@@ -226,6 +233,8 @@ async function route(S, r) {
     { folder_id: 'f-b2100', parent_id: null, name: 'Bills · Received', code: 'B-2100', kind: 'view', system: true, scope: null, side: 'received', count: 0, total: 0 },
     { folder_id: 'f-b1300', parent_id: null, name: 'Bills · Issued', code: 'B-1300', kind: 'view', system: true, scope: null, side: 'issued', count: 0, total: 0 }] });
   if (/^\/api\/folders\/[^/]+\/chits$/.test(p) && m === 'GET') return J(r, 200, { chits: [] });
+  /* the app reads whether the Ledger is on from /me (ledger_on, noteLedgerOn): it no longer asks GET /books/health on the first screen */
+  if (p === '/api/entities/me' && m === 'GET') return J(r, 200, { entity: { display_name: 'Books Shop', currency_code: 'INR', ledger_on: !!S.enabled } });
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }
@@ -251,7 +260,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     await ctx.addInitScript(() => { try {
       const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
       const tok = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-books', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
-      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: 'Books Shop' })); } catch (_) {} });
+      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: 'Books Shop' })); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html now lands on Home; this run drives the app shell itself */ });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
     await p.goto(base + '/app.html#/app');
@@ -368,7 +377,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(JSON.stringify(order1) === JSON.stringify(['cust-row-c1', 'cust-row-c2']) && JSON.stringify(order2) === JSON.stringify(['cust-row-c2', 'cust-row-c1']), 'a click on the Party no heading sorts by it, a second click reverses it');
   await p.click('[data-testid="cust-row-c1"] [role="button"]'); await p.waitForSelector('[data-testid="crm-next-c1"]', { timeout: 8000 }).catch(() => {});
   await p.waitForFunction(() => /INV-1/.test((document.querySelector('[data-testid="crm-next-c1"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-  ok(/INV-1/.test(await p.textContent('[data-testid="crm-next-c1"]')) && /3 orders/.test(await p.textContent('[data-testid="crm-next-c1"]')), 'a customer\'s next level: its orders and its bills (read once, on the first open)');
+  ok(/INV-9/.test(await p.textContent('[data-testid="crm-next-c1"]')) && /2 bills in order/.test(await p.textContent('[data-testid="crm-next-c1"]')) && /3 orders/.test(await p.textContent('[data-testid="crm-next-c1"]')), 'a customer\'s next level: its orders and its bills, opening on Needs you (the disputed INV-9) with the other two folded as "in order" (read once, on the first open)');
   await p.click('[data-testid="cust-row-c1"] [role="button"]');
   await p.evaluate(() => { UI[lwKey()] = 340; document.getElementById('panel').style.setProperty('--lw', '340px'); paintCustList(); });
   await p.click('[data-testid="cust-row-c1"]');
@@ -416,6 +425,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
   await p.fill('[data-testid="pay_amt"]', '4000');
   await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 8000 });
+  /* the rows paint from the bills first and take the proposal when the preview answers: read them once it has */
+  await p.waitForFunction(() => { const e = document.querySelector('[data-testid="alloc-2"]'); return !!e && Number(e.value) === 1000; }, null, { timeout: 8000 }).catch(() => {});
   ok(S.payPosts.length === 0 && /^Record$/.test((await p.textContent('[data-testid="pay_record"]')).trim()) && !/Later/.test(await p.evaluate(() => document.body.innerText)), 'the bills table appears from the preview with nothing recorded yet; the button says Record and there is no "Later"');
   const rows = await p.$$eval('[data-testid^="alloc-row-"]', (els) => els.map((e) => e.textContent));
   const vals = await p.$$eval('[data-testid^="alloc-"]:not([data-testid^="alloc-row"])', (els) => els.map((e) => ({ v: e.value, d: e.disabled })));
@@ -432,7 +443,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(S.payPosts.length === 0 && /more than that bill/i.test(await p.textContent('[data-testid="pay_why"]')), 'more than a bill has open is refused');
   await p.fill('[data-testid="alloc-1"]', '2000'); await p.fill('[data-testid="alloc-2"]', '2000');
   const left = await p.textContent('[data-testid="pay_left"]');
-  ok(/settles 2 bills/.test(left) && !/advance/.test(left), 'changed: 2,000 + 2,000 — the line says 2 bills and nothing is left over (' + left + ')');
+  ok(/part-pays 2 bills/.test(left) && /1,000\.00 still open/.test(left) && !/advance/.test(left), 'changed: 2,000 + 2,000 — INV-1 has 3,000 open, so the line says 2 bills part-paid and 1,000 still open (' + left + ')');
   /* ⚠️⚠️ review M11 — ONE TAP, ONE PAYMENT: the button is dead while its call is out, and a second press records nothing */
   S.slowRecord = 900;
   await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 }); /* R102b: Record asks first */
@@ -446,7 +457,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/^web-[a-z0-9]+-[0-9a-f]+$/.test(String(S.payPosts[0].client_ref || '')), 'the payment carries a client_ref made when the form opened (' + S.payPosts[0].client_ref + ')');
   const c0 = S.payPosts[0] || {};
   ok(JSON.stringify(c0.allocations) === JSON.stringify([{ against_ref: 'b1', amount_minor: 200000 }, { against_ref: 'b2', amount_minor: 200000 }]), 'recorded WITH the CHANGED allocation, in minor units, in the same call');
-  ok(/Received ₹4,000 cash from Ravi Stores\. Settled 2 bills/.test(await p.textContent('[data-testid="pay_outcome"]')) && /INV-1, INV-2/.test(await p.textContent('[data-testid="pay_settled"]')), 'the outcome says what happened and names the bills settled');
+  ok(/Received ₹4,000 by bank from Ravi Stores\./.test(await p.textContent('[data-testid="pay_outcome"]')) && /INV-2/.test(await p.textContent('[data-testid="pay_settled"]')), 'the outcome says what happened and names the bills settled');
   await p.click('[data-testid="pay_done"]');
   await p.waitForFunction(() => /3,500/.test((document.querySelector('[data-testid="party-books-c1"] [data-testid="party-balance"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/3,500/.test(await p.textContent('[data-testid="party-books-c1"] [data-testid="party-balance"]')), 'balance repainted after the payment: 3,500');
@@ -486,14 +497,14 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const E1 = 'JV/2026-27/000001', E2 = 'JV/2026-27/000002', E3 = 'JV/2026-27/000003', E4 = 'JV/2026-27/000004';
   const t1 = await headOf('db-src-JV/2026-27/000001-at');
   ok(await p.locator('#bk_dvlist.tbllines, #bk_dvlist .lhead').count() >= 1 && await p.locator('#bk_dvlist .lrow').count() > 0 && await p.locator('.bkdv-row').count() === 0, 'day book: drawn by the Task table (.lhead / .lrow), and no .bkdv-row of its own');
-  ok(/\d{1,2}:\d{2}/.test(t1) && await dbCell(E1, 'Bill') === 'C2/26-27/0002 ' + t1 && await dbCell(E1, 'Kind') === 'Sales' && await dbCell(E1, 'Party') === 'Ravi Stores' && await dbCell(E1, 'Tender') === 'On credit' && await dbCell(E1, 'Counter') === 'Counter C2 · rung by Athi',
+  ok(/\d{1,2}:\d{2}/.test(t1) && await dbCell(E1, 'Bill') === 'C2/26-27/0002 ' + t1 && await dbCell(E1, 'Kind') === 'Sales' && await dbCell(E1, 'Party') === 'Ravi Stores' && await dbCell(E1, 'Tender') === 'On credit' && await dbCell(E1, 'Counter') === 'Counter 2 · rung by Athi',
     'day book: a bill entry — its bill and time, kind, party, how it was paid, counter, and "rung by" in the secondary text, one fact a column ("' + await dbCell(E1, 'Bill') + '" · "' + await dbCell(E1, 'Counter') + '")');
   ok(await dbCell(E1, 'Party') !== 'Athi' && !/Athi/.test(await dbCell(E1, 'Party')) && !/Counter/.test(await dbCell(E1, 'Party')), 'day book: the person who rang the bill and the counter are never in the Party column');
   ok(!/recorded/.test(await dbCell(E1, 'Bill')) && await p.locator('[data-testid="db-src-JV/2026-27/000001-rec"]').count() === 0, 'day book: recorded the same day as the bill → no "recorded" note');
-  ok(await dbCell(E2, 'Bill') === 'Walk-in day · 12 bills' && /^Cash \S*1,240\.00 · UPI \S*860\.00 · Card \S*300\.00$/.test(await dbCell(E2, 'Tender')) && await dbCell(E2, 'Counter') === 'Counter C2', 'day book: a walk-in day says how many bills, its cash / UPI / card split, which counter ("' + await dbCell(E2, 'Bill') + '" · "' + await dbCell(E2, 'Tender') + '")');
+  ok(await dbCell(E2, 'Bill') === 'Walk-in day · 12 bills' && /^Cash \S*1,240\.00 · UPI \S*860\.00 · Card \S*300\.00$/.test(await dbCell(E2, 'Tender')) && await dbCell(E2, 'Counter') === 'Counter 2', 'day book: a walk-in day says how many bills, its cash / UPI / card split, which counter ("' + await dbCell(E2, 'Bill') + '" · "' + await dbCell(E2, 'Tender') + '")');
   ok(await dbCell(E3, 'Bill') === 'Payment received' && await dbCell(E3, 'Party') === 'Ravi Stores', 'day book: an entry with no chit shows its own word in the Bill column ("' + await dbCell(E3, 'Bill') + '")');
   const t4 = await headOf('db-src-JV/2026-27/000004-at');
-  ok(/\d{1,2}:\d{2}/.test(t4) && await dbCell(E4, 'Bill') === 'R/C2/0001 ' + t4 + ' recorded 01 Oct' && await dbCell(E4, 'Kind') === 'Receipts' && await dbCell(E4, 'Tender') === 'UPI 4421…9931' && await dbCell(E4, 'Counter') === 'Counter C2 · rung by Athi',
+  ok(/\d{1,2}:\d{2}/.test(t4) && await dbCell(E4, 'Bill') === 'R/C2/0001 ' + t4 + ' recorded 01 Oct' && await dbCell(E4, 'Kind') === 'Receipts' && await dbCell(E4, 'Tender') === 'UPI 4421…9931' && await dbCell(E4, 'Counter') === 'Counter 2 · rung by Athi',
     'day book: money received — its number and time, UPI and its reference, counter, who — and, taken in late, "recorded 01 Oct" ("' + await dbCell(E4, 'Bill') + '")');
   const opened = await p.evaluate(async () => {
     const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); };
@@ -695,7 +706,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }), p.click('[data-testid="db-csv"]')]);
     const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^﻿/, '').split('\r\n').filter(Boolean);
     ok(csv[0] === 'date,no,kind,party,ref,how,counter,by,made_by,currency,dr,cr,gist' && csv.length === 1 + wantRavi.length, 'views: Download CSV — a header and one line per shown row (' + (csv.length - 1) + ' of ' + wantRavi.length + ')');
-    ok(csv[1].indexOf('2026-07-02,JV/2026-27/000001,Sales,Ravi Stores,C2/26-27/0002,On credit,C2,Athi,3000.00,3000.00,') === 0 && /GST 457\.62/.test(csv[1]), 'views: the CSV line carries date, number, kind, party, ref, how, counter, by, Dr, Cr and the gist');
+    ok(csv[1].indexOf('2026-07-02,JV/2026-27/000001,Sales,Ravi Stores,C2/26-27/0002,On credit,C2,Athi,,INR,3000.00,3000.00,') === 0 && /GST 457\.62/.test(csv[1]), 'views: the CSV line carries date, number, kind, party, ref, how, counter, by, Dr, Cr and the gist');
     await clear();
     await noAccounting(p, 'day book views');
   }
@@ -712,7 +723,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.waitForSelector('[data-testid="stmt-what-0"]', { timeout: 8000 }).catch(() => {});
   const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');
   const lt0 = await headOf('stmt-src-0-at');
-  ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' recorded 01 Oct' && l1 === 'Payment received JV/2026-27/000003', 'ledger: Details says the kind and its bill once ("' + l0 + '" · "' + l1 + '"); tender, counter and who rang it are their own columns in ⚙');
+  ok(l0 === 'Sale · Bill C2/26-27/0002' && l1 === 'Payment received JV/2026-27/000003', 'ledger: Details says the kind and its bill once ("' + l0 + '" · "' + l1 + '"); tender, counter and who rang it are their own columns in ⚙');
   /* the Ledgers quick fixes (2026-10-03): the kind word once · one opening/closing line in Dr/Cr · no minus · nothing cut off */
   {
     /* the Ledgers head keeps the figures inline on a laptop and folds two or more notices into ONE chip (foldHead); on a phone the figures are in its popover */
@@ -750,7 +761,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.waitForSelector('[data-testid="dues-next-c1"]', { timeout: 5000 }).catch(() => {});
   ok(/1,000/.test(await p.textContent('[data-testid="dues-next-c1"]')), 'dues: the disputed amount is on the party\'s next level');
   /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS bucket, not only the total */
-  const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
+  const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="band-' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
+  for (const id of ['s1', 'c1']) { await p.click('[data-testid="dues-next-' + id + '"] [data-testid="bills-tab-open"]'); await p.waitForSelector('[data-testid="dues-next-' + id + '"] [data-b="band-d31_60"]', { timeout: 5000 }).catch(() => {}); }   /* the age bands belong to Open / All; Needs you (the default) lists only what needs you */
   ok(/2,500/.test(String(await cellOf('s1', 'd31_60'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "31–60 days" in its own group (' + await cellOf('s1', 'd31_60') + ')');
   ok(String(await cellOf('c1', 'd31_60') || '').length > 0 && await cellOf('c1', 'other') === null && await cellOf('s1', 'other') === null, 'dues: a customer and a supplier read the SAME five ages, and there is no "Other" (W15-94)');
   await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-dues-laptop.png') });
@@ -809,22 +821,27 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   /* month lock blocks a payment in that month; opening again needs a reason */
   await p.click('[data-testid="acc-nav-lock"]'); await p.waitForSelector('[data-testid="lk-row-12"]');
   const sep = String((new Date().getMonth() + 9) % 12 + 1);
+  /* GREY-AU U-F-10: an open month has no Lock of its own; the ONE Lock is in the bar and acts on the OLDEST open month. This run locks this month, so the months before it are already closed. */
+  for (let m = 1; m < +sep; m++) S.locked[m] = true;
+  await p.reload(); await p.waitForSelector('[data-testid="lk-row-12"]');
   ok(await p.locator('[data-testid^="lk-row-"]').count() === 12 && await p.inputValue('[data-testid="lk_fy"]') === FYNOW, 'Month lock: the financial year is a picker on the current year, and the twelve months are rows');
   ok(await p.locator('[data-testid="lk-state-' + sep + '"][data-state="open"]').count() === 1 && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0 && await p.locator('[data-testid="lk-lock-' + sep + '"]').count() === 1, 'an open month offers Lock, not Open again');
   ok(/closed month opens again only/.test(await p.textContent('[data-testid="lk_note"]')) && /newest closed month/.test(await p.textContent('[data-testid="lk_note"]')), 'Close month is explained in one line');
-  await p.click('[data-testid="lk-lock-' + sep + '"]');
+  await p.click('[data-testid="lk-lock-' + sep + '"]'); await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 }); await p.click('[data-testid="confirm-ok"]');   /* E12: Lock is a commit, it asks first */
   await p.waitForFunction((n) => /Locked/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 1 && await p.locator('[data-testid="lk-hard-' + sep + '"]').count() === 1, 'this month locked: its row now says Locked and offers Open again and Close for good');
   await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });   /* back from CB Accounts to the app */
   await p.evaluate(() => navTo('customers'));
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
-  await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
+  await p.selectOption('[data-testid="pay_mode"]', 'bank');   /* the form remembers the last mode (the cheque before); this one is a plain payment */
+  await p.fill('[data-testid="pay_amt"]', '100'); await p.waitForTimeout(1200);
+  await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
   await p.waitForFunction(() => /locked/.test((document.querySelector('[data-testid="pay_why"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/locked/.test(await p.textContent('[data-testid="pay_why"]')) && await p.locator('[data-testid="pay_outcome"]').count() === 0, 'a payment in a locked month is refused, and the form says why');
   /* M11: pressing Next again on the SAME form is a retry — it carries the same client_ref, so the server can answer with what it kept */
   const nPosts = S.payPosts.length;
-  await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
+  await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 3000 }).catch(() => {});
   for (let i = 0; i < 40 && S.payPosts.length === nPosts; i++) await p.waitForTimeout(100);
   ok(S.payPosts.length === nPosts + 1 && S.payPosts[nPosts].client_ref && S.payPosts[nPosts].client_ref === S.payPosts[nPosts - 1].client_ref, 'a retry from the same form sends the SAME client_ref');
   await p.evaluate(() => closeModal());
@@ -841,7 +858,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(S.locked[+sep] === false && S.lastLock.body.reason === 'late bill from Agro Mills', 'opened again, with the reason sent');
 
   /* close for good: asks first; Cancel sends nothing, Yes sends hard */
-  await p.click('[data-testid="lk-lock-' + sep + '"]');
+  await p.click('[data-testid="lk-lock-' + sep + '"]'); await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 }); await p.click('[data-testid="confirm-ok"]');   /* E12: Lock asks first */
   await p.waitForSelector('[data-testid="lk-hard-' + sep + '"]', { timeout: 8000 });
   const b4 = S.lastLock;
   await p.click('[data-testid="lk-hard-' + sep + '"]'); await p.waitForSelector('[data-testid="confirm-cancel"]', { timeout: 5000 });
@@ -851,7 +868,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="confirm-ok"]');
   await p.waitForFunction((n) => /Closed/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
   ok(S.lastLock !== b4 && S.lastLock.body.hard === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0, 'close for good: asked, then sent as a hard lock; a closed month offers nothing more');
-  S.locked[+sep] = false; S.hard[+sep] = false;
+  S.locked[+sep] = false; S.hard[+sep] = false; for (let m = 1; m < +sep; m++) S.locked[m] = false;   /* the months closed only to put the one Lock on this month */
 
   /* 7 · packs */
   await p.click('[data-testid="acc-nav-packs"]'); await p.waitForSelector('[data-testid="pk_build"]');

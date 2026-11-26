@@ -100,7 +100,7 @@
   /** the period control mounts into the named slot of the header line (CBBooksActing.periodSlot, W19): ONE function, ONE call in paint(); moving it is changing that call. Nothing in a refused or Actions screen. */
   function fillPeriodSlot(report) {
     var slot = $('bv_period_slot');
-    if (slot) slot.innerHTML = !report.k || grantKit.viewState.why || !grantKit.viewState.choices ? '' : root.CBPeriodPick.control(grantKit.viewState.choices, grantKit.viewState.period, pickPeriod);
+    if (slot) slot.innerHTML = !report.k || grantKit.viewState.why || !grantKit.viewState.choices ? '' : root.CBPeriodPick.control(grantKit.viewState.choices, grantKit.viewState.period, pickPeriod, report.k === 'bas' && grantKit.viewState.answer ? grantKit.viewState.answer.periods : null); /* FW-25: the return's own quarters are in the one control, so the Day box is not the only way to change quarter */
   }
   /** a period chosen: every view follows it (the typed day is dropped), the address records it */
   function pickPeriod(period) {
@@ -147,11 +147,24 @@
     ).then(function () { var held = flagsRead; flagsRead = null; return held; }); /* the page paints once the flags answered (or failed: never a reason to hold the books back) */
   }
   /** a read answered: the answer, the since watermark and the server's gross profit are kept, and the helpers are told which entries it holds */
+  /** RW3-11: the books being read are the CLIENT's: its clock (the answer's `timezone`, the audited shop's own zone) writes every time on these screens, never the firm's or the device's; the viewer's own zone returns when the books close */
+  var ownZone = null;
+  function useClientZone(answer) {
+    if (!answer || !answer.timezone || typeof root.shopZoneSet !== 'function') return;
+    if (ownZone === null) ownZone = root.CB_SHOP_TZ || '';
+    root.shopZoneSet(answer.timezone);
+  }
+  function backToOwnZone() {
+    if (ownZone === null) return;
+    root.shopZoneSet(ownZone, true);
+    ownZone = null;
+  }
   function keepAnswer(report, answer) {
+    useClientZone(answer);
     grantKit.viewState.answer = answer;
     grantKit.viewState.seen = report.k === 'daybook' && grantKit.viewState.since && answer ? { to: answer.seen_to, total: answer.total, since: answer.since } : null; /* rank 10: the watermark of what this screen listed: Mark as checked sends it back */
     if (grantKit.viewState.o.onRead) grantKit.viewState.o.onRead(); /* the first books read answered 200: the seat the person chose may now be remembered */
-    if (report.k === 'pl' && answer && answer.gross_profit) answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; /* the server's gross profit, named like its other totals */
+    if (report.k === 'pl' && answer && answer.gross_profit) { answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; answer.gross_cost_minor = answer.gross_profit.cost_of_sales_minor; } /* the server's gross profit, named like its other totals */
     grantKit.viewState.why = null;
     ingestEntries(report, answer);
     ingestExplained(report, answer);
@@ -182,10 +195,15 @@
   function phone() {
     return typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 700px)').matches;
   }
+  /** RW3-16: the return tab is named by the CLIENT's own pack. network.html loads no pack registry, so the word comes from the server: GET /periods answers `return_name` (BAS · VAT return) from the audited shop's pack, read before the first paint; Tax return only where it names none */
+  function labelOf(r) {
+    var own = r.k === 'bas' && grantKit.viewState.choices && grantKit.viewState.choices.return_name;
+    return own || r.label;
+  }
   function tabs() {
     if (phone()) return '';
     var all = grantKit.REPORTS.map(function (r) {
-      return { k: r.k, label: r.label };
+      return { k: r.k, label: labelOf(r) };
     });
     if (isAdviser()) all.push({ k: grantKit.ACTIONS, label: 'Actions' });
     return all.map(function (r) {
@@ -197,7 +215,7 @@
   /** the phone's screen pick: the library Select (ui-select.js, as period-pick.js uses) with the same screens as the buttons, and the Bank / Prepare ways as its last lines; the address follows the pick (onView) */
   function tabSelect() {
     if (!phone() || grantKit.viewState.why || !root.ui || typeof root.ui.select !== 'function') return '';
-    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(r.label) }; });
+    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(labelOf(r)) }; });
     if (isAdviser()) options.push({ value: grantKit.ACTIONS, label: words('Actions') }, { value: '_prepare', label: words('Prepare a journal') });
     else options.push({ value: '_bank', label: words('Bank') });
     return '<span class="bv-tabsel" data-testid="bv-tabsel">' + root.ui.select({
@@ -240,7 +258,7 @@
   function screenName() {
     if (onActions()) return words('Queues');
     var r = grantKit.REPORTS.filter(function (x) { return x.k === grantKit.viewState.report; })[0];
-    return r ? words(r.label) : '';
+    return r ? words(labelOf(r)) : '';
   }
   /** l16 R4-2b: a screen of the client's books is a history entry: the page is told (onView) so Back and Forward can restore it */
   function tell() {
@@ -339,6 +357,7 @@
   var stopForgetting = null;
   /** the answer and the day of the store that was open are forgotten when the store changes */
   function forget() {
+    backToOwnZone();
     grantKit.viewState = { host: grantKit.viewState.host, o: grantKit.viewState.o, report: homeOf(grantKit.viewState.o), day: '', answer: null, why: null, mk: grantKit.viewState.mk, period: null, range: null, choices: undefined, since: false, seen: null };
     grantKit.newMarks();
   }
@@ -417,6 +436,7 @@
         reload();
       },
       destroy: function () {
+        backToOwnZone();
         host.innerHTML = '';
       }
     };

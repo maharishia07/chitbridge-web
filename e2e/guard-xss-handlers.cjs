@@ -44,7 +44,7 @@ t('escJs: the string value round-trips', new Function('return \'' + decoded + '\
 /* p1new-1130 (GF-app-html-r3#L30 · L-sec-web-screens-11#L24): the two P1s slipped past every guard above. One put a name in a handler through
    escJs(a) + "','" + String(name).replace(...) (a second quote kind between the pieces), the other wrote  netAvailToggle(\'' + (newline) + item.key  (a
    concatenation over several lines, and the line-based guards read one line). The scan now follows both, and reports EVERY expression in a quoted handler
-   string that is not escJs / testJs / cbAttachSafe ("raw"). The ones that exist today are ids and fixed keys the developer wrote, counted per file in
+   string that is not escJs / cbAttachSafe ("raw"). The ones that exist today are ids and fixed keys the developer wrote, counted per file in
    e2e/fixtures/inline-handler-raw-multiline.json; this list only shrinks: a NEW raw expression fails. Use data-x="${esc(v)}" onclick="f(this.dataset.x)" or escJs(v).
    Regenerate only to LOWER it: GEN_XSS_RAW=1 node e2e/guard-xss-handlers.cjs */
 const RAWFIX = path.join(__dirname, 'fixtures', 'inline-handler-raw-multiline.json');

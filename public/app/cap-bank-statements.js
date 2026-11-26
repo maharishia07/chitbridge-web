@@ -32,7 +32,10 @@ function bkstMonth(month) {
 /** the bank ledgers the page lists (bkbBanks: the ONE list), each { code, name } */
 const bkstBanks = () => BKST.banks.map((item) => ({ code: String(item.code), name: item.name }));
 /** the account of a row of the answer, as the page names it: its name and the owner's label (..1234) */
-const bkstAccountName = (account) => (account.name || tx('Bank account')) + (account.label ? ' ' + account.label : '');
+/* RW1-13: the label is added only when it says something the name does not ("Business bank account" + "Business account" read as one account twice) */
+const bkstWords = (text) => String(text || '').toLowerCase().split(/[^a-z0-9À-￿]+/).filter(Boolean);
+const bkstLabelAdds = (name, label) => { const have = bkstWords(name); return bkstWords(label).some((word) => have.indexOf(word) < 0); };
+const bkstAccountName = (account) => { const name = account.name || tx('Bank account'); return name + (account.label && bkstLabelAdds(name, account.label) ? ' ' + account.label : ''); };
 const bkstAccountOf = (id) => ((BKST.data && BKST.data.accounts) || []).filter((item) => item.account_id === id)[0] || {};
 
 /* ── the box ── */
@@ -368,7 +371,7 @@ function bkstFilesOptions() {
       { key: 'by', label: tx('Added by'), prio: 4, w: 130, cell: bkstFileBy },
       {
         key: 'acts',
-        label: '',
+        label: tx('Actions'),
         prio: 1,
         keep: true,
         w: 170,
@@ -398,7 +401,10 @@ function bkstFetchFile(id, use) {
     headers: CBBooksActing.authHeaders()
   });
 }
-const bkstWhyNot = async (res) => (res.status === 403 && (await bkstBlind(res)) ? bksCostBlindSay() : res.status === 403 ? tx('This access has ended.') : res.status === 404 ? tx('That statement is no longer here.') : tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
+/** W4-03: a 403 is worded by its own code: only an ended grant says "ended"; a door the access does not include says what it is */
+const bkstRefusalCode = (res) => res.clone().json().then((j) => String((j && j.code) || ''), () => '');
+const bkstRefusedWords = async (res) => ((await bkstRefusalCode(res)) === 'GRANT_ROUTE_NOT_LISTED' ? tx('This is not part of this access.') : tx('This access has ended.'));
+const bkstWhyNot = async (res) => (res.status === 403 && (await bkstBlind(res)) ? bksCostBlindSay() : res.status === 403 ? await bkstRefusedWords(res) : res.status === 404 ? tx('That statement is no longer here.') : tx('The statement could not be opened. Nothing was lost; try again in a minute.'));
 /** a 403 whose body says COST_BLIND (the file read has no api() wrapper, so the body is read here) */
 const bkstBlind = (res) => res.clone().json().then((j) => bksCostBlind({ status: res.status, data: j }), () => false);
 /** Read: the kept text goes to the page's ONE reader (bankTake), for the account it was kept against; nothing is parsed or hashed here */
@@ -408,10 +414,19 @@ async function bankStmtRead(button) {
 /** which statement a Read means: the file named by id, the account's code, the file's name and its end date — a month of the grid names its newest file (hint), a row of the list is the file itself */
 function bkstReadTarget(id, hint) {
   const file = ((BKST.data && BKST.data.files) || []).filter((item) => item.id === id)[0];
+  return Object.assign(
+    {
+      file,
+      code: hint ? hint.code : file ? bkstAccountOf(file.account_id).code : null,
+      name: hint ? hint.name : file && file.name
+    },
+    bkstReadSpan(file, hint)
+  );
+}
+/** the period of the statement a Read means: the hint's own dates, else the file's */
+function bkstReadSpan(file, hint) {
   return {
-    file,
-    code: hint ? hint.code : file ? bkstAccountOf(file.account_id).code : null,
-    name: hint ? hint.name : file && file.name,
+    from: hint && hint.from ? hint.from : file && file.period_from,
     to: hint ? hint.to : file && file.period_to
   };
 }
@@ -420,14 +435,21 @@ async function bkstOpenInReader(target, text) {
   const code = target.code,
     name = target.name,
     to = target.to;
+  BKB.keptPeriod = { from: target.from, to: target.to }; /* RW2-01: the kept file's own period is the books' window (bankLedger), cleared below */
   const select = bkbEl('bk_acct');
   if (select) select.value = String(code);
   bankAcctPick(String(code), true); /* the account the file was kept against; the screen is cleared, the device copy is not loaded over it */
   const out = bkbEl('bk_out');
   if (out) out.innerHTML = '';
   BKB.to = String(to || '').slice(0, 10); /* the trail's month is the file's, before the reader answers */
-  await bankTake(text, name || 'statement.csv', false);
-  if (BKB.view !== 'lines' && out && out.innerHTML) peBad('bks_out', out.textContent || tx('That statement could not be read.')); /* a refusal stays on the home, said where the person is looking */
+  BKB.kept = true;
+  try {
+    await bankTake(text, name || 'statement.csv', false);
+  } finally {
+    BKB.kept = false;
+    BKB.keptPeriod = null;
+  }
+  if (BKB.view !== 'lines' && out && out.innerHTML && !out.querySelector('[data-testid="bank-currency-ask"]')) peBad('bks_out', out.textContent || tx('That statement could not be read.')); /* a refusal stays on the home, said where the person is looking */
 }
 /** Read one kept statement by its id (the grid names a month's newest file with a hint): the file is fetched, then read by the one reader */
 async function bankStmtReadFile(id, hint) {

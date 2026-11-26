@@ -68,7 +68,7 @@
       if (!n) return '';
       return (
         '<button type="button" class="attn-chip" data-cbsid="CMP033-B01" data-b="attn-' + item[0] + '" data-testid="attn-' + item[0] + '" aria-pressed="' + (slot.kind === item[0]) + '" onclick="CBAttention.open(\'' + escJs(host.id) + '\',\'' + item[0] + '\')">' +
-        '<span aria-hidden="true">' + item[1] + '</span> <b>' + esc(String(n)) + '</b> ' + esc(translate(item[3] === 'flag' ? 'flag' : item[3] === 'none' ? 'none' : item[3] === 'nodoc' ? 'nodoc' : 'query')) + '</button>'
+        '<span aria-hidden="true">' + item[1] + '</span> <b>' + esc(String(n)) + '</b> ' + esc(item[3] === 'query' && typeof root.txn === 'function' ? root.txn('open query', 'open queries', n) : translate(item[3] === 'flag' ? 'flag' : item[3] === 'none' ? 'none' : item[3] === 'nodoc' ? 'nodoc' : 'query')) + '</button>'
       );
     }).filter(Boolean).join(' · ');
     var body = total === 0 ? '<span class="attn-ok" data-b="attn-ok" data-testid="attn-ok">' + esc(translate('ok')) + '</span>' : chips;

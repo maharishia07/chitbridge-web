@@ -298,7 +298,7 @@ async function bankTake(text, name, remembered) {
   BKB.parsed = parsed;
   BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
   BKB.curKey = 'cur:' + BKB.acct + ':' + BKB.file.hash;
-  BKB.stmtCur = bkbStatementCurrency(parsed.currency, bkbLoad(BKB.curKey, '')); /* FIN-111: the file's own currency, else the one the person confirmed for THIS file on this device, else asked below (prefilled with the account's, one press); never taken from the account unasked */
+  BKB.stmtCur = bkbStatementCurrency(parsed.currency, bkbLoad(BKB.curKey, '') || (BKB.kept ? bkbAcctCur() : '')); /* FW-37: a KEPT statement was signed off against this account in this account's currency (the sign-off refuses any other), so it is never asked again */ /* FIN-111: the file's own currency, else the one the person confirmed for THIS file on this device, else asked below (prefilled with the account's, one press); never taken from the account unasked */
   BKB.bal = '';
   const dates = parsed.lines.map((item) => item.date).sort();
   BKB.from = parsed.from || dates[0];
@@ -360,9 +360,20 @@ function bankFileAccountNote() {
   out.innerHTML = '<div class="pe-warn" data-testid="bank-file-account">' + bkbE(txf('The file is for account {a}. Check it is the one you picked: {b}.', { a: String(BKB.parsed.account), b: ledger.name || BKB.acct })) + '</div>';
 }
 
-/** the shop's own bank lines for the statement's dates → the engine's ledger lines */
+/** RW2-01: the books' side of a statement is every ledger line dated in the statement's PERIOD, not only between its first and last line (Xero/MYOB list the period's book lines against the statement; a rent paid on the 3rd is "not on the statement", never absent).
+ *  The period is the kept file's own (period_from..period_to) when the page knows it, else the whole calendar month(s) of the first and last line; it never narrows the lines' own span. Pure: days in ('YYYY-MM-DD'), { from, to } out. */
+function bkbLedgerWindow(from, to, kept) {
+  const first = String(from || '').slice(0, 10), last = String(to || '').slice(0, 10);
+  const monthStart = (day) => day.slice(0, 7) + '-01';
+  const monthEnd = (day) => day.slice(0, 7) + '-' + String(new Date(Date.UTC(+day.slice(0, 4), +day.slice(5, 7), 0)).getUTCDate()).padStart(2, '0');
+  const periodFrom = kept && kept.from ? String(kept.from).slice(0, 10) : first && monthStart(first);
+  const periodTo = kept && kept.to ? String(kept.to).slice(0, 10) : last && monthEnd(last);
+  return { from: first && periodFrom && periodFrom < first ? periodFrom : first, to: last && periodTo && periodTo > last ? periodTo : last };
+}
+/** the shop's own bank lines for the statement's period → the engine's ledger lines */
 async function bankLedger() {
-  const reply = await api('booksLedger', { params: { account: BKB.acct }, query: { from: BKB.from, to: BKB.to } });
+  const window = bkbLedgerWindow(BKB.from, BKB.to, BKB.keptPeriod);
+  const reply = await api('booksLedger', { params: { account: BKB.acct }, query: { from: window.from, to: window.to } });
   BKB.ledgerRaw = reply || {};
   return bksLiveLines(reply && reply.lines).map((item, index) => ({
     id: String(item.ref) + '#' + index,
@@ -528,7 +539,7 @@ function bankExplain() {
   BKB.rows = rows;
   BKB.counts = explained.counts;
   /* the Home count: what needs a person, from the last statement read on this device */
-  bkbSave('todo', { n: explained.counts.needs_you, acct: BKB.acct, to: BKB.to });
+  if (typeof bkshTodo !== 'function') bkbSave('todo', { n: explained.counts.needs_you, acct: BKB.acct, to: BKB.to }); /* FW-36: ONE writer of the Home count — the statement screen's own (bkshTodo, "Needs you n"); two definitions made the banner read 1, then 2 */
 }
 
 
@@ -536,13 +547,7 @@ function bankExplain() {
 const bkbAcctName = () => ((BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {}).name || '';
 /** the Bank Reconciliation Statement: the books' balance is the API's ledger closing figure; the bank's is the statement's (or typed); the engine states the difference */
 function bankBrs() {
-  const parsed = BKB.parsed,
-    last = parsed.lines[parsed.lines.length - 1] || {};
-  let bank = parsed.closing_minor != null ? parsed.closing_minor : last.balance_minor != null ? last.balance_minor : null;
-  if (bank == null && BKB.bal !== '') {
-    const typedMinor = bkToMinor(BKB.bal);
-    if (!isNaN(typedMinor)) bank = typedMinor;
-  }
+  const bank = bkbBankClosing(BKB.parsed);
   BKB.bankKnown = bank != null;
   if (bank == null) {
     BKB.brs = null;
@@ -556,6 +561,20 @@ function bankBrs() {
     unmatched_ledger: BKB.m.unmatched_ledger || [],
     unmatched_stmt: BKB.m.unmatched_stmt || []
   });
+}
+/** the bank closing balance for the statement: the file own, else its last line, else the one typed, else the signed-off month record; null when none is known */
+function bkbBankClosing(parsed) {
+  const last = parsed.lines[parsed.lines.length - 1] || {};
+  let bank = parsed.closing_minor != null ? parsed.closing_minor : last.balance_minor != null ? last.balance_minor : null;
+  if (bank == null && BKB.bal !== '') {
+    const typedMinor = bkToMinor(BKB.bal);
+    if (!isNaN(typedMinor)) bank = typedMinor;
+  }
+  if (bank == null && typeof bankStoreSignedNow === 'function') {
+    const signed = bankStoreSignedNow(); /* W4-11: a month that IS signed off already holds the bank's closing balance on its record: never asked for again */
+    if (signed && signed.closing_bank_minor != null) bank = Number(signed.closing_bank_minor);
+  }
+  return bank;
 }
 
 /** the page is "loaded" once a statement is on screen: the load form folds to one line and the lines fill the screen (body.bk-on, accounts.html); the Statement view scrolls as a page */

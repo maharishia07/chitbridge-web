@@ -71,6 +71,7 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
+sandbox.addEventListener = sandbox.addEventListener || function () {};   /* cap-admin registers a pagehide handler at load */
 
 const ctx = vm.createContext(sandbox);
 /* Load the capability the same way the browser does: a classic script into shared global scope. */

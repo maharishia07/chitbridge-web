@@ -14,7 +14,7 @@ function run(whoami) {
 }
 (async () => {
   const owner = await run(() => Promise.resolve({ actions: { publish: { ok: false, why: 'not_helpdesk', say: 'Only a help desk can publish.' } } }));
-  assert.ok(owner.includes('ca-readonly') && owner.includes('Only a help desk can publish.') && !/ca_accept|ca-draft|<textarea/.test(owner), 'owner: one line, no editor: ' + owner);
+  assert.ok(owner.includes('ca-readonly') && owner.includes('Our support team keeps these answers up to date.') && !owner.includes('help desk') && !/ca_accept|ca-draft|<textarea/.test(owner), 'owner: one line, no editor: ' + owner);
   const desk = await run(() => Promise.resolve({ actions: { publish: { ok: true } } }));
   assert.ok(desk.includes('ca_accept') && desk.includes('<textarea') && !desk.includes('ca-readonly'), 'help desk: the editor');
   const down = await run(() => Promise.reject(new Error('net')));

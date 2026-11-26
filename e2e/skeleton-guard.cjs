@@ -21,7 +21,7 @@ const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'settings.html',
 const LABS = ['product-lab.html', 'offer-lab-next.html', 'conversion-lab.html', 'country-lab.html', 'network-design.html', 'list-lab.html', 'signin-lab.html', 'shell-lab.html', 'ui-standard.html'];
 /* pages that load the frame or the list control but are not small apps: the app itself, the labs and the standards page, and two older single-purpose pages (their own round) */
 /* testing.html: the test board's printable report — it loads list-ctl.js only for CBList.every (every page of a paged list, T2-PAGING), it mounts no list */
-const NOT_APPS = ['app.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html', 'bank-demo.html'];   /* bank-demo.html: the no-login showcase mounts the frame's bar from app/bank-demo.js (anonymous, CSP script-src self), so the page carries no inline CBFrame.mount */
+const NOT_APPS = ['app.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html', 'bank-demo.html', 'intake.html'];   /* intake.html: the capture connector's self-contained inbox; it loads page-frame.js only for CBFrame.session() (who saved a draft, p2wave-sec) and mounts no frame (847752afc). bank-demo.html: the no-login showcase mounts the frame's bar from app/bank-demo.js (anonymous, CSP script-src self), so the page carries no inline CBFrame.mount */
 
 OWN.forEach((f) => {
   const h = read('public/' + f);

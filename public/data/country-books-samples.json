@@ -1,6 +1,6 @@
 {
  "generated_by": "tools/country-samples.cjs",
- "engines": "1.104.0",
+ "engines": "1.110.10",
  "note": "A sample shop per country, simulated (tests/helpers/year-any.js) — never a real shop's figures. Amounts in minor units.",
  "prerequisites": [
   "Country setup done — registered for the tax, the number checks out",
@@ -144,7 +144,7 @@
     "periods": [
      {
       "period": "2026-Q1",
-      "label": "FY27 Q1 (Jul–Sep 2026)",
+      "label": "FY27 Q1 (Jul–Sept 2026)",
       "start": "2026-07-01",
       "end": "2026-09-30",
       "due": "2026-10-28",
@@ -179,13 +179,25 @@
         "label": "Your payment or refund amount",
         "amount_minor": -915242,
         "tax_minor": null
+       },
+       {
+        "code": "W1",
+        "label": "Total salary, wages and other payments",
+        "amount_minor": null,
+        "tax_minor": null
+       },
+       {
+        "code": "W2",
+        "label": "Amount withheld from payments shown at W1",
+        "amount_minor": null,
+        "tax_minor": null
        }
       ],
       "payable_minor": 0,
       "refund_minor": 915242,
       "net_minor": -915242,
       "notes": [
-       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)",
+       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million); G2, G3, G10 and G11 are left out. Set Labels to Full to see them",
        "This period has input-taxed sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      },
@@ -226,13 +238,25 @@
         "label": "Your payment or refund amount",
         "amount_minor": 393082,
         "tax_minor": null
+       },
+       {
+        "code": "W1",
+        "label": "Total salary, wages and other payments",
+        "amount_minor": null,
+        "tax_minor": null
+       },
+       {
+        "code": "W2",
+        "label": "Amount withheld from payments shown at W1",
+        "amount_minor": null,
+        "tax_minor": null
        }
       ],
       "payable_minor": 393082,
       "refund_minor": 0,
       "net_minor": 393082,
       "notes": [
-       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)",
+       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million); G2, G3, G10 and G11 are left out. Set Labels to Full to see them",
        "This period has input-taxed sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      },
@@ -273,13 +297,25 @@
         "label": "Your payment or refund amount",
         "amount_minor": 527463,
         "tax_minor": null
+       },
+       {
+        "code": "W1",
+        "label": "Total salary, wages and other payments",
+        "amount_minor": null,
+        "tax_minor": null
+       },
+       {
+        "code": "W2",
+        "label": "Amount withheld from payments shown at W1",
+        "amount_minor": null,
+        "tax_minor": null
        }
       ],
       "payable_minor": 527463,
       "refund_minor": 0,
       "net_minor": 527463,
       "notes": [
-       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)",
+       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million); G2, G3, G10 and G11 are left out. Set Labels to Full to see them",
        "This period has input-taxed sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      },
@@ -320,13 +356,25 @@
         "label": "Your payment or refund amount",
         "amount_minor": 588687,
         "tax_minor": null
+       },
+       {
+        "code": "W1",
+        "label": "Total salary, wages and other payments",
+        "amount_minor": null,
+        "tax_minor": null
+       },
+       {
+        "code": "W2",
+        "label": "Amount withheld from payments shown at W1",
+        "amount_minor": null,
+        "tax_minor": null
        }
       ],
       "payable_minor": 588687,
       "refund_minor": 0,
       "net_minor": 588687,
       "notes": [
-       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million)",
+       "Simpler BAS: G1, 1A and 1B only (GST turnover under A$10 million); G2, G3, G10 and G11 are left out. Set Labels to Full to see them",
        "This period has input-taxed sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
      }
@@ -551,7 +599,7 @@
       "notes": [
        "the whole of Box 1 is reported under the Emirate of the fixed establishment (none was handed in) — the ledgers carry no Emirate (ER Art. 72(2))",
        "VAT-exclusive, and counting only the purchases and expenses that carried recoverable VAT (a bill with no VAT on it, a bank fee, a zero-rated or exempt purchase is not in Box 9); the VAT column is what was posted to Input VAT",
-       "the ledgers hold all recoverable input VAT in one account, so the reverse-charge recovery sits inside Box 9's VAT here; Box 13 is the same either way",
+       "the reverse-charge recovery is read as the VAT Box 3 charged (rcm_vat), up to what Input VAT holds: it is shown in Box 10 and taken out of Box 9; Box 13 is the same either way",
        "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures",
        "This period has exempt sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
@@ -668,7 +716,7 @@
       "notes": [
        "the whole of Box 1 is reported under the Emirate of the fixed establishment (none was handed in) — the ledgers carry no Emirate (ER Art. 72(2))",
        "VAT-exclusive, and counting only the purchases and expenses that carried recoverable VAT (a bill with no VAT on it, a bank fee, a zero-rated or exempt purchase is not in Box 9); the VAT column is what was posted to Input VAT",
-       "the ledgers hold all recoverable input VAT in one account, so the reverse-charge recovery sits inside Box 9's VAT here; Box 13 is the same either way",
+       "the reverse-charge recovery is read as the VAT Box 3 charged (rcm_vat), up to what Input VAT holds: it is shown in Box 10 and taken out of Box 9; Box 13 is the same either way",
        "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures",
        "This period has exempt sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]
@@ -785,7 +833,7 @@
       "notes": [
        "the whole of Box 1 is reported under the Emirate of the fixed establishment (none was handed in) — the ledgers carry no Emirate (ER Art. 72(2))",
        "VAT-exclusive, and counting only the purchases and expenses that carried recoverable VAT (a bill with no VAT on it, a bank fee, a zero-rated or exempt purchase is not in Box 9); the VAT column is what was posted to Input VAT",
-       "the ledgers hold all recoverable input VAT in one account, so the reverse-charge recovery sits inside Box 9's VAT here; Box 13 is the same either way",
+       "the reverse-charge recovery is read as the VAT Box 3 charged (rcm_vat), up to what Input VAT holds: it is shown in Box 10 and taken out of Box 9; Box 13 is the same either way",
        "the adjustment column is 0: bad-debt relief, the unpaid-supplier claw-back and the input-tax apportionment wash-up are the shop's own figures",
        "This period has exempt sales. The input tax on purchases used to make them is not recoverable, and this return claims all the input tax posted. Apportion it before you file."
       ]

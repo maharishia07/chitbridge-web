@@ -47,7 +47,7 @@ W.run('price-moved', async (w) => {
     }
     return json(200, {});
   };
-  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Books Shop', 'Books Shop'));
+  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ }, W.session('Books Shop', 'Books Shop'));
   await ctx.route('**/api/**', answer);
   await page.goto(base + '/app.html#/app');
   await page.waitForFunction(() => typeof sendChit === 'function' && typeof renderApp === 'function' && !!window.CBPriceMoved, null, { timeout: 30000 });

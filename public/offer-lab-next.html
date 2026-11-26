@@ -2441,7 +2441,7 @@ function paintPriceOvCats() {
   if (OVL.pickMode === 'cat') {
     el.innerHTML = cats
       .map(function (item) {
-        return '<button data-cbsid="OLB001-B16" class="ovlchip" onclick="overlayPick(\'' + item.id + '\')">' + esc(item.name) + ' (' + item.n + ')</button>';
+        return '<button data-cbsid="OLB001-B16" class="ovlchip" onclick="overlayPick(\'' + escJs(item.id) + '\')">' + esc(item.name) + ' (' + item.n + ')</button>';
       })
       .join('');
     return;
@@ -2461,7 +2461,7 @@ function paintPriceOvCats() {
           '<button data-cbsid="OLB001-B18" class="ovlchip' +
           (OVL.cat === item.id ? ' on' : '') +
           '" onclick="priceOvCat(\'' +
-          item.id +
+          escJs(item.id) +
           '\')">' +
           esc(item.name) +
           ' (' +
@@ -2514,7 +2514,7 @@ function paintPriceOvBody() {
         esc(catName(OVL.cat)) +
         ' category automatically — including anything added to it later?</span>' +
         '<button data-cbsid="OLB001-B20" class="btn sm" onclick="overlayApplyWholeCategory(\'' +
-        OVL.cat +
+        escJs(OVL.cat) +
         '\')">Use all of ' +
         esc(catName(OVL.cat)) +
         '</button></div>'
@@ -2546,7 +2546,7 @@ function paintPriceOvBody() {
                 '<tr class="ovlpickrow' +
                 (hit ? ' ovlinother' : '') +
                 '" style="cursor:pointer" onclick="overlayApplyToggle(\'' +
-                item.id +
+                escJs(item.id) +
                 '\')">' +
                 '<td style="width:30px"><span class="cbx' +
                 (checked ? ' on' : '') +
@@ -2588,7 +2588,7 @@ function paintPriceOvBody() {
           .map(function (item) {
             return (
               '<tr class="ovlpickrow" style="cursor:pointer" onclick="overlayPick(\'' +
-              item.id +
+              escJs(item.id) +
               '\')">' +
               '<td class="ovlname">' +
               esc(item.name) +
@@ -4827,6 +4827,15 @@ function savedLive() {
     return false;
   }
 }
+function labOwner() {
+  try {
+    var held = JSON.parse(localStorage.getItem('cb_sess') || 'null') || {};
+    return String(held.actorId || held.entityId || '');
+  } catch (failure) {
+    console.warn('Offer Lab: the saved sign-in could not be read — no owner is named', failure);
+    return '';
+  }
+} /* L-sec-web-screens-24#L51: who the Lab is signed in as, the ids the app stamps its queue with (SEC-140); '' when nobody is */
 function savedToken() {
   try {
     return (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null;
@@ -4936,7 +4945,7 @@ async function apiFetch(method, url, body, queueKind) {
     return { ok: reply.ok, status: reply.status, body: j || {}, queued: false };
   } catch (e) {
     if (queueKind && method !== 'GET') {
-      await LabDB.queuePush({ kind: queueKind, method: method, url: url, body: body || null });
+      await LabDB.queuePush({ kind: queueKind, method: method, url: url, body: body || null, owner: labOwner() });
       labPaintQueue();
     }
     return { ok: true, queued: true, body: {} };
@@ -4945,7 +4954,7 @@ async function apiFetch(method, url, body, queueKind) {
 /** ⭐ replays queued writes IN ORDER; a real refusal (4xx) is dropped rather than retried for ever — the same
  * offer would only be refused again, and a queue that never empties is a queue nobody trusts */
 async function labDrainOutbox() {
-  var rows = await LabDB.queueAll();
+  var rows = (await LabDB.queueAll()).filter(function (item) { return labOwner() && item.owner === labOwner(); }); /* another person's (or an unstamped) queued write is never sent under this person's token */
   for (var index = 0; index < rows.length; index++) {
     var row = rows[index];
     try {
@@ -4964,13 +4973,11 @@ async function labDrainOutbox() {
   if (savedLive() && S.step === 3) await loadSaved();
 }
 function labPaintQueue() {
-  LabDB.queueAll().then(function (rows) {
+  LabDB.queueAll().then(function (all) {
+    var rows = all.filter(function (item) { return labOwner() && item.owner === labOwner(); });
     var node = document.getElementById('labqueue');
     if (!node) return;
-    if (!rows.length) {
-      node.hidden = true;
-      return;
-    }
+    if (!rows.length) return void (node.hidden = true);
     node.hidden = false;
     node.textContent = rows.length + ' change' + (rows.length > 1 ? 's' : '') + ' waiting to sync — will send once the line is back.';
   });
@@ -5046,7 +5053,7 @@ async function labUseMine(quiet) {
     });
     if (!nestedItems.length) return labUseCache(who, 'no priced products yet');
     await catNamesReady; /* CATNAMES must be filled before buildBiz() (inside labApplyCatalogue) reads it */
-    await LabDB.set('catalogue', { items: nestedItems, who: who, at: Date.now() });
+    await LabDB.set('catalogue', { items: nestedItems, who: who, at: Date.now(), owner: labOwner() });
     labApplyCatalogue(nestedItems, who, false);
     return true;
   } catch (e) {
@@ -5055,7 +5062,7 @@ async function labUseMine(quiet) {
 }
 async function labUseCache(who, why) {
   var c = await LabDB.get('catalogue');
-  if (c && c.items && c.items.length) {
+  if (c && c.items && c.items.length && labOwner() && c.owner === labOwner()) { /* the cached catalogue (costs included) is shown only to the person it was cached for */
     labApplyCatalogue(c.items, c.who || who, true);
     return true;
   }
@@ -5167,14 +5174,15 @@ function importField(row, names) {
 function importSpreadsheet(input) {
   var file = input && input.files && input.files[0];
   if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return toastSay('That file is larger than 5 MB. Send just the sheet with the price list on it.'); /* L-sec-web-screens-24#L45: a price list is a few hundred kilobytes; bounded before the vendored SheetJS 0.18.5 parses it */
   var reader = new FileReader();
   reader.onload = function (e) {
     try {
       var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
       var sheet = wb.Sheets[wb.SheetNames[0]];
       var list = XLSX.utils.sheet_to_json(sheet, { defval: null });
-      if (!list.length) {
-        toastSay('That file has no rows Offer Lab can read.');
+      if (!list.length || list.length > 20000) {
+        toastSay(list.length ? 'That file has ' + list.length + ' rows; Offer Lab reads up to 20,000. Split it and send the part you want to price.' : 'That file has no rows Offer Lab can read.');
         return;
       }
       var count = 0,

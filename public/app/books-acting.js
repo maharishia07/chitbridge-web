@@ -241,7 +241,7 @@
     return (
       '<label class="ba-sr" for="ba_switch">' + esc(words('Switch client')) + '</label><select data-cbsid="NET006-S01" id="ba_switch" class="inp" data-testid="ba-switch" title="' + esc(words('Switch client')) + '">' +
       stores.map(function (item) {
-        return '<option value="' + esc(item.id) + '"' + (String(item.id) === context.store.id ? ' selected' : '') + '>' + esc(item.name) + (item.role ? ' (' + esc(roleWord(item.role)) + ')' : '') + '</option>';
+        return '<option value="' + esc(item.id) + '"' + (String(item.id) === context.store.id ? ' selected' : '') + '>' + esc(item.name) + (item.country ? ' · ' + esc(String(item.country).toUpperCase()) : '') + (item.role ? ' (' + esc(roleWord(item.role)) + ')' : '') + '</option>';
       }).join('') + '</select>'
     );
   }
@@ -361,9 +361,13 @@
   function roleOf(held, id) {
     return (held[String(id)] || {}).preset === 'adviser' ? 'adviser' : 'auditor';
   }
-  /** EVERY client a firm holds a live grant on, with its role, for the banner's switch (one client: no switch is drawn) */
-  function clientStores(stores, held) {
-    return stores.filter(function (s) { return held[String(s.entity_id)]; }).map(function (s) { return { id: s.entity_id, name: (held[String(s.entity_id)].grantor_name) || s.name, role: roleOf(held, s.entity_id) }; });
+  /** EVERY client a firm holds a live grant on, with its role, for the banner's switch (one client: no switch is drawn).
+   *  W4-14: a test shop never shows to a firm (the server's grantor_is_test; the client open now stays, so the list never loses where you are); each name carries its country beside it; one order (by name) */
+  function clientStores(stores, held, openId) {
+    return stores.filter(function (s) { var g = held[String(s.entity_id)]; return g && (g.grantor_is_test !== 'true' || String(s.entity_id) === String(openId)); }).map(function (s) {
+      var g = held[String(s.entity_id)];
+      return { id: s.entity_id, name: g.grantor_name || s.name, country: g.grantor_country || '', role: roleOf(held, s.entity_id) };
+    }).sort(function (x, y) { return String(x.name).localeCompare(String(y.name)); });
   }
   /** the preview's "Only the owner may record this." does not stop an acting ADVISER: Save prepares (or posts under adviser_posts) through the actions door, not through POST /events */
   function refusals(list) {

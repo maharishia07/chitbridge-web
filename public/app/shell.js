@@ -103,6 +103,7 @@
     signInShop: 'Sign in to open your shop.',
     unfinished: 'Being finished · not ready yet',
     unfinishedHome: 'Back to Home',
+    unfinishedShort: 'Being finished',
     factsFailed: 'Could not read',
     backToClients: 'Back to Clients',
     skip: 'Skip to content',
@@ -243,6 +244,7 @@
     '.cbsh-av{flex:0 0 auto;display:flex;align-items:center}',
     /* switcher (inside an app) */
     '.cbsh-sw{position:relative}',
+    '.cbsh-is-working .cbsh-sw{display:none}',
     '.cbsh-swb{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);font-size:13px;font-weight:600}',
     '.cbsh-swb .chev{font-size:10px;color:var(--sh-muted)}',
     '.cbsh-swpop{position:absolute;top:36px;left:0;z-index:30;min-width:180px;background:var(--sh-card);border:1px solid var(--sh-line);border-radius:11px;padding:5px;box-shadow:0 14px 28px var(--sh-shadow);display:flex;flex-direction:column;gap:2px}',
@@ -295,9 +297,8 @@
     '.cbsh-nv{position:relative}.cbsh-nv[data-go=more]{display:none}',
     '.cbsh-nv .bd{position:absolute;top:1px;left:calc(50% + 6px);min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:var(--sh-amber-t);border:1px solid var(--sh-amber-b);color:var(--sh-amber-i);font-size:10px;font-weight:700;line-height:14px;text-align:center}',
     '.cbsh-nv .bd.dot{min-width:10px;width:10px;height:10px;padding:0;top:3px}',
-    '.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
+    '.cbsh-hint{display:inline-block;margin-left:6px;padding:0 6px;border:1px dashed var(--sh-line,#c9bfa8);border-radius:9px;font-size:11px;font-weight:500;line-height:16px;color:var(--sh-muted,#6f6753);background:transparent;white-space:nowrap;vertical-align:middle}.cbsh-box.off{border-style:dashed;background:var(--sh-panel);color:var(--sh-muted);cursor:default}.cbsh-box.off:hover{border-color:var(--sh-line)}.cbsh-box.off .no{display:block;clear:left;font-size:13px;margin-top:9px;padding-top:7px;border-top:1px solid var(--sh-hair)}',
     '.cbsh-note{font-size:13px;color:var(--sh-muted);padding:6px 0}',
-    '.cbsh-unready{position:fixed;left:0;right:0;bottom:0;top:var(--sh-bar,52px);z-index:90;background:var(--sh-panel);color:var(--sh-muted);display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}.cbsh-unready h2{margin:0 0 6px;font-size:18px;color:var(--sh-ink,inherit)}.cbsh-unready p{margin:0 0 12px;font-size:14px}.cbsh-unready a{color:var(--sh-green);font-weight:600}',
     /* cards (max three columns, DECISIONS.md) */
     '.cbsh-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
     '.cbsh-box{display:block;width:100%;text-align:left;background:var(--sh-card);border:1px solid var(--sh-line);border-radius:13px;padding:14px 16px;position:relative;transition:border-color .12s}',
@@ -818,30 +819,62 @@
     });
     return best;
   }
-  /* READY-GREY: a typed address to a not-ready page shows the same note, over the page, with the way back (no bypass: no GOV switch exists) */
-  function gateUnready(doc, manifest, where) {
-    var old = doc.querySelector('[data-testid="shell-unready"]');
-    var entry = manifest && entryOfAddress(manifest.entries, where);
-    if (!entry || entry.ready !== false) {
-      if (old) old.remove();
-      return false;
-    }
-    if (old) return true;
-    var cover = doc.createElement('div');
-    cover.className = 'cbsh-unready';
-    cover.setAttribute('data-testid', 'shell-unready');
-    cover.setAttribute('data-cbsid', 'HOM001-B01');
-    cover.setAttribute('role', 'alert');
-    cover.innerHTML = '<div><h2>' + entryName(entry) + '</h2><p>' + esc(T(W.unfinished)) + '</p><a href="/" data-testid="shell-unready-home">' + esc(T(W.unfinishedHome)) + '</a></div>';
-    doc.body.appendChild(cover);
-    return true;
+  /* AT-02 / FW-01: readiness is per ADDRESS. A not-ready host page can carry a ready sub-view: the entry's `ready_for` lists the query pieces that are ready (network.html?open=<client>&view=… is the client's books, which work). ONE reader, for the cover and for the grey links. */
+  function readyAt(entry, where) {
+    if (!entry || entry.ready !== false) return true;
+    return (entry.ready_for || []).some(function (piece) { return String(where.search || '').indexOf(piece) >= 0; });
+  }
+  /* READY-HINT (Athi, 25 Nov, replaces the page-wide cover): EVERY page and tab opens. A thing that is not ready is marked AT ITS OWN ELEMENT with one small hint
+     ("Being finished"), through THIS one control; the element stays visible and pressable, nothing else on the page is blocked, and a half-built action says so itself. */
+  function readyHintHTML(id) {
+    return '<span class="cbsh-hint" data-cbsid="HOM001-B02" data-ready="no" data-testid="shell-hint' + (id ? '-' + esc(id) : '') + '" title="' + esc(T(W.unfinishedShort)) + '">' + esc(T(W.unfinishedShort)) + '</span>';
+  }
+  /* a page is never covered: any cover an older load left is removed. Kept as the one name callers and tests know; always false. */
+  function gateUnready(doc) {
+    var old = doc.querySelector && doc.querySelector('[data-testid="shell-unready"]');
+    if (old) old.remove();
+    return false;
+  }
+  /* the hint on an element that already exists (a link, a Setup tab): once, by the one control above */
+  function hintOne(el) {
+    el.setAttribute('data-cbsh-hint', '1');
+    el.setAttribute('title', T(W.unfinishedShort));
+    el.insertAdjacentHTML('beforeend', readyHintHTML(''));
+  }
+  /* every in-page link and every sidebar section / Setup tab (settings.html#/counters: this page + #/<key>) whose ADDRESS is not ready carries the hint; none is blocked */
+  function hintLinks(doc, manifest, win) {
+    if (!doc.querySelectorAll || !manifest) return 0;
+    var hinted = 0;
+    [].forEach.call(doc.querySelectorAll('.nav-btn[data-sec]:not([data-cbsh-hint])'), function (b) {
+      var where = { pathname: win.location.pathname, hash: '#/' + b.getAttribute('data-sec'), search: '' };
+      if (readyAt(entryOfAddress(manifest.entries, where), where)) return;
+      hintOne(b);
+      hinted++;
+    });
+    [].forEach.call(doc.querySelectorAll('a[href]:not([data-cbsh-hint])'), function (a) {
+      var url;
+      try { url = new win.URL(a.getAttribute('href'), win.location.href); } catch (failure) { if (root.cbQuiet) root.cbQuiet('shell:hintLinks', failure); return; }
+      if (url.origin !== win.location.origin || url.pathname === win.location.pathname || a.closest('.cbsh-box')) return;
+      var where = { pathname: url.pathname, hash: url.hash, search: url.search };
+      if (readyAt(entryOfAddress(manifest.entries, where), where)) return;
+      hintOne(a);
+      hinted++;
+    });
+    return hinted;
   }
   /* the gate at mount, and again when the address changes inside the page (a #route) */
   function watchUnready(state, doc, win) {
-    gateUnready(doc, state.manifest, win.location);
-    win.addEventListener('hashchange', function () {
-      gateUnready(doc, state.manifest, win.location);
-    });
+    gateUnready(doc);
+    hintLinks(doc, state.manifest, win);
+    if (win.MutationObserver && doc.body && doc.body.nodeType) { /* a page draws after the shell mounts: hint again when it has */
+      var again = false;
+      new win.MutationObserver(function () {
+        if (again) return;
+        again = true;
+        win.setTimeout(function () { again = false; hintLinks(doc, state.manifest, win); }, 150);
+      }).observe(doc.body, { childList: true, subtree: true });
+    }
+    win.addEventListener('hashchange', function () { hintLinks(doc, state.manifest, win); });
   }
   /* the area a go() asks for, made real: More is the phone's tab (a laptop shows the three areas themselves); an area this showing does not draw is Home */
   function resolveArea(areaId, onPhone, drawn) {
@@ -890,6 +923,34 @@
   /** the shop's name for the header: the business the header read named, else the person's entity, else the session's, else "Your shop" */
   function shopNameOf(header, person, sess) {
     return wordsOf(header && header.business && header.business.name) || wordsOf(person && person.entity) || wordsOf(sess && sess.entity) || W.yourShop;
+  }
+  /** the switcher's three facts for this page: the area it sits in, its icon and its name (the app's manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area) */
+  function switcherFacts(manifest, options, host, pageTitleFor) {
+    var me = ((manifest && manifest.entries) || []).filter(function (e) {
+      return e && e.id === host.app;
+    })[0];
+    var areaId = (me && me.area) || options.area || 'home';
+    return {
+      cur: areaId,
+      icon: (me && me.icon) || (options.title && options.title.icon) || ICON[areaId],
+      name: (me && me.name) || (options.title && options.title.name) || pageTitleFor(areaId) || W.areas[areaId]
+    };
+  }
+  /** one area's link in the switcher: back to Home at that area, marked when it is the page's own area */
+  function switcherLinkHTML(item, current, homeHref, iconHTML) {
+    return (
+      '<a href="' +
+      esc(homeHref + (item === 'home' ? '' : '#' + item)) +
+      '" data-cbsid="CMP033-M01"' + shellMount('CMP033') + ' data-testid="shell-switch-' +
+      item +
+      '"' +
+      (item === current ? ' aria-current="true"' : '') +
+      '><span class="i" aria-hidden="true">' +
+      iconHTML +
+      '</span>' +
+      esc(W.areas[item]) +
+      '</a>'
+    );
   }
   function mount(el, o) {
     if (!el) return null;
@@ -1132,7 +1193,7 @@
       return bid ? text.replace('{bridge_id}', encodeURIComponent(bid)) : text.split('?')[0];
     }
     function card(e) {
-      if (e.ready === false || (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf())) return greyedTileHTML(e, glyph(e.icon), !!person);
+      if (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf()) return greyedTileHTML(e, glyph(e.icon), !!person);
       return (
         '<a class="cbsh-box" data-cbsid="HOM001-B01" href="' +
         esc(routeOf(e)) +
@@ -1146,6 +1207,7 @@
         '</span><h4>' +
         entryName(e) +
         '</h4>' +
+        (e.ready === false ? readyHintHTML(e.id) : '') +
         (e.what ? '<p class="what" title="' + esc(T(e.what)) + '">' + esc(T(e.what)) + '</p>' : '') +
         '<span class="facts" data-testid="shell-facts-' +
         esc(e.id) +
@@ -1328,17 +1390,20 @@
     }
 
     /* ── the switcher (inside an app): the five areas as links to Home, the app's own menu stays the app's ── */
+    /** FW-44: with no manifest entry and no title the switcher fell to the AREA word "Home", beside the ⌂ Home link: two Home controls. A page inside an area names itself (its own <title>); the Home page keeps the area word. */
+    function pageTitleFor(area) {
+      if (area !== 'home' || host.app === 'home' || !doc || !doc.title) return '';
+      var word = String(doc.title).split(/\s[·|–—-]\s/)[0].trim();
+      return word && word.toLowerCase() !== String(W.areas.home).toLowerCase() ? word : '';
+    }
     function paintSwitcher() {
       var element = $('.cbsh-swb'),
         target = $('.cbsh-swpop');
       if (!element) return;
-      var me = ((S.manifest && S.manifest.entries) || []).filter(function (e) {
-        return e && e.id === host.app;
-      })[0];
-      var cur = (me && me.area) || o.area || 'home';
-      /* the app's name: its manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area */
-      var icon = (me && me.icon) || (o.title && o.title.icon) || ICON[cur],
-        name = (me && me.name) || (o.title && o.title.name) || W.areas[cur];
+      var facts = switcherFacts(S.manifest, o, host, pageTitleFor),
+        cur = facts.cur,
+        icon = facts.icon,
+        name = facts.name;
       element.innerHTML =
         '<span aria-hidden="true">' +
         glyph(icon) +
@@ -1349,19 +1414,7 @@
       element.setAttribute('aria-label', W.switcher);
       target.innerHTML = shellChip('POP116', 'align-self:flex-end;margin:2px 4px') + areasShown()
         .map(function (item) {
-          return (
-            '<a href="' +
-            esc(homeHref + (item === 'home' ? '' : '#' + item)) +
-            '" data-cbsid="CMP033-M01"' + shellMount('CMP033') + ' data-testid="shell-switch-' +
-            item +
-            '"' +
-            (item === cur ? ' aria-current="true"' : '') +
-            '><span class="i" aria-hidden="true">' +
-            glyph(ICON[item]) +
-            '</span>' +
-            esc(W.areas[item]) +
-            '</a>'
-          );
+          return switcherLinkHTML(item, cur, homeHref, glyph(ICON[item]));
         })
         .join('');
     }
@@ -1648,6 +1701,7 @@
     var bar = doc.querySelector('.cbsh-bar'),
       old = doc.querySelector('[data-testid="shell-working"]');
     if (old && old.parentNode) old.parentNode.removeChild(old);
+    if (bar) bar.classList.toggle('cbsh-is-working', !!working); /* W4-15: inside a client's books the area switcher is not drawn: the client header is the frame (CSS below) */
     if (!bar || !working) return;
     var link = doc.createElement('a');
     link.className = 'cbsh-working';
@@ -1716,6 +1770,9 @@
     greyedTileHTML: greyedTileHTML,
     entryOfAddress: entryOfAddress,
     gateUnready: gateUnready,
+    readyAt: readyAt,
+    hintLinks: hintLinks,
+    readyHintHTML: readyHintHTML,
     openRow: openRow
   };
 })(typeof window !== 'undefined' ? window : this);

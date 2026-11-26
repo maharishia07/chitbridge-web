@@ -69,15 +69,21 @@
   function paletteHere() {
     try { return root.CBDraw.paletteNow(null, root.document.getElementById('bp_practice') || root.document.documentElement); } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:palette', failure); return undefined; }
   }
+  /** the words under a picture: "<total> [of <listed>] <unit>" when the picture has a unit, else its parts' figures side by side */
+  function pictureCountText(spec, parts, total, listed) {
+    if (!spec.unit) return parts.map(function (p) { return p.value; }).join(' · ');
+    return total + (listed > total ? ' ' + practiceKit.translate('of') + ' ' + listed : '') + ' ' + practiceKit.translate(spec.unit);
+  }
   function pictureHTML(shown) {
     var spec = PICTURES[shown.key];
     if (!spec || !root.CBDraw) return '';
     var parts = picParts(shown, spec);
     if (!parts.length) return '';
     var narrow = root.innerWidth && root.innerWidth <= 700;
-    var svg = root.CBDraw.statusBar(parts, { palette: paletteHere(), width: narrow ? 112 : 200, id: spec.id, tid: spec.id, codes: PIC_CODES.status, title: practiceKit.translate(spec.title), desc: parts.map(function (p) { return p.label; }).join(', ') });
+    var statusBarSvg = root.CBDraw.statusBar(parts, { palette: paletteHere(), width: narrow ? 112 : 200, id: spec.id, tid: spec.id, codes: PIC_CODES.status, title: practiceKit.translate(spec.title), desc: parts.map(function (p) { return p.label; }).join(', ') });
     var total = parts.reduce(function (sum, p) { return sum + p.value; }, 0);
-    return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + practiceKit.escapeHtml(shown.key) + '" data-total="' + total + '">' + svg + '<span class="sub" data-cbsid="HOM001-P04" data-testid="practice-pic-count">' + practiceKit.escapeHtml(spec.unit ? total + ' ' + practiceKit.translate(spec.unit) : parts.map(function (p) { return p.value; }).join(' · ')) + '</span></div>';
+    var listed = ((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []).length; /* W4-06: the strip counts the clients with books in; when the title says more, the strip says "75 of 76 clients" */
+    return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + practiceKit.escapeHtml(shown.key) + '" data-total="' + total + '">' + statusBarSvg + '<span class="sub" data-cbsid="HOM001-P04" data-testid="practice-pic-count">' + practiceKit.escapeHtml(pictureCountText(spec, parts, total, listed)) + '</span></div>';
   }
   /* REP-66b (year on year, Athi 16 Nov): sales this year to date against the same dates last year, drawn by CBDraw.compare from the figures the server carried on each client's health
      (sales_ytd_minor, sales_prev_ytd_minor, sales_yoy_pct, the dates and sales_yoy_state). This page adds, subtracts and divides nothing: it picks the rows by state, orders them by the carried change and prints

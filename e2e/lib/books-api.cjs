@@ -38,7 +38,7 @@ const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03'
 const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30', entries: 0, sales_minor: 0, lock: { may: true, why: '' }, reopen: { may: false, why: null }, lock_trail: [] });   /* lock_trail: api #910 ACC-240 sends the lock, unlock and relock trail on every month */
 /** GET /api/books/periods */
 /* the api always names the year under review and lists the years (PERIOD, l17): a stand-in that has no case says the shop's current year and no years */
-const periods = (rows, o) => Object.assign({ under_review: { fy: '2026-27', from: '2026-04-01', to: '2027-03-31' }, years: [], periods: rows || [] }, o || {});
+const periods = (rows, o) => Object.assign({ under_review: { fy: '2026-27', from: '2026-04-01', to: '2027-03-31' }, years: [], periods: rows || [], return_name: 'GSTR-3B', months_to_lock: 0 }, o || {});
 module.exports = { ENGINES, health, csStatus, statement, dues, dueRow, periods, periodRow };
 
 /* ── the period-end answers ── */
@@ -72,7 +72,8 @@ const eventsAnswer = (a) => Object.assign({ may: { post: { ok: true, code: null,
 /** the refusal body of a 4xx the page shows: { error, message } and a code when the API gives one */
 const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code ? { code } : {});
 /** GET /api/books/daybook */
-const daybook = (entries, o) => Object.assign({ currency: 'INR', country: 'IN', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
+/* the api sends no_narration · recorded_at · made_by on EVERY entry (the contract lists them) */
+const daybook = (entries, o) => { const es = (entries || []).map((e) => Object.assign({ no_narration: false, recorded_at: String(e.posting_date || e.date || DAY).slice(0, 10) + 'T05:00:00.000Z', made_by: null, posted_by: null, may_reverse: false, evidence: { doc: null, files: [], count: 0, flag: null }, why: null }, e, { lines: (e.lines || []).map((l) => Object.assign({ fx: null }, l)) })); return Object.assign({ currency: 'INR', country: 'IN', timezone: 'Asia/Kolkata', from: DAY, to: DAY, entries: es, count: es.length }, o || {}); };
 /** a day book entry with every key the API sends (a missing doc_date is the posting date, no reversal, a line with no party / counter / rate says so) */
 /* 17 Nov: the api now sends no_narration (a person wrote none) and recorded_at on EVERY day-book entry (routes/books.js daybook), and the shop's country on the answer */
 const entry = (e) => Object.assign({ evidence: { doc: null, files: [], count: 0, flag: null }, posted_by: null, made_by: null, may_reverse: false, why: null, no_narration: false, recorded_at: '2026-10-03T05:00:00.000Z', doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null, fx: null }, l)) });
@@ -88,19 +89,19 @@ Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, asset
 /* R106: `short` = { theirs_minor, ours_minor, short_minor } (integers) when their bill is above the count, else null (FIELDS waiting[].short) */
 const waitingRow = (o) => only({ id: 1, chit_id: null, ref: null, reason: 'Waiting', tries: 0, since: '2026-10-03T05:00:00.000Z', job: 'chit', todo: 'record', name: null, short: null, candidates: [], wait: 'acceptance', source: { chit_id: null, ref: null, kind: 'chit', counter: null, by: null } }, o);
 /** GET /api/books/trial-balance */
-const trialBalance = (rows, o) => { const r = (rows || []).map((x) => Object.assign({ group: 'group' }, x)); const dr = r.reduce((t, x) => t + (x.dr_minor || 0), 0), cr = r.reduce((t, x) => t + (x.cr_minor || 0), 0);
-  return Object.assign({ currency: 'INR', asOf: DAY, rows: r, total_dr_minor: dr, total_cr_minor: cr, balanced: dr === cr }, o || {}); };
+const trialBalance = (rows, o) => { const r = (rows || []).map((x) => Object.assign({ group: 'group', group_label: 'Trade receivables', net_minor: (x.dr_minor || 0) - (x.cr_minor || 0) }, x)); const dr = r.reduce((t, x) => t + (x.dr_minor || 0), 0), cr = r.reduce((t, x) => t + (x.cr_minor || 0), 0);
+  return Object.assign({ currency: 'INR', asOf: DAY, shown_as_at: DAY, fy_from: '2026-04-01', over_rule: null, compare: null, rows: r, total_dr_minor: dr, total_cr_minor: cr, balanced: dr === cr }, o || {}); };
 /** GET /api/books/pl */
 const pl = (income, expense, o) => { const inc = (income || []).map((x) => Object.assign({ line: 'Revenue from operations' }, x)), exp = (expense || []).map((x) => Object.assign({ line: 'Other expenses' }, x));
   const ti = inc.reduce((t, x) => t + x.amount_minor, 0), te = exp.reduce((t, x) => t + x.amount_minor, 0);
-  return Object.assign({ currency: 'INR', from: '2026-04-01', to: DAY, income: inc, expense: exp, total_income_minor: ti, total_expense_minor: te, profit_minor: ti - te, by_line: { income: [], expense: [] }, gross_profit: null, over_rule: null, profit_share_bp: null, total_income_share_bp: null, total_expense_share_bp: null, period: null, presets: [], compare: null /* 17 Nov: the api sends these on every P&L; null = nothing to show */ }, o || {}); };
+  return Object.assign({ currency: 'INR', from: '2026-04-01', to: DAY, income: inc.map((x) => Object.assign({ role: null }, x)), expense: exp.map((x) => Object.assign({ role: null }, x)), total_income_minor: ti, total_expense_minor: te, profit_minor: ti - te, by_line: { income: [], expense: [] }, gross_profit: null, over_rule: null, profit_share_bp: null, total_income_share_bp: null, total_expense_share_bp: null, period: null, presets: [], compare: null /* 17 Nov: the api sends these on every P&L; null = nothing to show */ }, o || {}); };
 /** GET /api/books/bs */
-const bs = (assets, liabilities, equity, o) => { const a = (assets || []).map((x) => Object.assign({ line: 'Trade receivables' }, x)), l = (liabilities || []).map((x) => Object.assign({ line: 'Trade payables' }, x)), e = (equity || []).map((x) => Object.assign({ line: 'Reserves and surplus' }, x));
+const bs = (assets, liabilities, equity, o) => { const prior = { role: null, prior_month_minor: 0, prior_year_minor: 0, group: null }, a = (assets || []).map((x) => Object.assign({ line: 'Trade receivables' }, prior, x)), l = (liabilities || []).map((x) => Object.assign({ line: 'Trade payables' }, prior, x)), e = (equity || []).map((x) => Object.assign({ line: 'Reserves and surplus' }, prior, x));
   const ta = a.reduce((t, x) => t + x.amount_minor, 0), tl = l.concat(e).reduce((t, x) => t + x.amount_minor, 0);
-  return Object.assign({ currency: 'INR', asOf: DAY, assets: a, liabilities: l, equity: e, total_assets_minor: ta, total_liab_equity_minor: tl, profit_to_date_minor: 0, balanced: ta === tl, by_line: { assets: [], liabilities: [] },
+  return Object.assign({ currency: 'INR', asOf: DAY, shown_as_at: DAY, fy_from: '2026-04-01', as_at: { kind: 'custom', step: 0, as_at: DAY, can_next: false }, assets: a, liabilities: l, equity: e, total_assets_minor: ta, total_liab_equity_minor: tl, total_liabilities_minor: l.reduce((t, x) => t + x.amount_minor, 0), total_equity_minor: e.reduce((t, x) => t + x.amount_minor, 0), profit_to_date_minor: 0, balanced: ta === tl, by_line: { assets: [], liabilities: [] },
     schedule_iii: { equity_and_liabilities: { heads: [], total_minor: tl }, assets: { heads: [], total_minor: ta }, balanced: ta === tl, difference_minor: ta - tl } }, o || {}); };
 /** POST /api/books/enable */
-const enable = (o) => Object.assign({ ok: true, accounts_added: 80, fiscal_year: '2026-27', parties_numbered: null }, o || {});
+const enable = (o) => Object.assign({ ok: true, accounts_added: 80, fiscal_year: '2026-27', parties_numbered: null, backfill: null }, o || {});
 /** one account of GET /api/books/accounts */
 const accountRow = (o) => Object.assign({ account_id: 'acc', code: '1000', name: 'Account', is_group: false, tally_group: 'Group', nature: 'asset', role: null, parent_code: null, active: true }, o || {});
 /* GET /api/books/cheques (T3-P1-MONEY shape): the cheques in hand, the post-dated reminders and the owner's switch — the contract's keys, asOf = the one injected today */

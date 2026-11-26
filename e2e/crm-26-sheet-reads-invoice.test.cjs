@@ -12,7 +12,7 @@ const { liftFns } = require('./lib/lift-fn.cjs');
 const asked = [];
 const frozen = { total: 118, taxable: 100, tax: 18, from: 'invoice' };
 const cx = vm.createContext({ root: { CBTax: { moneyOf: (inv, cur) => { asked.push({ inv, cur }); return frozen; } } } });
-vm.runInContext(liftFns('public/app/chit-sheet.js', ['moneyFor'], '  ') + '\nthis.moneyFor = moneyFor;', cx);
+vm.runInContext(liftFns('public/app/chit-sheet.js', ['moneyFor', 'placedTotal'], '  ') + '\nthis.moneyFor = moneyFor;', cx);
 const J = (v) => JSON.parse(JSON.stringify(v));
 
 let bad = 0;
@@ -32,6 +32,6 @@ ok(cx.moneyFor({}, null, 'INR', { total_value: 'abc' }) === null, 'an unreadable
 const before = asked.length;
 ok(cx.moneyFor({ invoice }, null, 'INR', null) === frozen && asked.length === before + 1, 'an invoice with no summary at all is still read from the invoice');
 const bare = vm.createContext({ root: {} });
-vm.runInContext(liftFns('public/app/chit-sheet.js', ['moneyFor'], '  ') + '\nthis.moneyFor = moneyFor;', bare);
+vm.runInContext(liftFns('public/app/chit-sheet.js', ['moneyFor', 'placedTotal'], '  ') + '\nthis.moneyFor = moneyFor;', bare);
 ok(J(bare.moneyFor({ invoice }, { total: 9 }, 'INR', null)).total === 9, 'when the tax engine is not loaded the header\'s summary is used, not a guess');
 process.exitCode = bad ? 1 : 0;

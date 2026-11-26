@@ -131,7 +131,7 @@
       call: call,
       raw: function (path, headers) { return root.fetch((page.o.base || '') + path, { cache: 'no-store', headers: Object.assign({ Authorization: 'Bearer ' + page.o.token }, headers || {}) }); } /* a file: the same token and base as call, the answer left as bytes (cap-evidence.js) */,
       member: page.opened,
-      stores: root.CBBooksActing.clientStores(page.stores, page.held),
+      stores: root.CBBooksActing.clientStores(page.stores, page.held, page.opened && page.opened.id),
       mountList: mountList, sheet: sheet, closeSheet: closeSheet,
       onEnded: page.o.onEnded,
       onSwitch: function (id, name) { openSeat(id, (page.held[id] && page.held[id].grantor_name) || name); },

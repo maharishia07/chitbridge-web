@@ -34,12 +34,12 @@
   /* the Day book's seven columns fit one 1366 screen beside the menu (Entry · Date · Kind · Party · ref · Amount · Evidence · Mark) */
   grantKit.DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170, flag: 70, risk: 80, explain: 120 };
   grantKit.REPORTS = [
-    { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', grantKit.MONEY], ['cr_minor', 'Credit', grantKit.MONEY], ['prior_net_minor', 'Last year', grantKit.DRCR], ['change_minor', 'Change', grantKit.MONEY], ['change_bp', '%', grantKit.PCT]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
+    { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group_label', 'Group'], ['dr_minor', 'Debit', grantKit.MONEY], ['cr_minor', 'Credit', grantKit.MONEY], ['prior_net_minor', 'Last year', grantKit.DRCR], ['change_minor', 'Change', grantKit.MONEY], ['change_bp', '%', grantKit.PCT]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
     { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: plRows, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', grantKit.MONEY], ['prior_minor', 'Last year', grantKit.MONEY], ['change_minor', 'Change', grantKit.MONEY], ['change_bp', '%', grantKit.PCT], ['explain', 'Explain', 'explain']], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['gross_profit_minor', 'Gross profit'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')).map(function (row) { return profitRow(row, a); }); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', grantKit.MONEY], ['prior_year_minor', 'Last year', grantKit.MONEY], ['change_minor', 'Change', grantKit.MONEY], ['change_bp', '%', grantKit.PCT]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
     { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return bookOrder(a.entries || [], grantKit.viewState.since).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e), risk_list: grantKit.riskWords(Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e) }, e)) /* the same row the filters judge (the amount is the debits) */ /* JET: the rules this entry trips (books-grant-filters.js riskOf), one definition each */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', grantKit.MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark'], ['risk', 'Risk', 'risk'], ['flag', 'Saved', 'flag']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', more: { control: '1' } /* FC-M10: the server also answers the trial-balance control */, rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', grantKit.MONEY], ['age_d0_30', '1–30', grantKit.MONEY], ['age_d31_60', '31–60', grantKit.MONEY], ['age_d61_90', '61–90', grantKit.MONEY], ['age_d90_plus', '90+', grantKit.MONEY], ['balance_minor', 'Total', grantKit.MONEY]], facts: [], panels: true },
-    { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['profit_minor', 'Income, tax out', grantKit.MONEY]], facts: [] },
+    { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['profit_minor', 'Profit', grantKit.MONEY]], facts: [] },
     /* YE-F-11: the client's tax return (BAS · VAT return), read from its posted books through GET /returns — a grant read; the box rows and the server's net, the stage in the header line (the server's one stage word) */
     { k: 'bas', label: 'Tax return', ep: 'readReturns', day: 'on', rows: basRows, cols: [['code', 'Box'], ['label', 'What'], ['amount_minor', 'Amount', grantKit.MONEY], ['tax_minor', 'Tax', grantKit.MONEY]], facts: [['net_minor', 'To pay or refund']] }
   ];
@@ -56,8 +56,8 @@
   }
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
   function monthRows(answer) {
-    var today = new Date().toISOString().slice(0, 10); /* months that have not begun are not the books yet */
-    return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && !p.before_books && p.start_date && String(p.start_date).slice(0, 10) <= today; }).map(function (p) {
+    var today = new Date().toISOString().slice(0, 10); /* W4-13: only months that are OVER, the rule the year box and the practice read count by (a month still running is not work to lock yet) */
+    return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && !p.before_books && p.end_date && String(p.end_date).slice(0, 10) < today; }).map(function (p) {
       var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
       var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
       return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: root.CBLockWords ? root.CBLockWords.stateWord(p.status) : grantKit.words(p.status), profit_minor: monthProfit(p), lock_note: lockNoteHtml(who) });
@@ -75,8 +75,9 @@
   }
   /** W20: the balance sheet's profit line is the profit of the period it is read at: "Profit 1 Jul 2025 – 30 Jun 2026", not a bare "Profit for the year" (api fy_from and the as-at day) */
   function profitRow(row, a) {
-    if (row.role !== 'profit_to_date' || !a.fy_from || !a.asOf) return row;
-    return Object.assign({}, row, { name: grantKit.words('Profit') + ' ' + root.shopDay(a.fy_from) + ' – ' + root.shopDay(a.asOf) });
+    var to = a.shown_as_at || a.asOf; /* W4-16: the profit line runs to the day the heading says (shown_as_at, capped at the shop day), never to a year end still to come */
+    if (row.role !== 'profit_to_date' || !a.fy_from || !to) return row;
+    return Object.assign({}, row, { name: grantKit.words('Profit') + ' ' + root.shopDay(a.fy_from) + ' – ' + root.shopDay(to) });
   }
   /** the P&L's rows: each ledger with last year, the change and its flag, all the server's (by_line); the flat lists only when by_line is absent */
   function plRows(a) {
@@ -146,12 +147,19 @@
     return items.length ? '<span class="bv-facts" data-testid="bv-facts">' + items.join('') + '</span>' : '';
   }
   /** the server's own totals as a last row (nothing is added up here) */
-  function totalRows(key, a) {
+  function totalRows(key, figures) {
     var total = grantKit.words('Total');
-    if (key === 'tb' && a.total_dr_minor != null) return [{ _total: true, name: total, dr_minor: a.total_dr_minor, cr_minor: a.total_cr_minor }];
-    if (key === 'pl' && a.profit_minor != null) return (a.gross_profit_minor != null ? [{ _total: true, name: grantKit.words('Gross profit (sales less cost of sales)'), amount_minor: a.gross_profit_minor }] : []).concat([{ _total: true, name: grantKit.words('Profit'), amount_minor: a.profit_minor }]);
-    if (key === 'bs' && a.total_assets_minor != null) return [{ _total: true, side: grantKit.words('Assets'), name: total, amount_minor: a.total_assets_minor }, { _total: true, side: grantKit.words('Liabilities and equity'), name: total, amount_minor: a.total_liab_equity_minor }];
+    if (key === 'tb' && figures.total_dr_minor != null) return [{ _total: true, name: total, dr_minor: figures.total_dr_minor, cr_minor: figures.total_cr_minor }];
+    if (key === 'pl' && figures.profit_minor != null) return profitRows(figures);
+    if (key === 'bs' && figures.total_assets_minor != null) return [{ _total: true, side: grantKit.words('Assets'), name: total, amount_minor: figures.total_assets_minor }, { _total: true, side: grantKit.words('Liabilities and equity'), name: total, amount_minor: figures.total_liab_equity_minor }];
     return [];
+  }
+  /** the profit and loss last rows: the gross profit line (when the server carried one), then Profit or Loss */
+  function profitRows(figures) {
+    /* W4-16: a loss is a Loss with its size (no "Profit" with a minus); a gross profit with no cost of sales says it equals sales, never a 100% margin shown as a fact */
+    var loss = figures.profit_minor < 0, noCost = figures.gross_profit_minor != null && figures.gross_cost_minor === 0;
+    var gross = figures.gross_profit_minor != null ? [{ _total: true, name: grantKit.words(noCost ? 'Gross profit (no cost of sales booked, so it equals sales)' : 'Gross profit (sales less cost of sales)'), amount_minor: figures.gross_profit_minor }] : [];
+    return gross.concat([{ _total: true, name: grantKit.words(loss ? 'Loss' : 'Profit'), amount_minor: loss ? -figures.profit_minor : figures.profit_minor }]);
   }
   /** a heading naming the date the figures stand at */
   function asAt(report) {

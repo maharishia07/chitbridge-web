@@ -629,11 +629,14 @@ async function accBills(body) {
       return accBillsFromBooks(folder, list);
     };
     let cur = sys.find((item) => item.code === ACC.billTab);
-    let side = await loadSide(cur);
+    /* RW2-10: a tab counts the rows of ITS list (the one the rows below are drawn from), never the folder's own count: both sides load together */
+    const sides = {};
+    await Promise.all(sys.map(async (item) => { sides[item.code] = await loadSide(item); }));
+    let side = sides[cur.code];
     /* BD-F-02: the screen opened on Received (nothing open) beside an Issued tab and a Dues screen that owe 116.00. Until the owner picks a tab, open on the side that has something open. */
     const other = sys.find((item) => item.code !== cur.code);
     if (!ACC.billPicked && !side.rowsAll.length && other) {
-      const otherSide = await loadSide(other);
+      const otherSide = sides[other.code];
       if (otherSide.rowsAll.length) {
         cur = other;
         side = otherSide;
@@ -647,7 +650,7 @@ async function accBills(body) {
       sys
         .map(
           (item) =>
-            `<button data-cbsid="BKS001-B04" type="button" class="tab" data-testid="bills-tab-${esc(item.code)}" data-code="${esc(item.code)}" aria-pressed="${item.code === ACC.billTab}">${word(item)}<span class="n">${Number(item.count) || 0}</span></button>`
+            `<button data-cbsid="BKS001-B04" type="button" class="tab" data-testid="bills-tab-${esc(item.code)}" data-code="${esc(item.code)}" aria-pressed="${item.code === ACC.billTab}">${word(item)}<span class="n">${sides[item.code].rowsAll.length}</span></button>`
         )
         .join('') +
       '</div>';
@@ -747,13 +750,17 @@ async function accTodo(body) {
     if (g !== ACC.gen) return;
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
-    addBankTodo(list);
-    ACC.todo = list;
-    body.innerHTML = list.length
-      ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
-      : '<div class="todo-ok" data-testid="todo-none">✓ ' + esc(tx('Books up to date')) + '</div>';
-    body.querySelectorAll('.todo-go').forEach((item) => { item.onclick = () => todoGo(+item.getAttribute('data-i')); });
-    if (typeof CBBooksHeldOk !== 'undefined') CBBooksHeldOk.paintUnder(body, list, isOwner(), { api, tx, esc, money: bkMoney, modal, closeModal, reload: () => accTodo(body) });
+    const paintList = () => {
+      ACC.todo = list;
+      body.innerHTML = list.length
+        ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
+        : '<div class="todo-ok" data-testid="todo-none">✓ ' + esc(tx('Books up to date')) + '</div>';
+      body.querySelectorAll('.todo-go').forEach((item) => { item.onclick = () => todoGo(+item.getAttribute('data-i')); });
+      if (typeof CBBooksHeldOk !== 'undefined') CBBooksHeldOk.paintUnder(body, list, isOwner(), { api, tx, esc, money: bkMoney, modal, closeModal, reload: () => accTodo(body) });
+    };
+    addBankTodo(list, () => { if (g === ACC.gen && body.isConnected) { wordBankUnexplained(list); paintList(); } });
+    wordBankUnexplained(list);
+    paintList();
   } catch (e) {
     body.innerHTML = e && e.status === 503 ? '<div class="todo-ok off" data-testid="todo-503">⏳ ' + esc(tx('Starts after an update')) + '</div>' : bkErr(e);
   }
@@ -835,7 +842,7 @@ function offCard() {
   $('nav').innerHTML = '';
   card(
     `<h2 data-testid="acc-off">Accounts is not switched on</h2>` +
-      (isOwner()
+      (isOwner() && !(window.CBBooksActing && CBBooksActing.current()) /* FW-02: the switch is the firm's own; a client's books are switched on by its owner */
         ? `<button data-cbsid="BKS001-B07" type="button" class="act" data-testid="acc-switch-on" id="switchOn">Switch on</button>`
         : `<p data-testid="acc-ask-owner">Ask the owner to switch it on</p>`)
   );
@@ -918,23 +925,33 @@ function paintFrame() {
   if (v0 !== 'ledgers')
     $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
 }
+/** the card for a start that failed: Accounts off (404), a country not set up yet (422 with its code), else the failure itself */
+function startFailedCard(e) {
+  if (e && e.status === 404) return offCard();
+  if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
+  return failedCard(e);
+}
+/** what this page keeps of the signed-in person: the identity fields of the stored sign-in, plus the shop they belong to */
+function sessionOf(stored, person) {
+  return Object.assign(
+    { token: null },
+    {
+      entityId: person && person.ent,
+      token: stored.token,
+      role: stored.role,
+      name: stored.name,
+      entity: stored.entity,
+      bridgeId: stored.bridgeId,
+      duty: stored.duty,
+      shop: stored.shop
+    }
+  );
+}
 async function start() {
   SESS = session(); CBBooksActing.fromAddress(location.search); /* ACC-176b: before the first read, so every request names the store */
   if (!SESS) return signedOut('');
   MINE = CBOnePerson.who(SESS);
-  SESSION = Object.assign(
-    { token: null },
-    {
-      entityId: MINE && MINE.ent,
-      token: SESS.token,
-      role: SESS.role,
-      name: SESS.name,
-      entity: SESS.entity,
-      bridgeId: SESS.bridgeId,
-      duty: SESS.duty,
-      shop: SESS.shop
-    }
-  );
+  SESSION = sessionOf(SESS, MINE);
   whoPaint(); await CBBooksActing.openPage(CFG.API_BASE, SESS.token, NAV, NAV_GROUPS); /* ACC-176b: acting enters only on a live adviser grant (else leaves); the menu keeps the /api/books tabs */
   if (seatClosed()) return;
   const g = ++ACC.gen;
@@ -946,16 +963,15 @@ async function start() {
   try {
     /* /me says whether the Ledger is on (ledger_on): GET /books/health answers 404 LEDGER_OFF by design, a failed request in the console on a shop with none */
     /* SPEED (batch 1128): the avatar already read /me for this page; when it has answered, its ledger_on is the answer - no second /me round trip before the ledger read */
-    const known = knownLedgerOn();
+    /* FW-02: acting for a client, the Ledger that matters is the CLIENT'S, and booksHealth (sent with the acting headers) answers for it. The avatar's switch and /me are the firm's OWN books, so an adviser whose practice keeps none was told "Accounts is not switched on" in the middle of a client's journal */
+    const acting = CBBooksActing.current(), known = acting ? null : knownLedgerOn();
     startTodoEarly(known);
-    const profile = typeof known === 'boolean' ? { ledger_on: known } : await readProfile();
+    const profile = acting ? {} : typeof known === 'boolean' ? { ledger_on: known } : await readProfile();
     if (typeof profile.ledger_on === 'boolean' && !profile.ledger_on) return offCard(); /* an api that does not say (no ledger_on) is asked the old way below: 404 = off — never "off" for every shop */
     const reply = await api('booksHealth');
     noteHealth(reply);
   } catch (e) {
-    if (e && e.status === 404) return offCard();
-    if (e && e.status === 422 && e.data && /^(NO_COUNTRY_PACK|NO_COUNTRY|COUNTRY_SETUP_PENDING)$/.test(String(e.data.code || ''))) return countryCard(e.data);
-    return failedCard(e);
+    return startFailedCard(e);
   }
   if (!ON) return offCard();
   const first = hashPageOf();

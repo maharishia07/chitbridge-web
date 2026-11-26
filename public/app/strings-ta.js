@@ -1148,7 +1148,7 @@
     'books began part-way': 'புத்தகங்கள் ஆண்டின் நடுவில் தொடங்கின',
     'no bank statement signed': 'வங்கி அறிக்கை எதுவும் ஒப்புதல் பெறவில்லை',
     'no statement kept': 'அறிக்கை எதுவும் வைக்கப்படவில்லை',
-    'not signed off yet': 'இன்னும் ஒப்புதல் இல்லை',
+    'not signed off': 'இன்னும் ஒப்புதல் இல்லை',
     'nothing unexplained': 'விளக்கமில்லாதது எதுவுமில்லை',
     'unexplained {a}': 'விளக்கமில்லாத {a}',
     '{a} unexplained': '{a} விளக்கமில்லாதது',
@@ -1159,5 +1159,7 @@
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {
     if (typeof renderApp === 'function') renderApp();
-  } catch (_) {}
+  } catch (failure) {
+    if (typeof cbQuiet === 'function') cbQuiet('strings-ta: the screen was not repainted with the new words', failure);
+  }
 })();

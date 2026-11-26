@@ -52,7 +52,7 @@ const PRODUCTS = [
 
   console.log('\n── signed in, online: reads the real catalogue and caches it ' + '─'.repeat(1));
   await p.goto(base + '/offer-lab-next.html?api=' + encodeURIComponent(base));
-  await p.evaluate(() => localStorage.setItem('cb_sess', JSON.stringify({ token: 'demo-token', entity: 'Mayur Bhavan' })));
+  await p.evaluate(() => localStorage.setItem('cb_sess', JSON.stringify({ token: 'demo-token', entity: 'Mayur Bhavan', entityId: 'ent-mayur' }))); /* SEC-140 (p2wave-sec 1130): the cached catalogue and the queue belong to the person who made them, so the session must name one */
   const first = await p.evaluate(async () => {
     const ok = await labUseMine();
     await new Promise((r) => setTimeout(r, 100));

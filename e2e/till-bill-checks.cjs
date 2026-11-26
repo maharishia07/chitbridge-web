@@ -106,7 +106,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
   console.log('\n── BF4 · one counter name, from the prefix the bills are numbered under');
   const r4 = await p.evaluate(async () => {
     ls.set('cb_till_name', 'Counter 1'); STATE = { till: { id: 'C5', name: 'Counter 1' } };
-    tillIdSet('C5');
+    tillIdSet('C5'); ls.set(tillGivenKey(), 'C5'); /* RW2-09: a counter number the shop gave THIS shop is a name; a leftover id is not */
     var bill = { kind: 'cash', no: 'C5/26-27/0003', at: Date.now(), total: 10, lines: [], payments: [] };
     var opt = document.querySelector('#set_dating option[value="fy"]');
     try { paintSetup(); } catch (e) {}

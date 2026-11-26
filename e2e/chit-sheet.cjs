@@ -15,7 +15,7 @@
  *     summary_json.money alone → read from it; neither → "not recorded"
  * 10  Accept on a bill received asks what it is for FIRST (PUT /use, then PUT /status — once each); the step is read from the chit's
  *     state_log bill_step row (the shared status never moves), so the sheet, the to-do and Waiting stop saying "To accept"
- * 11  the popup names the counter as the Day book does (Counter C2); CB Accounts' Bills rows open the sheet and name who accepted
+ * 11  the popup names the counter as the Day book does (Counter 2); CB Accounts' Bills rows open the sheet and name who accepted
  * 12  #/app/ledger, a remembered cb_nav of 'ledger' and navTo('ledger') land on /accounts.html at the same view; the app's menu has a Bills door
  * ⚠️ "Open page" (test 3) pins TODAY's door: the chit page in CB CRM (crm.html#/chit/<id>, round CRM2) — it moves with the round that moves the page.
  *  Env CHS_ROOT = a COPY of public/ (used by chit-sheet-breaks.cjs); screenshots to e2e/shots/chit-sheet-*.png
@@ -188,7 +188,7 @@ async function route(S, r) {
     await ctx.addInitScript(([shop]) => { try {
       const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
       const tok = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-books', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
-      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: shop })); } catch (_) {} }, [SHOP]);
+      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: shop })); } catch (_) {} window._firmLandingDone = true; /* RW3-25: the app shell is driven directly */ }, [SHOP]);
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
     /* the Ledger lives on /accounts.html (the in-app door redirects there) — the sheet is opened from CB Accounts' own Day book */
@@ -204,6 +204,7 @@ async function route(S, r) {
   const noAccounting = async (p, where) => { const t = await p.evaluate(() => document.body.innerText); ok(!/accounting|books of account/i.test(t), where + ': the word "accounting" is nowhere on screen'); };
   const shot = async (p, n) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, n + '.png') }); } };
 
+  const take = () => true;   /* RW1-27: every walk block runs (the numbering take() once kept for chit-sheet-breaks is gone; the name was left dangling and the whole walk threw) */
   const env = { ok, open, standIn, waitSheet, acts, sheetOpen, yesAccept, take, SHOP, TODAY };   /* what the blocks in chit-sheet-blocks.cjs need */
 
   /* ── 1 · the counter bill, from the Day book ─────────────────────────────────────────────────────── */
@@ -224,8 +225,8 @@ async function route(S, r) {
     await waitSheet(p, 'C2/26-27/0002');
     ok(await sheetOpen(p), 'tapping the bill number opens the sheet (a <dialog>) over the Day book');
     const head = await p.textContent('[data-testid="cs-head"]');
-    ok(/Counter bill/.test(head) && /C2\/26-27\/0002/.test(head) && /Counter C2/.test(head) && !/Counter 2/.test(head) && /Books Shop/.test(head), 'header: kind · number · date/time · counter (C2 — the way the Day book says it, not the till\'s "Counter 2") · person — ' + head.replace(/\s+/g, ' ').trim());
-    ok(/Counter C2/.test(await p.textContent('[data-testid="db-entry-JV/2026-27/000001"]')), 'the Day book names the same counter: Counter C2');
+    ok(/Counter bill/.test(head) && /C2\/26-27\/0002/.test(head) && /Counter 2/.test(head) && !/Counter C2/.test(head) && /Books Shop/.test(head), 'header: kind · number · date/time · counter (C2 — the way the Day book says it, not the till\'s "Counter 2") · person — ' + head.replace(/\s+/g, ' ').trim());
+    ok(/Counter 2/.test(await p.textContent('[data-testid="db-entry-JV/2026-27/000001"]')), 'the Day book names the same counter: Counter 2');
     /* every figure is CBTax.moneyOf(invoice), to the paisa — read off the DOM cells, compared with the engine's own numbers */
     const nums = async (sel) => (await p.$$eval(sel, (els) => els.map((e) => e.textContent.replace(/[₹,\s]/g, ''))));
     const lineTotals = await nums('#chitsheet tbody tr[data-testid^="cs-line-"] td:last-child');
@@ -255,9 +256,8 @@ async function route(S, r) {
     ok(!a.includes('dispute') && !a.includes('accept'), 'a cart bill has no Dispute (and no Accept)');
     await shot(p, 'chit-sheet-cart'); await shot(p, 'chit-sheet-invoice-laptop');
     await noAccounting(p, 'sheet');
-    /* Return is honest: no web return flow exists, so it says where returns are made */
-    await p.click('[data-testid="cs-act-return"]');
-    ok(/counter/i.test(await p.textContent('[data-testid="cs-note"]')), 'Return says where a return is made');
+    /* RW1-27: the Return button is "Credit note": it opens the till's one return sheet at this bill (clicked once more at the end of this block: it leaves the page) */
+    ok(/Credit note/.test(await p.textContent('[data-testid="cs-act-return"]')) && !(await p.locator('[data-testid="cs-act-return"]').isDisabled()), 'the sheet offers Credit note on a bill with something left to credit');
     ok(!/chit-detail|#\/chit/.test(await p.evaluate(() => location.href)) && await p.evaluate(() => location.href) === hrefBefore, 'opening the sheet did not navigate');
     /* Esc closes; the Day book is exactly where it was */
     await p.keyboard.press('Escape'); await p.waitForTimeout(250);
@@ -266,7 +266,19 @@ async function route(S, r) {
     await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click()); await waitSheet(p, 'C2/26-27/0002');
     await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)) && await scroller.evaluate((e) => e.scrollTop) === before, 'Close does the same');
+    /* RW1-27: a bill credited in full greys the button WITH the reason (the server's read says credit.full); the Day book's sale entry offers the same Credit note */
+    S.chits.ch2.credit = { bill_minor: 118000, credited_minor: 118000, left_minor: 0, full: true, notes: 1 };
+    await p.evaluate(() => openChitSheet('ch2')); await waitSheet(p, 'C1/26-27/0003');
+    const full = p.locator('[data-testid="cs-act-return"]');
+    ok(await full.isDisabled() && /already been credited in full/.test((await full.getAttribute('title')) || '') && /already been credited in full/.test(await p.textContent('[data-testid="cs-why"]')), 'credited in full: Credit note is greyed and says why (hint and line)');
+    await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
+    await p.locator('[data-testid="db-expand-all"]').click().catch(() => {});
+    ok(await p.locator('[data-testid="db-credit"]').count() >= 1, 'the Day book sale entry offers Credit note');
     await B.windowScrollSpy(env, p);
+    await p.route('**/till.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<title>till</title>' }));
+    await p.locator('[data-testid="db-credit"]').first().click();
+    await p.waitForURL(/till\.html\?return=ch1/,{ timeout: 5000 }).catch(() => {});
+    ok(/till\.html\?return=ch1$/.test(await p.evaluate(() => location.href)), 'Credit note from the Day book opens the counter at /till.html?return=<the bill>');
     await ctx.close();
   }
 
@@ -519,7 +531,7 @@ async function route(S, r) {
     await ctx.addInitScript(([shop]) => { try {
       const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
       const tok = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-books', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
-      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: shop })); } catch (_) {} }, [SHOP]);
+      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: shop })); } catch (_) {} window._firmLandingDone = true; /* RW3-25: the app shell is driven directly */ }, [SHOP]);
     const p = await ctx.newPage(); p.on('pageerror', (e) => threw.push(e.message));
     await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     ok(await p.evaluate(() => typeof BK === 'undefined' || !(BK.waiting || []).length), 'STD1 · off the Books page: no Waiting list in hand (app.html)');
@@ -558,7 +570,7 @@ async function route(S, r) {
     await p.evaluate(() => openChitSheet('ch2')); await waitSheet(p, 'C1/26-27/0003');
     const c = await p.$$eval('[data-testid="cs-gst-18"] td', (els) => els.map((e) => e.textContent.replace(/[₹,\s]/g, '')));
     ok(c.join('|') === '18%|1000.00|90.00|90.00' && (await p.textContent('[data-testid="cs-total"]')).replace(/[₹,\s]/g, '') === '1180.00', 'only summary_json.money: GST 18% row and total are the header\'s own (' + c.join(' | ') + ' · 1180.00)');
-    ok(/Counter C1/.test(await p.textContent('[data-testid="cs-head"]')), 'the counter reads "Counter C1" here too');
+    ok(/Counter 1/.test(await p.textContent('[data-testid="cs-head"]')), 'the counter reads "Counter 1" here too');
     await p.keyboard.press('Escape'); await p.waitForTimeout(200);
     await p.evaluate(() => openChitSheet('nr1')); await waitSheet(p, 'C1/26-27/0004');
     ok(/not recorded/i.test(await p.textContent('[data-testid="cs-total"]')) && /not recorded/i.test(await p.textContent('[data-testid="cs-gst-none"]')), 'neither invoice nor money: "not recorded" on the total and on the GST — nothing invented');

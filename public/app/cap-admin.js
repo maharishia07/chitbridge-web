@@ -6041,7 +6041,8 @@ function localeSetFw(v) {
  * /api/offers/openapi.json. Only a signed-in person mints or revokes — a key cannot breed.
  */
 var _KEYS,
-  _KEY_SHOWN = ''; /* the minted key, shown once — survives the list repaint, cleared on the next mint/revoke/leave */
+  _KEY_SHOWN = '', /* the minted key, shown once — survives the list repaint, cleared on the next mint/revoke, after a minute, and when the page is left (intKeyForget) */
+  _KEY_TIMER = 0;
 var _INT_CAT, _INT_RUN, _INT_MAP; /* the connector catalogue, the connectors that have checked in, the profile map — lazy, like the keys */
 /**
  * ⭐ THE PROFILE MAP (Athi, 2026-09-05: "do we have a map of what we look for, how do we fill it, what is the authenticity?").
@@ -8545,12 +8546,22 @@ async function intKeyMint() {
       tx('or') +
       ' <code>Authorization: Bearer …</code></div></div>';
     _KEYS = undefined;
+    clearTimeout(_KEY_TIMER);
+    _KEY_TIMER = setTimeout(intKeyForget, 60000); /* P2WAVE-SEC EL-web-screens-03#L51: nothing cleared the key on leave, as the comment said; a minute is long enough to copy it */
     if (typeof toast === 'function') toast(tx('Key minted ✓'));
     loadSettings(); /* the list repaints; the shown key rides _KEY_SHOWN into the repaint */
   } catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || tx('Could not mint'), true);
   }
 }
+/** forget the minted key: the memory and the screen (a minute after minting, on revoke, when the page is hidden or left) */
+function intKeyForget() {
+  clearTimeout(_KEY_TIMER);
+  _KEY_SHOWN = '';
+  var shown = document.getElementById('int_key_out');
+  if (shown) shown.innerHTML = '';
+}
+window.addEventListener('pagehide', intKeyForget);
 async function intKeyRevoke(jti) {
   try {
     await api('keysRevoke', { params: { jti: jti } });

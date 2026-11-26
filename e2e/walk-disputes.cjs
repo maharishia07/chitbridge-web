@@ -262,7 +262,7 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
   await open('assist');
   await w.step('A1', 'Sidebar -> Assist: "2 answers live", the review box, the answers in a CBList; this shop is not a help desk, so Accept is shown greyed WITH the server\'s sentence', async () => {
     const cnt = await txt('[data-testid="ca-count"]'), n = await page.locator('[data-testid^="ca-row-"]').count(), dis = (await page.locator('#ca_accept').count()) === 0, why = await txt('[data-testid="ca-readonly"]'), lit = await page.$eval('[data-testid="skel-nav-assist"]', (b) => b.classList.contains('active'));
-    return { ok: /2\s*answers live/.test(cnt) && n === 2 && dis === true && /Only a help desk/.test(why) && lit, saw: '"' + cnt + '" · ' + n + ' rows · accept ' + (dis ? 'not offered: "' + why + '"' : 'OPEN') };
+    return { ok: /2\s*answers live/.test(cnt) && n === 2 && dis === true && /support team keeps these answers up to date/.test(why) && lit, saw: '"' + cnt + '" · ' + n + ' rows · accept ' + (dis ? 'not offered: "' + why + '"' : 'OPEN') };
   });
   S.helpdesk = true; await open('assist');
   await w.step('A2', 'As the help desk: a question -> ✨ Draft -> ONE POST /governance/ai-draft { skill_id: assist-ask, context.question } -> the answer box holds the draft, marked "Assist drafted this"', async () => {

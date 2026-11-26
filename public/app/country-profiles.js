@@ -13,6 +13,7 @@
 
   /** text made safe for HTML — the shared helper when the page has it */
   function safe(value) {
+    if (value && typeof value === 'object') value = value.label || value.name || value.id || ''; /* RW2-12: a pack lists some things as { id, label }; an object is never printed as an object */
     return typeof root.esc === 'function'
       ? root.esc(value)
       : String(value == null ? '' : value).replace(/[&<>"']/g, function (symbol) {

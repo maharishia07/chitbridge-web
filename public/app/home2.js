@@ -4,15 +4,12 @@
  * FLOW      CBShell.mount draws the frame and the cards and READS their facts as ever (one source, no second fetch path); this file only MOVES those same
  *           card nodes into the pillar panels named by manifest.json `home2`, and reads the digit off the facts the shell already painted.
  * CARD      26-reporting-mis-and-bi/home-facts
- * Facts follow (Athi 18 Nov: "follow the leaders"; the four sources below are from memory and UNVERIFIED here — nothing was fetched):
- *   Xero dashboard, QuickBooks home, Shopify home, Stripe dashboard each lead with a few headline numbers and a to-do list, details on demand (unverified).
  */
 (function (root) {
   'use strict';
   if (root.CBHome2) return;
   var OPEN_KEY = 'cb_home2_open';
   var doc = root.document;
-  /* plain words for Home only (Fable review, 18 Nov: our words out of the top); the page behind keeps its own name */
   var PLAIN_WORDS = { compare: 'Compare with your old books' };
   var ALIAS = { selling: 'sell', money: 'money', running: 'buy', trade: 'trade', sell: 'sell', customers: 'customers', buy: 'buy', people: 'people' };
   var ROW_SHAPE = { items: '.ix-item', key: 'data-pillar', row: '.ix-row', panel: '.ix-panel' };
@@ -27,7 +24,6 @@
   function quiet(where, failure) {
     if (typeof root.cbQuiet === 'function') root.cbQuiet(where, failure);
   }
-  /* esc is the one in helpers.js (esc · fmtMoney · monthNames), loaded before this file by both pages */
   /** one stored word of this viewer, '' when the browser refuses or keeps none */
   function lsGet(key) {
     try {
@@ -66,12 +62,18 @@
     var first = cards[0];
     return { n: '', w: '', full: first ? sayText('Set up') + ' ' + nameOf(first) : '', tone: 'q', amber: 0 }; /* nothing started: the row says nothing (the Start here row names the steps), never the same "Set up ›" six times */
   }
+  /** RW3-07: the first two words of what a figure counts, and a third when the second is only a connector (3 letters or fewer: to, of, in, on, for, and): "23 entries to fix", never "23 entries to" */
+  function firstWords(text) {
+    var words = String(text).split(/ +/).filter(Boolean), keep = words.slice(0, 2);
+    if (words.length > 2 && keep[1].length <= 3) keep.push(words[2]);
+    return keep.join(' ');
+  }
   /** the figure and the words of a closed row from one fact: the leading number, then the first two words of what it counts (a 0 is never shown) */
   function figureOf(fact, pick) {
     var parts = /^(\S*\d\S*)\s*(.*)$/.exec(fact);
     var num = parts && !/^0\b/.test(parts[1]) ? parts : null;
     /* closed row = ONE figure + ONE word (Fable review §3): the figure, then the first two words of what it counts; the whole fact rides the title */
-    var rest = num ? num[2].split(' · ')[0].split(/ +/).slice(0, 2).join(' ') : fact || nameOf(pick);
+    var rest = num ? firstWords(num[2].split(' · ')[0]) : fact || nameOf(pick);
     return { n: num ? num[1] : '', w: rest };
   }
   /* a row's one figure: the first needs-you fact, else the first fact of a card in use, else its first step (never a 0) */
@@ -177,7 +179,6 @@
       panel.setAttribute('data-testid', 'ix2-panel-' + group.id);
       home.panels[group.id] = panel;
     });
-    /* the two Sides buttons (We lean on / Leans on us) leave the top: they stand in the foot (INDEX-2 §4) */
     var tools = (home.shell.el || doc).querySelector('.cbsh-tools');
     if (tools) home.host.querySelector('.ix-fs').appendChild(tools);
   }
@@ -325,7 +326,7 @@
       home.df.innerHTML = html;
     }
     home.df._items = doors;
-    if (root.CBBell && root.CBBell.setNeeds) root.CBBell.setNeeds(needsCount(doors)); /* the bell's dot is THIS list's size (Do first), not the activity feed's unread count */
+    /* FW-39: the bell's dot is the Activity feed's unread count on EVERY page (what its popup lists); Home no longer swaps in the Do-first size, which made 1 here and 3 on the next page. CBBell.setNeeds stays for a page that really wants it. */
   }
   /* the shell draws (and, for a firm, redraws) its cards into .cbsh-more; every card keeps its own node, so the facts the shell paints keep landing in it */
   function adoptCards(home) {
@@ -362,7 +363,6 @@
     (root.requestAnimationFrame || root.setTimeout)(function () { home.queued = false; adopt(home); });
   }
 
-  /* one open at a time (a second press closes it); the open row is remembered for this viewer */
   function open(home, id, keep) {
     root.CBShell.openRow(home.list, id, true, ROW_SHAPE); /* the shell's one way to open a row (shell.js openRow) */
     home.host.classList.toggle('has-open', !!id);

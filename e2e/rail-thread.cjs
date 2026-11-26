@@ -115,7 +115,7 @@ async function route(S, r) {
     ctx = await b.newContext({ viewport: { width: 1360, height: 900 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, C.wrap(r)));
-    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window.__rail = []; document.addEventListener('cb:rail', (e) => window.__rail.push(e.detail)); }, SESSION(who));
+    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); } catch (_) {} window._firmLandingDone = true; /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */ window.__rail = []; document.addEventListener('cb:rail', (e) => window.__rail.push(e.detail)); }, SESSION(who));
     p = await ctx.newPage();
     p.on('pageerror', (e) => errs.push(who.name + ': ' + String(e.message)));
     p.on('dialog', (d) => { errs.push('a browser dialog opened: ' + d.type()); d.dismiss().catch(() => {}); });

@@ -44,7 +44,7 @@
   const CSS_P2 = [
       /* the pill border follows the focus; the ring is the input's own (next line), so the focused element itself shows it (WCAG 2.4.7, 2.4.11) */
     '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
-      '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
+      '.cbl .cbl-tbtn{flex:0 0 auto;height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
       '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
       '.cbl .cbl-needs{border-color:var(--warn,#B7791F);background:var(--warn-tint,#FFF4D6);color:var(--warn-3,#7A4B00);font-weight:600}.cbl .cbl-needs[aria-pressed="true"]{background:var(--warn,#B7791F);border-color:var(--warn-3,#7A4B00);color:var(--on-accent,#fff)}',
       '.cbl .cbl-needs.clear{border-color:var(--cl-line);background:var(--cl-card);color:var(--grey,#5E594D);font-weight:400;cursor:default}.cbl .cbl-needs-prog{font-size:calc(13px * var(--k,1));color:var(--grey,#5E594D);white-space:nowrap}',
@@ -61,6 +61,10 @@
     '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
       '.cbl .cbl-views::-webkit-scrollbar{display:none}',
       '.cbl .cbl-title .cbl-views.in-title{padding:0;background:none;overflow:visible;flex-wrap:wrap}',
+      /* AT-01 (Athi 25 Nov): on a wide screen the view tabs and the tools bar share ONE row (a list that has views no longer spends a whole row on three chips); a narrow screen keeps them stacked */
+      '@media (min-width:901px){.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools){display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);align-items:center}.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>.cbl-list{align-self:stretch}',
+      '.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>*{grid-column:1/-1}.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>.cbl-views{grid-column:1;padding-inline:0}.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>.cbl-tools{grid-column:2;padding-inline-start:12px}.cbl:has(>.cbl-views:not(.in-title)+.cbl-tools)>.cbl-tools .cbl-search{flex-basis:120px}',
+      '.cbl:has(>.cbl-title):has(>.cbl-views:not(.in-title)+.cbl-tools){grid-template-rows:auto auto minmax(0,1fr)}}',
       '.cbl .cbl-vtab{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:30px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:0 12px;font-size:calc(13px * var(--k,1));font-weight:600;white-space:nowrap;margin:0;color:var(--cl-ink)}',
       '.cbl .cbl-vtab .n{font-family:var(--cl-num);font-size:calc(11.5px * var(--k,1));color:var(--cl-muted);font-weight:500}',
       '.cbl .cbl-vtab[aria-selected="true"]{background:var(--cl-ink);border-color:var(--cl-ink);color:var(--cl-page)}',
@@ -192,6 +196,9 @@
       '.cbl .cbl-lline{display:flex;gap:4px 10px;align-items:baseline}',
       '.cbl .cbl-lflow{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:2px 0}',
       '.cbl .cbl-lflow > span:not(:last-child)::after{content:"·";color:var(--cl-ghost);margin:0 7px}',
+      /* RW1-14: a part that holds a block (the description with its "Made by / recorded" line) drew its "·" on a line of its own and the next button sat against its last word: no dot after it, a gap instead */
+      '.cbl .cbl-lflow > span.cbl-grow{flex:1 1 0;min-width:16ch}.cbl .cbl-lflow > span.cbl-grow:not(:last-child)::after{content:none}.cbl .cbl-lflow > span.cbl-grow:not(:last-child){margin-inline-end:12px}',
+      '.cbl .cbl-lflow > span:has(div):not(:last-child)::after{content:none}.cbl .cbl-lflow > span:has(div):not(:last-child){margin-inline-end:12px}',
       '.cbl .cbl-lamt{font-family:var(--cl-num);font-weight:700;white-space:nowrap}',
       '.cbl .cbl-lgist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));padding-inline-start:22px;margin-top:1px}',
       /* states */
@@ -231,12 +238,22 @@
       '.cbl .cbl-pop,.cbl .cbl-pop.left{position:fixed;inset-inline:8px;top:auto;bottom:8px;max-height:min(70%,520px);min-width:0;z-index:30}',
       '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
       '}',
+    ];
+  }
+  /** the list unit's stylesheet, part 7 continued (the narrow-list and tap-target rules of part 7): one string per rule group */
+  function cssPart7More(phoneMax) {
+    return [
+      /* RW2-11 (re-walk 2, Day book with the bill pane open): the list's own box is ~570 px wide beside a pane, so its head wrapped to five rows and the list began at y 346 of 768 (2 entries). A mid-width box (a pane, a split window; not a phone, which keeps its 44 px taps) takes the desktop 32 px, the search shares the row with the filters, the stepper joins the chips, and the words beside the icons leave (their aria-label stays). Container query on the LIST'S box, never the viewport: one rule for every list in a pane. */
+      '@container screen (min-width: 461px) and (max-width: 700px){.cbl .cbl-search{flex:1 1 130px}.cbl .cbl-title .cbl-slot{margin-inline-start:0;gap:4px}.cbl .cbl-title .cbl-slot .cbl-chip{min-height:32px!important;min-width:32px!important}.cbl .cbl-tools .cbl-w,.cbl .cbl-tools span.cbl-glab{display:none}.cbl .cbl-title,.cbl .cbl-tools{gap:4px 6px}.cbl .cbl-title{padding-block:4px 4px}.cbl .cbl-tools{padding-block:2px;gap:2px 6px}}',
+      /* RW2-11 (entry height): Lines view in a narrow list box (a pane beside it, a phone): the amount stays on the first row beside the words, 13px/1.3, tight padding, the account line one ellipsised row, the day band one row. A card was 143 px, so 2 entries showed. Container query on the LIST'S box, never the viewport. */
+      '@container list (max-width: 700px){.cbl .cbl-lines .cbl-lrec{padding:2px 10px}.cbl .cbl-lines .cbl-lflow{gap:0;font-size:calc(13px * var(--k,1));line-height:1.25}.cbl .cbl-lines .cbl-lamt{font-size:calc(13px * var(--k,1));line-height:1.25}.cbl .cbl-lines .cbl-lgist{padding-inline-start:0;margin-top:0;font-size:calc(12px * var(--k,1));line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cbl .cbl-lines .cbl-lflow button,.cbl .cbl-lines .cbl-lflow .cbl-chip{margin-block:-6px}.cbl .cbl-lines .cbl-group{padding:1px 10px;line-height:1.25;flex-wrap:nowrap;white-space:nowrap;overflow:hidden}.cbl .cbl-lines .cbl-group>*{min-width:0;overflow:hidden;text-overflow:ellipsis}.cbl .cbl-lines .cbl-group>b{flex:none}}',
+      '@container list (min-width: 461px) and (max-width: 700px){.cbl .cbl-lines .cbl-lline{flex-wrap:nowrap;align-items:flex-start;gap:0 8px}.cbl .cbl-lines .cbl-lflow{flex:1 1 0;order:0}.cbl .cbl-lines .cbl-lamt{order:1;margin-inline-start:0}}',
       /* UX-137 TAP RULE (Athi 10 Nov): a desktop control is 32 px at least, a phone's 44 px; a word beside a toolbar icon leaves a phone (the aria-label keeps it) */
     '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px 6px;margin-block:-8px;vertical-align:middle}/* REP-73 B5: a gap on the end side, so the box never sits over the first letter of the name (it was -9px on both sides) */.cbl .cbl-search input{align-self:stretch}',
       /* ASSIGN-W3-CRM-TICKS: a grouped list with ticks: the caret's hang (-9px/-15px) sat over the tick in the 34px lead column, so a press on the tick hit the caret; with a lead column the caret starts at the cell */
       '.cbl .cbl-row[aria-expanded]>.cbl-lead{padding:0;justify-content:center}.cbl .cbl-row[aria-expanded]>.cbl-lead input[data-selrow]{margin:0}',
       '.cbl .cbl-row:has(>.cbl-lead)>.cbl-cell>.cbl-tw{margin-inline-start:0}',
-      '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
+      '.cbl .cbl-ico{width:auto;min-width:34px;padding-inline:8px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
       '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
       '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
       '.cbl .cbl-search,.cbl .cbl-gsel{min-height:34px}.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:32px}.cbl input[type="checkbox"]{width:24px;height:24px}',
@@ -269,7 +286,7 @@
   }
   /** the whole stylesheet text for a phone breakpoint (the standard's 700 px): the parts in order, one rule group a line */
   function cssText(phoneMax) {
-    return [].concat(CSS_P1, CSS_P2, CSS_P3, CSS_P4, cssPart5(phoneMax), CSS_P6, cssPart7(phoneMax), cssPart8(phoneMax)).join('\n');
+    return [].concat(CSS_P1, CSS_P2, CSS_P3, CSS_P4, cssPart5(phoneMax), CSS_P6, cssPart7(phoneMax), cssPart7More(phoneMax), cssPart8(phoneMax)).join('\n');
   }
   root.CBListParts.css = cssText;
 })(typeof window !== 'undefined' ? window : this);
