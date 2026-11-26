@@ -20,7 +20,7 @@ const giveBody = '<button type="button" class="mx" id="gx" aria-label="Close">âœ
   for (const [w, h] of [[1366, 768], [390, 844]]) {
     for (const [name, html, btn] of [['Add a person', addForm, '#add'], ['Give access', giveBody, '#give']]) {
       const page = await (await browser.newContext({ viewport: { width: w, height: h } })).newPage();
-      await page.setContent('<!doctype html><meta name="viewport" content="width=device-width"><style>:root{--surface:#fffdf8;--ink:#241f14;--line-2:#e6dcc4;--muted:#6b6250}body{margin:0;font:14px system-ui}.inp{height:36px;box-sizing:border-box}.act{min-height:40px}' + css + '</style><dialog class="sheet" id="s">' + html + '</dialog>');
+      await page.setContent('<!doctype html><meta name="viewport" content="width=device-width"><style>:root{--surface:#fffdf8;--ink:#241f14;--line-2:#e6dcc4;--muted:#6b6250}body{margin:0;font:14px system-ui}.inp{height:46px;box-sizing:border-box}.act{min-height:40px}' + css + '</style><dialog class="sheet" id="s">' + html + '</dialog>');
       await page.evaluate(() => document.getElementById('s').showModal());
       const r = await page.evaluate((sel) => {
         const el = document.querySelector(sel), b = el.getBoundingClientRect(), dlg = document.getElementById('s').getBoundingClientRect();
