@@ -2577,7 +2577,9 @@ function bkDvHead() {
     dayRange = view.range,
     todoCounts = view.todo,
     period = BK.dbp || bkDbPeriod('fy');
-  var sales = bkDaySales((reply && reply.entries) || [], dayRange.to),
+  /* RW3-10: a day that has not happened is owed nothing — a range that runs on (1 Oct – 31 Dec) is read to the shop's TODAY, so the notice never names a day in the future */
+  var stripDay = dayRange.to > bkToday() ? bkToday() : dayRange.to;
+  var sales = bkDaySales((reply && reply.entries) || [], stripDay),
     chips = [],
     notices = [];
   sales.counters.forEach(function (x) {
@@ -2590,7 +2592,7 @@ function bkDvHead() {
     chips.push({ tid: 'strip-tender-' + x.how, text: tx(x.how) + ' ' + bkMoney(x.amount_minor, currency) });
   });
   /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the strip is not the whole day yet, and says so (the counter holds the fix) */
-  if (!sales.day_closed) notices.push(bkNoCloseNotice(sales, dayRange.to));
+  if (!sales.day_closed) notices.push(bkNoCloseNotice(sales, stripDay));
   notices = notices.concat(bkDvTodoNotices(todoCounts));
   var askWaiting = bkMarkChips(notices, (reply && reply.entries) || []);
   if (!todoCounts.accept && !todoCounts.supplier && !todoCounts.overdue && !todoCounts.cheques && !todoCounts.waiting && !askWaiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
