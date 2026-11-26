@@ -750,14 +750,17 @@ async function accTodo(body) {
     if (g !== ACC.gen) return;
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
-    addBankTodo(list);
+    const paintList = () => {
+      ACC.todo = list;
+      body.innerHTML = list.length
+        ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
+        : '<div class="todo-ok" data-testid="todo-none">✓ ' + esc(tx('Books up to date')) + '</div>';
+      body.querySelectorAll('.todo-go').forEach((item) => { item.onclick = () => todoGo(+item.getAttribute('data-i')); });
+      if (typeof CBBooksHeldOk !== 'undefined') CBBooksHeldOk.paintUnder(body, list, isOwner(), { api, tx, esc, money: bkMoney, modal, closeModal, reload: () => accTodo(body) });
+    };
+    addBankTodo(list, () => { if (g === ACC.gen && body.isConnected) { wordBankUnexplained(list); paintList(); } });
     wordBankUnexplained(list);
-    ACC.todo = list;
-    body.innerHTML = list.length
-      ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
-      : '<div class="todo-ok" data-testid="todo-none">✓ ' + esc(tx('Books up to date')) + '</div>';
-    body.querySelectorAll('.todo-go').forEach((item) => { item.onclick = () => todoGo(+item.getAttribute('data-i')); });
-    if (typeof CBBooksHeldOk !== 'undefined') CBBooksHeldOk.paintUnder(body, list, isOwner(), { api, tx, esc, money: bkMoney, modal, closeModal, reload: () => accTodo(body) });
+    paintList();
   } catch (e) {
     body.innerHTML = e && e.status === 503 ? '<div class="todo-ok off" data-testid="todo-503">⏳ ' + esc(tx('Starts after an update')) + '</div>' : bkErr(e);
   }

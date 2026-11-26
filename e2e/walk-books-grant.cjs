@@ -101,7 +101,7 @@ W.run('books-grant', async (w) => {
   });
   await w.step('A3', 'the auditor · the view has no write control (every button is Back or a report)', async () => {
     const names = await page.$$eval(T('bv-band') + ' button,' + T('bv-tabs') + ' button', (els) => els.map((e) => e.textContent.trim()));
-    return { ok: names.every((n) => /Back|Clients|Trial|Profit|Balance|Day|owes|Closed|Months|Tax return|Bank/.test(n)) && !(await has('#nw_body [data-act]')), saw: names.join(' · ') };
+    return { ok: names.every((n) => /Back|Clients|Trial|Profit|Balance|Day|owes|Closed|Months|Tax return|GSTR-3B|BAS|VAT return|Bank/.test(n)) && !(await has('#nw_body [data-act]')), saw: names.join(' · ') };
   });
   /* W19 (Athi 16 Nov, "be more space cautious in each page"): on a client's books the STATIC header (crumb, name, read only tag, period slot, tabs) takes at most 15% of the viewport height and the DYNAMIC part (totals, filters, the list's own bar and head) at most another 5%, so the first data row starts at 20% or less under the app header; a list under ten rows has no search box. GUARD NAME: w19-first-data-top */
   /* W19 (Athi 16 Nov): the first data row of every client view by 20% (1366x768) / 30% (390x844) of the screen, measured from y = 0: ONE guard for both seats, e2e/lib/first-data-top.cjs (the accountant seat calls it from walk-books-adviser.cjs). */
