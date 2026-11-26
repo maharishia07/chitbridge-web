@@ -112,7 +112,7 @@ W.run('country', async (w) => {
   });
 
   /* ── a Japanese browser: no pack ships for Japan, so the step says it (Australia had this role until AU1 shipped reg-au) ── */
-  const au = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en', timezoneId: 'Asia/Tokyo', serviceWorkers: 'block' });
+  const au = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en', timezoneId: 'Asia/Tokyo', serviceWorkers: 'block' }); await au.addInitScript(() => { window._firmLandingDone = true; }); /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */
   const p2 = await au.newPage(); p2.on('pageerror', (e) => w.errs.push('jp: ' + String(e && e.message || e)));
   const sent2 = {};
   const jpProfile = profile({ country: { code: 'JP', name: 'Japan' }, currency: 'JPY', fy_start_month: 4, timezone: 'Asia/Tokyo', zones: [], pack: { id: null, version: null, books: false, code: 'NO_COUNTRY_PACK', why: JP_WHY } });
@@ -143,7 +143,7 @@ W.run('country', async (w) => {
   await au.close();
 
   /* ── an Australian browser (AU1): the pack is there — AUD and a July year from it, no sentence, and the PUT carries them ── */
-  const au2 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
+  const au2 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' }); await au2.addInitScript(() => { window._firmLandingDone = true; }); /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */
   const p3 = await au2.newPage(); p3.on('pageerror', (e) => w.errs.push('au: ' + String(e && e.message || e)));
   const sent3 = {};
   await stubRegistration(au2, profile({ country: { code: 'AU', name: 'Australia' }, currency: 'AUD', fy_start_month: 7, timezone: 'Australia/Sydney', zones: AU_ZONES, pack: { id: 'AU', version: '1.0.0', books: true, code: null, why: null } }), sent3);
@@ -167,7 +167,7 @@ W.run('country', async (w) => {
 
   /* ── FX-AU1 (F7): the Sydney guess the panel showed is SENT with the registration (the server stores it in the write that creates the shop);
         the owner leaves before Continue, opens Settings › Country: it says Australia, "your time zone" — the SERVER's source, not a default ── */
-  const au3 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
+  const au3 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' }); await au3.addInitScript(() => { window._firmLandingDone = true; }); /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */
   const pAu3 = await au3.newPage(); pAu3.on('pageerror', (e) => w.errs.push('au3: ' + String(e && e.message || e)));
   const sentAu3 = {};
   const AU_PROF = profile({ country: { code: 'AU', name: 'Australia' }, currency: 'AUD', fy_start_month: 7, timezone: 'Australia/Sydney', zones: AU_ZONES,
@@ -185,7 +185,7 @@ W.run('country', async (w) => {
   await au3.close();
 
   /* ── FX-AU1: a shop whose country is only the column default (no source stored, step not done) is never labelled "your registration" ── */
-  const au4 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
+  const au4 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' }); await au4.addInitScript(() => { window._firmLandingDone = true; }); /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */
   const pAu4 = await au4.newPage(); pAu4.on('pageerror', (e) => w.errs.push('au4: ' + String(e && e.message || e)));
   await stubRegistration(au4, profile(), {});
   await w.step('C16', 'FX-AU1: Settings > Country for a shop holding only the default India (no source, not done) -> "not confirmed yet", never "your registration"', async () => {
@@ -199,7 +199,7 @@ W.run('country', async (w) => {
   await au4.close();
 
   /* ── CS2: an Indian browser, a shop not yet constituted — the picker is the server's list; a correction to Australia re-derives ── */
-  const in2 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+  const in2 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' }); await in2.addInitScript(() => { window._firmLandingDone = true; }); /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */
   const p4 = await in2.newPage(); p4.on('pageerror', (e) => w.errs.push('in2: ' + String(e && e.message || e)));
   const sent4 = {};
   await stubRegistration(in2, profile(), sent4);
@@ -229,7 +229,7 @@ W.run('country', async (w) => {
   await in2.close();
 
   /* ── CS2: a CONSTITUTED shop (it has products): Country and Money are fixed on the step, and the server refuses a change in its words ── */
-  const in3 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+  const in3 = await w.browser.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' }); await in3.addInitScript(() => { window._firmLandingDone = true; }); /* RW3-25: an owner on /app.html is sent Home; this walk drives the app shell */
   const p5 = await in3.newPage(); p5.on('pageerror', (e) => w.errs.push('in3: ' + String(e && e.message || e)));
   const sent5 = {};
   const fixedProfile = profile({ done: true, required: false, constituted: true, constituted_by: { products: true, chits: false, entries: false } });
