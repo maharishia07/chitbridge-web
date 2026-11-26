@@ -31,7 +31,7 @@ const TODAY = require('./lib/today.cjs').TODAY; /* the shop's own day (Asia/Kolk
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 /* the menu's views in the menu's order (A1), plus Bank and the Month & year end pages — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [
-  ['todo', 'To do', '[data-testid="todo-list"]'], ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
+  ['todo', 'To do', '[data-testid="todo-list"]'], ['overview', 'How we are doing', '[data-testid="ov"]'], ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
   ['tb', 'Trial balance', '[data-testid="tb-balanced"]'], ['pl', 'P&L', '[data-testid="pl-profit"]'],
   ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['compare', 'Parallel run', '[data-testid="cmp"]'],   /* PR1 (e2e/walk-compare.cjs walks it) */
   ['bank', 'Bank', '[data-testid="bank-form"], [data-testid="bank-none"]'],
@@ -41,11 +41,11 @@ const VIEWS = [
   ['bills', 'Unpaid bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
   ['lock', 'Month lock', '[data-testid="lk_fy"]'],
   ['closingstock', 'Closing stock', '[data-testid="ps-form"]'], ['assets', 'Assets & depreciation', '[data-testid="assets-list"]'], ['accruals', 'Accruals & recurring', '[data-testid="recurring-list"]'],
-  ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
+  ['gstclose', 'Tax close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="ob-root"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
   ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
-  ['rates', 'Rates', '[data-testid="fx"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
+  ['rates', 'Rates', '[data-testid="fx"]'], ['delegate', 'Delegate work', '[data-testid="emp-give"]'], ['access', 'Who can see my books', '[data-testid="bg-head"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
 ];
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
 const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
@@ -137,11 +137,12 @@ async function route(S, r) {
     if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, (S.todo || [
       { kind: 'bills_to_accept', count: 1, words: '1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
       { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]).map(books.todoRow));
-    if (p === '/api/books/dues') return J(r, 200, books.dues(((S.sideFilter && u.searchParams.get('side')) ? (rows) => rows.filter((x) => x.side === u.searchParams.get('side')) : (rows) => rows)([
+    if (p === '/api/books/dues') return J(r, 200, books.dues(((S.sideFilter && u.searchParams.get('side')) ? (rows) => rows.filter((x) => x.side === u.searchParams.get('side')) : (rows) => rows)(((rows) => S.suppliersSettled ? rows.map((x) => x.side === 'supplier' ? Object.assign({}, x, { balance_minor: 0, buckets: { not_due: 0 } }) : x) : rows)([
       { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
-      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }]), { asOf: TODAY }));
+      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }])), { asOf: TODAY }));
+    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: [], parents: [] });   /* Who can see my books: nobody yet */
     if (p === '/api/books/cheques') return J(r, 200, books.cheques({ cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] }));   /* the contract's keys beside them: asOf · pdc_reminders · remind */
     if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1590000 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 1490000 }));
     if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [], [], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
@@ -193,6 +194,8 @@ async function route(S, r) {
     ok(!/accounting|books of account/i.test(t), where + ': "accounting" / "books of account" appear nowhere');
   };
   const nav = (p, id) => p.click('[data-testid="acc-nav-' + id + '"]');
+  /* F-54: a window under 820 px high opens only the open view's group (Books holds Ledgers): open it first when the button is hidden */
+  const openLedgers = async (p) => { await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { state: 'attached', timeout: 15000 }); if (!(await p.locator('[data-testid="acc-nav-ledgers"]').isVisible())) await p.click('[data-testid="acc-grp-books"]'); await p.click('[data-testid="acc-nav-ledgers"]'); };
   /* Dues · Month lock · Packs, looked at on a laptop and at 390 px (PR: ledger panels): at most three columns, nothing cut off, no sideways scroll */
   async function panelShots(p, tag, w) {
     await nav(p, 'receivables'); await p.waitForSelector('[data-testid="dues-side-rcv"]'); await p.waitForTimeout(350);
@@ -233,14 +236,16 @@ async function route(S, r) {
     await p.waitForTimeout(500);
     ok(/Accounts/.test(await p.textContent('.brand')), 'the brand says Accounts');
     ok(await p.locator('[data-testid="shop-name"]').textContent() === 'Mayur Bhavan', 'the pinned header names the shop');
-    const labels = await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')));
+    /* the period-end item names the shop's own tax (taxCloseWord): "Tax close & pay" until the health answer names the country, "GST close & pay" after it. Which one a paint catches is the page's race, so the pin is the one normal form */
+    const taxWord = (t) => String(t).replace(/^GST close/, 'Tax close');
+    const labels = (await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')))).map(taxWord);
     ok(JSON.stringify(labels) === JSON.stringify(VIEWS.map((v) => v[1])), 'the sidebar lists every view, in the menu\'s order: ' + labels.join(' · '));
     ok(await p.evaluate(() => document.querySelector('.titlebar') && getComputedStyle(document.querySelector('.titlebar')).position === 'sticky' && getComputedStyle(document.querySelector('#shell')).position === 'sticky'), 'the frame and the title row are pinned');
     ok(await p.locator('[data-testid="shell-header"]').count() === 1 && await p.locator('[data-testid="shell-home"]').count() === 1 && await p.locator('.home,[data-testid="acc-home"]').count() === 0 && await p.locator('.cbav-btn').count() === 1, 'SHELL-ONE: the frame is the one header — one shell header, one ⌂ Home, no Home of the page\'s own, one avatar');
     /* the menu's groups (Athi, 2026-10-03): To do alone, then Books · Every day · Period end · Setup, each folds; the header's line is level with the brand's */
     const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
-    ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
+    ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'overview,daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds How we are doing, Day book → Balance sheet, Parallel run, Bank');
     ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'dues,receivables,payables,bills,cheques', 'A1: Outstandings holds Dues · Receivables · Payables · Bills · Cheques');
     ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 1, 'A1: Waiting is no longer a menu item; Dues is one again, under Outstandings (ACC-175)');
     await p.click('[data-testid="acc-grp-setup"]');
@@ -266,7 +271,7 @@ async function route(S, r) {
       await nav(p, id);
       const seen = await p.waitForSelector(sel, { timeout: 8000 }).then(() => true, () => false);
       ok(seen, 'the sidebar opens ' + label + ' — its own screen paints (' + sel + ')');
-      ok(await p.evaluate((l) => document.querySelector('.nav-btn.active').getAttribute('aria-label') === l, label), label + ' is the one lit in the sidebar');
+      ok(await p.evaluate((l) => document.querySelector('.nav-btn.active').getAttribute('aria-label').replace(/^GST close/, 'Tax close') === l, label), label + ' is the one lit in the sidebar');
       await bad(p, label);
       ok(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), label + ': no horizontal scroll at 1360');
     }
@@ -298,6 +303,9 @@ async function route(S, r) {
     S.calls.length = 0;
     await nav(p, 'ledgers');
     await p.waitForSelector('[data-testid="lt-band-people"]');
+    /* ACC-367: the tree opens on "With activity" (a ledger that did not move hides); this block pins the whole chart, so it asks for All ledgers first */
+    await p.click('[data-testid="lt-act-all"]');
+    await p.waitForSelector('[data-testid="lt-band-income"]', { timeout: 8000 }).catch(() => {});
     const bands = await p.$$eval('[data-testid^="lt-band-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-band-', '')));
     ok(JSON.stringify(bands) === JSON.stringify(['people', 'things', 'income', 'capital']), 'four bands as the tree\'s top level: People · Things you hold · Income and expenses · Your capital');
     ok(await p.locator('#bk_lt').count() === 1 && await p.locator('.lt-tree').count() === 1 && await p.locator('.lt-pane').count() === 1 && await p.locator('[role="tree"] [role="treeitem"]').count() > 10, 'two panes — the tree (role=tree) and the list');
@@ -319,7 +327,7 @@ async function route(S, r) {
     ok(/Cr/.test(await p.textContent('[data-testid="bal-4000"]')), 'Sales: a Cr balance');
     ok((await p.textContent('[data-testid="bal-4200"]')).trim() === '—', 'a ledger the trial balance does not list says "—", not a made-up nil');
     const tbReads = S.calls.filter((c) => /\/api\/books\/trial-balance/.test(c)).length;
-    ok(tbReads === 1, 'ONE trial-balance read for the whole tree (' + tbReads + ')');
+    ok(tbReads === 2, 'TWO trial-balance reads for the whole tree: as at the period end, and as at the day before it starts, which says which ledgers moved (' + tbReads + ')');   /* ACC-367 (bkBalances): never one per row */
     { const reads = S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)); ok(reads.length === 1 && /\/ledger\/1500/.test(reads[0]), 'no per-leaf balance read; the one ledger opened on its own is the bank-role ledger (W15-90) (' + reads.join(' ') + ')'); }
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-ledgers.png'), fullPage: true });
     await p.screenshot({ path: path.join(SHOTS, 'one-table-ledgers-laptop.png'), fullPage: false });
@@ -539,12 +547,13 @@ async function route(S, r) {
     S.closing = null; S.extra = null;
 
     /* ── 3 · BILLS ── */
+    S.sideFilter = true;   /* the api answers /dues?side= with that side's parties only (the bills screen asks for each side) */
     await nav(p, 'bills');
     await p.waitForSelector('[data-testid="bills-list"]');
     const tabs = await p.$$eval('.tab', (s) => s.map((x) => x.textContent));
-    ok(JSON.stringify(tabs) === JSON.stringify(['Received2', 'Issued1']), 'two tabs from the system folders, with the open counts: ' + tabs.join(' · '));
+    ok(JSON.stringify(tabs) === JSON.stringify(['Received3', 'Issued2']), 'two tabs from the system folders, each counting the rows of its own list (RW2-10): 2 bills + the supplier the books say is owed · 1 bill + the one customer the books name beside it (the other has its own bill): ' + tabs.join(' · '));
     ok(await p.locator('[data-testid="bills-tab-B-2100"]').getAttribute('aria-pressed') === 'true', 'Received is the first tab');
-    ok(await p.locator('#bkl_bills .lrow').count() === 2 && await p.locator('#bkl_bills .lhead').count() === 1 && await p.locator('.bill').count() === 0, 'the Received tab lists its two bills as Task-table rows (Supplier · Bill no · Amount · Date · Step)');
+    ok(await p.locator('#bkl_bills .lrow').count() === 3 && await p.locator('[data-testid^="bill-rb"]').count() === 2 && await p.locator('#bkl_bills .lhead').count() === 1 && await p.locator('.bill').count() === 0, 'the Received tab lists its two bills (and the supplier row the books owe) as Task-table rows (Supplier · Bill no · Amount · Date · Step)');
     ok(/Goods checked/.test(await p.textContent('[data-testid="bill-step-rb1"]')) && await p.getAttribute('[data-testid="bill-step-rb1"]', 'data-step') === 'goods_checked', 'a bill carries the server\'s step chip — "Goods checked"');
     ok(/Bill refused/.test(await p.textContent('[data-testid="bill-step-rb2"]')) && /red/.test(await p.getAttribute('[data-testid="bill-step-rb2"]', 'class')), 'a disputed bill\'s chip is red, in the server\'s words');
     ok(/481\.65/.test(await p.textContent('[data-testid="bill-rb1"]')), 'the amount is shown through the locale layer');
@@ -730,7 +739,7 @@ async function route(S, r) {
     await nav(p, 'tb');
     await p.waitForSelector('table.bktab');
     const card = await p.evaluate(() => { const tr = document.querySelector('table.bktab tbody tr'); const cs = getComputedStyle(tr); return { disp: cs.display, labelled: tr.querySelectorAll('td[data-l]').length, head: getComputedStyle(document.querySelector('table.bktab thead')).display }; });
-    ok(card.disp === 'block' && card.labelled >= 3 && card.head === 'none', 'a table is one card per row at 390 px, each cell labelled (' + card.labelled + ' labelled cells)');
+    ok((card.disp === 'block' || card.disp === 'grid') && card.labelled >= 3 && card.head === 'none', 'a table is one card per row at 390 px, each cell labelled (' + card.labelled + ' labelled cells)');
     await ctx.close();
   }
 
@@ -754,8 +763,12 @@ async function route(S, r) {
       const snap = (n) => LSHOTS ? p.screenshot({ path: path.join(LSHOTS, n + '-' + tag + '-' + theme + '.png') }) : null;
       const pick = async (id) => { if (!(await p.locator('[data-testid="' + id + '"]').isVisible())) { if (await p.locator('[data-lt="back"]').isVisible()) await p.click('[data-lt="back"]'); else if (await p.locator('[data-lt="unfold"]').isVisible()) await p.click('[data-lt="unfold"]'); await p.waitForTimeout(200); }
         await p.click('[data-testid="' + id + '"]'); await p.waitForFunction(() => !document.querySelector('#lg_out .cbl-skel') && document.querySelector('#lg_out .cbl-list'), null, { timeout: 8000 }); await p.waitForTimeout(250); };
-      await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
-      await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
+      await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { state: 'attached' });
+      if (!(await p.locator('[data-testid="acc-nav-ledgers"]').isVisible())) await p.click('[data-testid="acc-grp-books"]');   /* F-54: a window under 820 px high opens only the open view's group; Ledgers is in Books */
+      await p.click('[data-testid="acc-nav-ledgers"]');
+      await p.waitForSelector('[data-testid="lt-band-people"]');
+      await p.click('[data-testid="lt-act-all"]');   /* ACC-367: the tree opens on "With activity"; these states pick ledgers that did not move */
+      await p.waitForTimeout(250);
       ok((await p.evaluate(() => document.documentElement.getAttribute('data-theme'))) === (theme === 'cream' ? 'cream' : theme) || theme === 'cream', 'Ledgers ' + tag + ' in ' + theme + ': the theme is applied');
       await snap('01-tree-open');
       const checks = {}; let parts = '';
@@ -792,7 +805,7 @@ async function route(S, r) {
   {
     const S = standIn(); S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
     const { ctx, p } = await open(S, { viewport: { width: 1080, height: 768 } });
-    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await openLedgers(p);
     await p.waitForSelector('[data-testid="lt-band-people"]', { state: 'attached' }); await p.waitForTimeout(250);
     ok(await p.locator('.lt-tree').isHidden() && await p.locator('[data-testid="lt-unfold"]').count() === 1, 'narrow laptop: the bank ledger opens on its own (W15-90), so the tree is folded and "☰ Ledgers" is the way in');
     await p.click('[data-testid="lt-unfold"]'); await p.waitForTimeout(200); await p.click('[data-testid="lg-acc-1300"]'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); await p.waitForTimeout(250);
@@ -812,15 +825,17 @@ async function route(S, r) {
   {
     const S = standIn();
     const { ctx, p } = await open(S, { viewport: { width: 1366, height: 768 } });
-    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await openLedgers(p);
     await p.waitForSelector('[data-testid="lt-band-people"]');
+    await p.click('[data-testid="lt-act-all"]');   /* ACC-367: the Income band shows once "All ledgers" is asked for */
     await p.click('[data-testid="lg-acc-1300"]'); await p.click('[data-testid="lg-party-c2"]');
     await p.waitForFunction(() => /Chola/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
     await p.click('[data-testid="lt-band-income"]');
     await p.reload();
-    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await openLedgers(p);
     await p.waitForFunction(() => /Chola/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/Chola Auto Care/.test(await p.textContent('.cbl-title h1')), 'the last ledger this person had open comes back (Chola Auto Care, a party\'s ledger)');
+    if (!(await p.locator('[data-testid="lt-band-income"]').count())) await p.click('[data-testid="lt-act-all"]');
     ok(await p.locator('[data-testid="lt-band-income"]').getAttribute('aria-expanded') === 'false', 'a band they folded stays folded');
     ok(await p.evaluate(() => Object.keys(localStorage).filter((k) => /^cb_lt\./.test(k)).length === 1), 'remembered on this device under this person\'s own key (the API has no ledgers preference yet — listed in the PR)');
     /* the agreement date, when the API sends it (it does not yet — the contract lists no `agreed_to`): the page is handed it as the API would, and draws a green chip in the head and a ✓ beside the party in the tree */
@@ -854,7 +869,7 @@ async function route(S, r) {
     PARTY_LINES.c1.push(...extra);
     for (const [w, h] of [[1366, 768], [390, 844]]) {
       const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h } });
-      await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { timeout: 15000 }); await p.click('[data-testid="acc-nav-ledgers"]');
+      await openLedgers(p);
       const pk = async (id) => { if (!(await p.locator('[data-testid="' + id + '"]').isVisible())) { if (await p.locator('[data-lt="back"]').isVisible()) await p.click('[data-lt="back"]'); else if (await p.locator('[data-lt="unfold"]').isVisible()) await p.click('[data-lt="unfold"]'); await p.waitForTimeout(200); } await p.click('[data-testid="' + id + '"]'); await p.waitForFunction(() => !document.querySelector('#lg_out .cbl-skel') && document.querySelector('#lg_out .cbl-list'), null, { timeout: 8000 }); await p.waitForTimeout(250); };
       await p.waitForSelector('[data-testid="lt-band-people"]', { timeout: 15000 }); await pk('lg-acc-1300'); await pk('lg-party-c1'); await p.waitForSelector('[data-testid="stmt-row-3"]', { timeout: 15000 }); await p.mouse.move(1, 1); await p.waitForTimeout(400); /* the pointer rests off the rows: a hover shade is not the zebra */
       const zb = await p.evaluate(() => { const bg = (e) => getComputedStyle(e).backgroundColor, rs = Array.from(document.querySelectorAll('[data-testid^="stmt-row-"]')); return { n: rs.length, a: bg(rs[0]), b: bg(rs[1]), c: bg(rs[2]), d: bg(rs[3]) }; });

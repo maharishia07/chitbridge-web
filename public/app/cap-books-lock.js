@@ -325,7 +325,7 @@ async function bkLockDo(what, period, reason, amend) {
       key: 'lk-' + fiscalYear + '-' + period,
       out: 'lk_out',
       failed: tx('Could not change it'),
-      confirm: bkLockConfirm(what, monthName, calendarYear),
+      confirm: what === 'unlock' || what === 'reopen' ? undefined : bkLockConfirm(what, monthName, calendarYear), /* opening a month again asks for its REASON in its own popup (bkLockReopen): the Lock question ("Lock Nov 2026?") was being put to the person opening it */
       onFail: function (words, failure) { bkLockRefused(what, period, words, failure); },
       /* after the server answers: flip the one month row, then reload the periods */
       outcome: function (answer) {
