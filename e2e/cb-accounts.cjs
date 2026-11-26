@@ -269,6 +269,7 @@ async function route(S, r) {
     for (const [id, label, sel] of VIEWS) {
       await nav(p, id);
       const seen = await p.waitForSelector(sel, { timeout: 8000 }).then(() => true, () => false);
+      if (!seen) console.log('DBGSEL', label, await p.evaluate(() => ((document.querySelector('[data-testid="bk-body"]') || document.body).innerText || '').slice(0, 300)));
       ok(seen, 'the sidebar opens ' + label + ' — its own screen paints (' + sel + ')');
       ok(await p.evaluate((l) => document.querySelector('.nav-btn.active').getAttribute('aria-label') === l, label), label + ' is the one lit in the sidebar');
       await bad(p, label);
@@ -326,7 +327,7 @@ async function route(S, r) {
     ok(/Cr/.test(await p.textContent('[data-testid="bal-4000"]')), 'Sales: a Cr balance');
     ok((await p.textContent('[data-testid="bal-4200"]')).trim() === '—', 'a ledger the trial balance does not list says "—", not a made-up nil');
     const tbReads = S.calls.filter((c) => /\/api\/books\/trial-balance/.test(c)).length;
-    ok(tbReads === 1, 'ONE trial-balance read for the whole tree (' + tbReads + ')');
+    ok(tbReads === 2, 'TWO trial-balance reads for the whole tree: as at the period end, and as at the day before it starts, which says which ledgers moved (' + tbReads + ')');   /* ACC-367 (bkBalances): never one per row */
     { const reads = S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)); ok(reads.length === 1 && /\/ledger\/1500/.test(reads[0]), 'no per-leaf balance read; the one ledger opened on its own is the bank-role ledger (W15-90) (' + reads.join(' ') + ')'); }
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-ledgers.png'), fullPage: true });
     await p.screenshot({ path: path.join(SHOTS, 'one-table-ledgers-laptop.png'), fullPage: false });
@@ -549,6 +550,7 @@ async function route(S, r) {
     await nav(p, 'bills');
     await p.waitForSelector('[data-testid="bills-list"]');
     const tabs = await p.$$eval('.tab', (s) => s.map((x) => x.textContent));
+    console.log('DBGBILLS', tabs.join('|'), await p.$$eval('#bkl_bills .lrow', (r) => r.map((x) => x.getAttribute('data-testid') + ':' + x.textContent.slice(0, 50)).join(' / ')), JSON.stringify(S.calls.filter((x) => /folders|dues/.test(x))));
     ok(JSON.stringify(tabs) === JSON.stringify(['Received2', 'Issued1']), 'two tabs from the system folders, with the open counts: ' + tabs.join(' · '));
     ok(await p.locator('[data-testid="bills-tab-B-2100"]').getAttribute('aria-pressed') === 'true', 'Received is the first tab');
     ok(await p.locator('#bkl_bills .lrow').count() === 2 && await p.locator('#bkl_bills .lhead').count() === 1 && await p.locator('.bill').count() === 0, 'the Received tab lists its two bills as Task-table rows (Supplier · Bill no · Amount · Date · Step)');
@@ -713,6 +715,7 @@ async function route(S, r) {
     const pg1 = await p.evaluate(() => { const tree = document.querySelector('.lt-tree'), top = document.querySelector('.titlebar'), l = document.querySelector('#lt_tree'); const r = l.getBoundingClientRect();
       return { tree: getComputedStyle(tree).display, pane: getComputedStyle(document.querySelector('.lt-pane')).display, top: top && getComputedStyle(top).display, h1: (document.querySelector('#title') || {}).textContent, av: !!document.querySelector('[data-testid="shell-header"] .cbav-btn'), head: Math.round(r.top / innerHeight * 100) }; });
     ok(pg1.tree !== 'none' && pg1.pane === 'none' && pg1.top !== 'none' && pg1.h1 === 'Ledgers' && pg1.av, 'phone page one: the tree, the title row "Ledgers" under the frame (with the avatar), and no squeezed side panel');
+    console.log('DBGPH', JSON.stringify(await p.evaluate(() => ['.titlebar', '#shell', '.lt-tools', '#lt_head', '.lt-asof', '.lt-segs', '#lt_tree', '.lt-tree'].map((s) => { const e = document.querySelector(s); if (!e) return s + ':none'; const r = e.getBoundingClientRect(); return s + ' top' + Math.round(r.top) + ' h' + Math.round(r.height); }))));
     ok(pg1.head <= 30, 'phone page one: the head is ' + pg1.head + '% of the window (limit 30%)');
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-phone.png'), fullPage: false });
     await p.click('[data-testid="lg-acc-1300"]');
@@ -737,6 +740,7 @@ async function route(S, r) {
     await nav(p, 'tb');
     await p.waitForSelector('table.bktab');
     const card = await p.evaluate(() => { const tr = document.querySelector('table.bktab tbody tr'); const cs = getComputedStyle(tr); return { disp: cs.display, labelled: tr.querySelectorAll('td[data-l]').length, head: getComputedStyle(document.querySelector('table.bktab thead')).display }; });
+    console.log('DBGCARD', JSON.stringify(card), await p.evaluate(() => document.querySelector('table.bktab tbody tr').outerHTML.slice(0, 500)));
     ok(card.disp === 'block' && card.labelled >= 3 && card.head === 'none', 'a table is one card per row at 390 px, each cell labelled (' + card.labelled + ' labelled cells)');
     await ctx.close();
   }
@@ -761,7 +765,9 @@ async function route(S, r) {
       const snap = (n) => LSHOTS ? p.screenshot({ path: path.join(LSHOTS, n + '-' + tag + '-' + theme + '.png') }) : null;
       const pick = async (id) => { if (!(await p.locator('[data-testid="' + id + '"]').isVisible())) { if (await p.locator('[data-lt="back"]').isVisible()) await p.click('[data-lt="back"]'); else if (await p.locator('[data-lt="unfold"]').isVisible()) await p.click('[data-lt="unfold"]'); await p.waitForTimeout(200); }
         await p.click('[data-testid="' + id + '"]'); await p.waitForFunction(() => !document.querySelector('#lg_out .cbl-skel') && document.querySelector('#lg_out .cbl-list'), null, { timeout: 8000 }); await p.waitForTimeout(250); };
-      await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+      await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { state: 'attached' });
+      if (!(await p.locator('[data-testid="acc-nav-ledgers"]').isVisible())) await p.click('[data-testid="acc-grp-books"]');   /* F-54: a window under 820 px high opens only the open view's group; Ledgers is in Books */
+      await p.click('[data-testid="acc-nav-ledgers"]');
       await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
       ok((await p.evaluate(() => document.documentElement.getAttribute('data-theme'))) === (theme === 'cream' ? 'cream' : theme) || theme === 'cream', 'Ledgers ' + tag + ' in ' + theme + ': the theme is applied');
       await snap('01-tree-open');
