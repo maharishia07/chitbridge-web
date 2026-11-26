@@ -551,7 +551,7 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="bills-list"]');
     const tabs = await p.$$eval('.tab', (s) => s.map((x) => x.textContent));
     console.log('DBGBILLS', tabs.join('|'), await p.$$eval('#bkl_bills .lrow', (r) => r.map((x) => x.getAttribute('data-testid') + ':' + x.textContent.slice(0, 50)).join(' / ')), JSON.stringify(S.calls.filter((x) => /folders|dues/.test(x))));
-    ok(JSON.stringify(tabs) === JSON.stringify(['Received3', 'Issued3']), 'two tabs from the system folders, each counting the rows of its own list (RW2-10): 2 bills + the supplier the books say is owed · 1 bill + the 2 customers: ' + tabs.join(' · '));
+    ok(JSON.stringify(tabs) === JSON.stringify(['Received3', 'Issued2']), 'two tabs from the system folders, each counting the rows of its own list (RW2-10): 2 bills + the supplier the books say is owed · 1 bill + the one customer the books name beside it (the other has its own bill): ' + tabs.join(' · '));
     ok(await p.locator('[data-testid="bills-tab-B-2100"]').getAttribute('aria-pressed') === 'true', 'Received is the first tab');
     ok(await p.locator('#bkl_bills .lrow').count() === 3 && await p.locator('[data-testid^="bill-rb"]').count() === 2 && await p.locator('#bkl_bills .lhead').count() === 1 && await p.locator('.bill').count() === 0, 'the Received tab lists its two bills (and the supplier row the books owe) as Task-table rows (Supplier · Bill no · Amount · Date · Step)');
     ok(/Goods checked/.test(await p.textContent('[data-testid="bill-step-rb1"]')) && await p.getAttribute('[data-testid="bill-step-rb1"]', 'data-step') === 'goods_checked', 'a bill carries the server\'s step chip — "Goods checked"');
@@ -768,7 +768,9 @@ async function route(S, r) {
       await p.waitForSelector('[data-testid="acc-nav-ledgers"]', { state: 'attached' });
       if (!(await p.locator('[data-testid="acc-nav-ledgers"]').isVisible())) await p.click('[data-testid="acc-grp-books"]');   /* F-54: a window under 820 px high opens only the open view's group; Ledgers is in Books */
       await p.click('[data-testid="acc-nav-ledgers"]');
-      await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
+      await p.waitForSelector('[data-testid="lt-band-people"]');
+      await p.click('[data-testid="lt-act-all"]');   /* ACC-367: the tree opens on "With activity"; these states pick ledgers that did not move */
+      await p.waitForTimeout(250);
       ok((await p.evaluate(() => document.documentElement.getAttribute('data-theme'))) === (theme === 'cream' ? 'cream' : theme) || theme === 'cream', 'Ledgers ' + tag + ' in ' + theme + ': the theme is applied');
       await snap('01-tree-open');
       const checks = {}; let parts = '';

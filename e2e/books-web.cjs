@@ -107,6 +107,13 @@ async function route(S, r) {
     }
     if (p === '/api/books/dues') { const d = S.dues(); return J(r, 200, books.dues(d.parties, { asOf: d.as_of })); }
     if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const st = S.statement(x[1]); return J(r, 200, books.statement(x[1], { opening_minor: st.opening_minor, closing_minor: st.closing_minor, lines: st.lines })); }
+    /* GET /party/:id/bills: one party's open bills for the Dues and CRM next levels (W15-107): the tabs' counts, the one ageing (the stand-in's dues put every open bill in 31-60), the on-account line */
+    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/bills$/)) && m === 'GET') {
+      const open = (S.items[x[1]] || []).filter((i) => i.open_minor !== 0), tab = u.searchParams.get('tab') || 'open', needs = open.filter((i) => i.disputed);
+      const rows = (tab === 'needs' ? needs : open).map((i) => ({ entry_id: 'e-' + i.chit, chit_id: i.chit, bill_no: i.bill_no, ref: i.bill_no, date: i.date, due_date: i.due_date, amount_minor: Math.abs(i.orig || i.open_minor), owed_minor: Math.abs(i.open_minor), status: 'unpaid', reasons: i.disputed ? ['disputed'] : [], days_overdue: 0, no_terms: false, mark: null }));
+      const aged = open.filter((i) => !i.disputed).reduce((a, i) => a + Math.abs(i.open_minor), 0);
+      return J(r, 200, { bills: rows, total: rows.length, page: 1, limit: 50, counts: { needs: needs.length, open: open.length, all: open.length, paid: 0, in_order: open.length - needs.length }, bands: aged ? { d31_60: aged } : {}, on_account_minor: 0, currency: 'INR' });
+    }
     const billsOf = (id) => S.items[id].filter((i) => i.open_minor !== 0).map((i) => Object.assign({}, i, { open_minor: Math.abs(i.open_minor) }));
     const nameOf = (id) => ((S.customers.find((c) => c.customer_identity_id === id) || {}).display_name) || ((S.suppliers.find((s) => s.supplier_entity_id === id) || {}).display_name) || 'this party';
     if (p === '/api/books/payments/preview' && m === 'POST') return J(r, 200, books.payPreview(billsOf(body.party_id), body, nameOf(body.party_id)));
@@ -419,6 +426,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
   await p.fill('[data-testid="pay_amt"]', '4000');
   await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 8000 });
+  /* the rows paint from the bills first and take the proposal when the preview answers: read them once it has */
+  await p.waitForFunction(() => { const e = document.querySelector('[data-testid="alloc-2"]'); return !!e && Number(e.value) === 1000; }, null, { timeout: 8000 }).catch(() => {});
   ok(S.payPosts.length === 0 && /^Record$/.test((await p.textContent('[data-testid="pay_record"]')).trim()) && !/Later/.test(await p.evaluate(() => document.body.innerText)), 'the bills table appears from the preview with nothing recorded yet; the button says Record and there is no "Later"');
   const rows = await p.$$eval('[data-testid^="alloc-row-"]', (els) => els.map((e) => e.textContent));
   const vals = await p.$$eval('[data-testid^="alloc-"]:not([data-testid^="alloc-row"])', (els) => els.map((e) => ({ v: e.value, d: e.disabled })));
