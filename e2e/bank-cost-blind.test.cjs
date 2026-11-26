@@ -1,6 +1,6 @@
 /**
  * bank-cost-blind.test.cjs — l16 integ2b-finmsg (16 Nov 2026): the api's 403 COST_BLIND (B3) on GET /bank/statement-files, /file and /bank/log is SAID, never an empty box or a generic error.
- * OWNS      the proof on the real consts: bksCostBlind · bksCostBlindSay · bksWhy (cap-bank-store.js) · bkstBlind · bkstWhyNot · the load catch and the summary line (cap-bank-statements.js)
+ * OWNS      the proof on the real consts: bksCostBlind · bksCostBlindSay · bksWhy (cap-bank-store.js) · bkstBlind · bkstRefusalCode · bkstRefusedWords (W4-03) · bkstWhyNot · the load catch and the summary line (cap-bank-statements.js)
  * CALLED BY .github/workflows/ci.yml (Offline guards). No browser, no network.   node e2e/bank-cost-blind.test.cjs
  */
 'use strict';
@@ -9,7 +9,7 @@ const vm = require('vm');
 const store = fs.readFileSync('public/app/cap-bank-store.js', 'utf8'), stm = fs.readFileSync('public/app/cap-bank-statements.js', 'utf8');
 const line = (src, name) => { const m = src.match(new RegExp('^const ' + name + ' = [^\n]*$', 'm')); if (!m) throw new Error(name + ' not found'); return m[0]; };
 const cx = vm.createContext({ tx: (s) => s, BKST: { mode: 'server', data: null, fileTotal: 0 } });
-vm.runInContext(['bksCostBlind', 'bksCostBlindSay', 'bksWhy'].map((n) => line(store, n)).join('\n') + '\n' + ['bkstBlind', 'bkstWhyNot'].map((n) => line(stm, n)).join('\n') + '\nthis.f = { bksCostBlind, bksCostBlindSay, bksWhy, bkstWhyNot };', cx);
+vm.runInContext(['bksCostBlind', 'bksCostBlindSay', 'bksWhy'].map((n) => line(store, n)).join('\n') + '\n' + ['bkstBlind', 'bkstRefusalCode', 'bkstRefusedWords', 'bkstWhyNot'].map((n) => line(stm, n)).join('\n') + '\nthis.f = { bksCostBlind, bksCostBlindSay, bksWhy, bkstWhyNot };', cx);
 const f = cx.f;
 let bad = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) bad++; };
@@ -22,6 +22,7 @@ const SAY = 'Your access does not include costs, so the bank statements are hidd
   const res = (status, body) => ({ status, ok: false, clone: () => ({ json: () => (body ? Promise.resolve(body) : Promise.reject(new Error('no body'))) }) });
   ok((await f.bkstWhyNot(res(403, { code: 'COST_BLIND' }))) === SAY, '/statement-files/:id/file 403 COST_BLIND says the sentence');
   ok((await f.bkstWhyNot(res(403, null))) === 'This access has ended.', 'a 403 with no body keeps "This access has ended."');
+  ok((await f.bkstWhyNot(res(403, { code: 'GRANT_ROUTE_NOT_LISTED' }))) === 'This is not part of this access.', 'W4-03: a 403 GRANT_ROUTE_NOT_LISTED says it is not part of this access, never "ended"');
   ok(stm.includes("bksCostBlind(failure) ? 'blind' : 'error'") && stm.includes("BKST.mode === 'blind' || "), '/statement-files list 403 sets mode blind and the Statements line says the sentence');
   /* the Bank home: bankHomeSigned (the real function) meets a 403 COST_BLIND on /bank/log and the Statements line says the sentence, not "Kept" */
   const { liftFns } = require('./lib/lift-fn.cjs');
