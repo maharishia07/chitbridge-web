@@ -1112,7 +1112,7 @@ function _secTabHtml() {
     return `<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">${esc(s.area)}</span><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:${c}">${lbl}</span></div>
       <div style="font-size:var(--fs-1);color:var(--ink);line-height:1.45;margin-bottom:4px">${esc(s.what)}</div>
-      ${typeof SESSION !== 'undefined' && SESSION && SESSION.token ? `<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>` : ''}
+      ${typeof SESSION !== 'undefined' && SESSION.token ? `<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>` : ''}
     </div>`;
   };
   return `<div style="padding:12px 13px;overflow:visible">
