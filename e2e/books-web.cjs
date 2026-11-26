@@ -226,7 +226,7 @@ async function route(S, r) {
     { folder_id: 'f-b2100', parent_id: null, name: 'Bills · Received', code: 'B-2100', kind: 'view', system: true, scope: null, side: 'received', count: 0, total: 0 },
     { folder_id: 'f-b1300', parent_id: null, name: 'Bills · Issued', code: 'B-1300', kind: 'view', system: true, scope: null, side: 'issued', count: 0, total: 0 }] });
   if (/^\/api\/folders\/[^/]+\/chits$/.test(p) && m === 'GET') return J(r, 200, { chits: [] });
-  /* the app reads whether the Ledger is on from /me (ledger_on, noteLedgerOn) — it no longer asks GET /books/health on the first screen */
+  /* the app reads whether the Ledger is on from /me (ledger_on, noteLedgerOn): it no longer asks GET /books/health on the first screen */
   if (p === '/api/entities/me' && m === 'GET') return J(r, 200, { entity: { display_name: 'Books Shop', currency_code: 'INR', ledger_on: !!S.enabled } });
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
@@ -310,7 +310,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   let crmNo = '';
   /* 2 · customers: chip + party block + statement */
   await p.evaluate(() => navTo('customers'));
-  await p.waitForSelector('[data-testid="party-due-c1"]', { timeout: 15000 }).catch(async (e) => { console.log('DBG2', await p.evaluate(() => 'booksOn=' + SESSION.booksOn + ' bkMoney=' + typeof bkMoney + ' BKdues=' + (typeof BK !== 'undefined' && BK.dues ? Object.keys(BK.dues).join('|') : 'none') + ' heads=' + Array.from(document.querySelectorAll('#tbl_customers .lhcell')).map((x) => x.textContent).join('|') + ' CRMledger=' + (typeof CRM !== 'undefined' ? CRM.ledger : 'noCRM')), 'calls=' + JSON.stringify(S.calls && S.calls.map((c) => c.path || c).slice(-15))); console.log('DBG', await p.evaluate(() => (document.getElementById('panel') || document.body).innerText.slice(0, 700) + ' | ids ' + Array.from(document.querySelectorAll('[data-testid]')).map((x) => x.dataset.testid).filter((t) => /cust|party|empty|err/.test(t)).slice(0, 20).join(','))); throw e; });
+  await p.waitForSelector('[data-testid="party-due-c1"]', { timeout: 15000 }).catch(async (e) => { console.log('DBG', await p.evaluate(() => { const r = document.querySelector('[data-testid="cust-row-c1"]'); return 'booksOn=' + SESSION.booksOn + ' dues=' + JSON.stringify(BK.dues && BK.dues.c1) + ' row=' + (r ? r.outerHTML.slice(0, 1500) : 'none') + ' all=' + Array.from(document.querySelectorAll('[data-testid^=party-due]')).map((x) => x.dataset.testid).join(','); })); throw e; });
   const chip = await p.textContent('[data-testid="party-due-c1"]');
   ok(/P-00001/.test(await p.textContent('[data-testid="party-no-c1"]')) && /6,000/.test(chip), 'the Customers table: the Party no column (P-00001) and the Balance column (' + chip.trim() + ')');
   const chipTitle = await p.getAttribute('[data-testid="party-due-c1"]', 'title');

@@ -31,7 +31,7 @@ const TODAY = require('./lib/today.cjs').TODAY; /* the shop's own day (Asia/Kolk
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 /* the menu's views in the menu's order (A1), plus Bank and the Month & year end pages — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [
-  ['todo', 'To do', '[data-testid="todo-list"]'], ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
+  ['todo', 'To do', '[data-testid="todo-list"]'], ['overview', 'How we are doing', '[data-testid="ov"]'], ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
   ['tb', 'Trial balance', '[data-testid="tb-balanced"]'], ['pl', 'P&L', '[data-testid="pl-profit"]'],
   ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['compare', 'Parallel run', '[data-testid="cmp"]'],   /* PR1 (e2e/walk-compare.cjs walks it) */
   ['bank', 'Bank', '[data-testid="bank-form"], [data-testid="bank-none"]'],
@@ -45,7 +45,7 @@ const VIEWS = [
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="ob-root"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
   ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
-  ['rates', 'Rates', '[data-testid="fx"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
+  ['rates', 'Rates', '[data-testid="fx"]'], ['delegate', 'Delegate work', '[data-testid="emp-give"]'], ['access', 'Who can see my books', '[data-testid="bg-head"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
 ];
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
 const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
@@ -231,6 +231,8 @@ async function route(S, r) {
     const { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
     await p.waitForTimeout(500);
+    /* the period-end item names the shop's own tax once the pack is read ("Tax close & pay" until then): wait for the pack's word, not a fixed 500 ms */
+    await p.waitForFunction(() => /^GST close/.test((document.querySelector('[data-testid="acc-nav-gstclose"]') || { getAttribute: () => '' }).getAttribute('aria-label') || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/Accounts/.test(await p.textContent('.brand')), 'the brand says Accounts');
     ok(await p.locator('[data-testid="shop-name"]').textContent() === 'Mayur Bhavan', 'the pinned header names the shop');
     const labels = await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')));
@@ -240,8 +242,7 @@ async function route(S, r) {
     /* the menu's groups (Athi, 2026-10-03): To do alone, then Books · Every day · Period end · Setup, each folds; the header's line is level with the brand's */
     const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
-    console.log('DBG3', JSON.stringify(await p.$eval('#nav .nav-sec', (s) => Array.from(s).map((x) => Array.from(x.querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')))));
-    ok(await p.$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
+    ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'overview,daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds How we are doing, Day book → Balance sheet, Parallel run, Bank');
     ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'dues,receivables,payables,bills,cheques', 'A1: Outstandings holds Dues · Receivables · Payables · Bills · Cheques');
     ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 1, 'A1: Waiting is no longer a menu item; Dues is one again, under Outstandings (ACC-175)');
     await p.click('[data-testid="acc-grp-setup"]');
@@ -299,8 +300,7 @@ async function route(S, r) {
     S.calls.length = 0;
     await nav(p, 'ledgers');
     await p.waitForSelector('[data-testid="lt-band-people"]');
-    console.log('DBG4', await p.evaluate(() => Array.from(document.querySelectorAll('#bk_lt [data-testid]')).map((x) => x.dataset.testid).slice(0, 60).join(',')));
-    const bands = await p.$eval('[data-testid^="lt-band-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-band-', '')));
+    const bands = await p.$$eval('[data-testid^="lt-band-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-band-', '')));
     ok(JSON.stringify(bands) === JSON.stringify(['people', 'things', 'income', 'capital']), 'four bands as the tree\'s top level: People · Things you hold · Income and expenses · Your capital');
     ok(await p.locator('#bk_lt').count() === 1 && await p.locator('.lt-tree').count() === 1 && await p.locator('.lt-pane').count() === 1 && await p.locator('[role="tree"] [role="treeitem"]').count() > 10, 'two panes — the tree (role=tree) and the list');
     ok(await p.locator('[data-testid="lt-band-people"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid^="lg-party-"]').count() === 0, 'the bands and groups are open (the tree is the way in); a control account is a closed ledger with its parties inside');
