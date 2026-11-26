@@ -202,7 +202,8 @@ function bkLockRowsPaint() {
   if (!el) return;
   if (typeof fxLockLine === 'function') fxLockLine();
   var foot = document.getElementById('lk_foot');
-  if (foot) foot.textContent = !own ? '' : tx('A locked month opens again with a reason, asked when you press Open again. A closed month opens again only if it is the newest closed month: the owner gives a reason and it is logged.');
+  var toLock = BK.lk && BK.lk.toLock; /* W4-13: the server's one count of months to lock, the same the year box and the practice list say */
+  if (foot) foot.textContent = (toLock == null ? '' : txn('{count} month to lock', '{count} months to lock', toLock) + '. ') + (!own ? '' : tx('A locked month opens again with a reason, asked when you press Open again. A closed month opens again only if it is the newest closed month: the owner gives a reason and it is logged.'));
   var rows = bkMonths()
     .map(function (item, index) {
       return bkLockRowHTML(item, index, own);

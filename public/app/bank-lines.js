@@ -9,9 +9,9 @@
  */
 (function (root) {
   'use strict';
-  var STATUS = { need: 'Needs you', ready: 'Ready to add', in: 'In your books', done: 'Added', books: 'Not on the statement', lock: 'Month locked' };
+  var STATUS = { need: 'Needs you', ready: 'Ready to add', in: 'In your books', done: 'Added', books: 'Not on the statement', lock: 'Month locked', signed: 'Signed off' };
   /** pending first: what a person must still answer sits at the top */
-  var ORDER = { lock: 0, need: 0, ready: 1, books: 2, done: 3, in: 4 };
+  var ORDER = { lock: 0, need: 0, ready: 1, books: 2, done: 3, signed: 4, in: 4 };
   /** the chip's words on a phone, where four full words do not fit on one row */
   var SHORT = { in: 'In books', ready: 'Ready', need: 'Needs you', books: 'Not on statement' };
   var KIND_WORDS = {

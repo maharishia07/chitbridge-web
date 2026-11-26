@@ -49,6 +49,16 @@ var CBUiMoney = (function () {
     }
   }
 
+  /** W4-17: the sign DRAWN beside a field: a bare dollar sign (AUD, SGD, CAD...) cannot be told from USD, so it is the currency's own (A$); every other currency keeps symbol(). Parsing still strips symbol(). */
+  function drawnSign(code) {
+    var bare = symbol(code);
+    try {
+      return (bare === '$' && CBLocale.moneySign && CBLocale.moneySign(code)) || bare;
+    } catch (_) {
+      return bare;
+    }
+  }
+
   /* ---------- the shop's number marks: the field library's, never a copy ---------- */
   function fieldLibrary() {
     if (typeof CBUiField === 'undefined' || !CBUiField.marks) throw new Error('CBUiMoney needs app/ui-field.js loaded before it');
@@ -212,7 +222,7 @@ var CBUiMoney = (function () {
    */
   function inputHtml(options, stamped) {
     var code = stamped === undefined ? currency(options.cur) : stamped;
-    return '<span class="mi"' + (options.w ? ' style="width:' + options.w + '"' : '') + '><span class="mi-sym" aria-hidden="true">' + escapeText(symbol(code)) + '</span>' + inputTag(options, code) + '</span>';
+    return '<span class="mi"' + (options.w ? ' style="width:' + options.w + '"' : '') + '><span class="mi-sym" aria-hidden="true">' + escapeText(drawnSign(code)) + '</span>' + inputTag(options, code) + '</span>';
   }
 
   /* ---------- ui.field({ kind: 'money', mount, label, currency, value | minor }) ---------- */

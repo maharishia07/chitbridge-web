@@ -19,6 +19,7 @@ function bkbLineRows() {
       const result = BKSH.ctl.view().results[item.key];
       row = CBBankLines.rowOfItem(item, result, CBBankPreview.standing(item, result));
     } else row = { item: null, result: null, standing: '', narration: found.narration || '', date: found.date, out: !found.in, amount_minor: found.amount_minor, kind: '', gst: '', sure: '', look: false, status: found.status === 'suggested' ? 'ready' : 'need' };
+    if (row.status === 'need' && typeof bankStoreSignedNow === 'function' && bankStoreSignedNow()) row.status = 'signed'; /* W4-11: a month signed off has nothing left for you to answer, so no line reads Needs you */
     if (group === 'matched') row.status = 'in';
     else if (group === 'bank') row.status = 'books';
     return Object.assign(row, { id: found.id, raw: found });
@@ -155,7 +156,7 @@ function bankList() {
     key: 'bank',
     rows: bkbLineRows,
     panel: bkbLinePanel,
-    fmt: (minor) => bkbFig(minor),
+    fmt: (minor) => bkMoney(minor, bkCur()) /* W4-17: a line's amount carries the account's currency sign, through the one formatter */,
     tid: (r) => 'bank-row-' + r.id,
     extra: {
       head: () => ({ notices }),

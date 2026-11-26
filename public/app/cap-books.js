@@ -5914,6 +5914,7 @@ async function bkPeriodsLoad() {
   yrs[bkFyNow()] = 1;
   var L = (BK.lk = BK.lk || {});
   L.rows = rows;
+  L.toLock = reply && Number.isInteger(reply.months_to_lock) ? reply.months_to_lock : null; /* W4-13: the server's one count */
   L.info = info;
   L.years = Object.keys(yrs).sort().reverse();
   if (!L.fy || !yrs[L.fy]) L.fy = bkFyNow();

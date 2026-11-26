@@ -364,6 +364,7 @@
     ready: '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
     need: '<circle cx="12" cy="12" r="6"/>',
     done: '<circle cx="12" cy="12" r="8"/><path d="M8.5 12.5 11 15l4.5-5.5"/>',
+    signed: '<circle cx="12" cy="12" r="8"/><path d="M8.5 12.5 11 15l4.5-5.5"/>' /* W4-11: a line of a signed-off month nobody has to answer: the same ring and tick as Added */,
     books: '<path d="M6 7h12M6 12h12M6 17h8"/>',
     lock: '<rect x="6" y="11" width="12" height="8" rx="2"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/>' /* a month that is locked: the line cannot be added until it is reopened (W15-85) */
   };

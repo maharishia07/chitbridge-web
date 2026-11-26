@@ -4,15 +4,12 @@
  * FLOW      CBShell.mount draws the frame and the cards and READS their facts as ever (one source, no second fetch path); this file only MOVES those same
  *           card nodes into the pillar panels named by manifest.json `home2`, and reads the digit off the facts the shell already painted.
  * CARD      26-reporting-mis-and-bi/home-facts
- * Facts follow (Athi 18 Nov: "follow the leaders"; the four sources below are from memory and UNVERIFIED here — nothing was fetched):
- *   Xero dashboard, QuickBooks home, Shopify home, Stripe dashboard each lead with a few headline numbers and a to-do list, details on demand (unverified).
  */
 (function (root) {
   'use strict';
   if (root.CBHome2) return;
   var OPEN_KEY = 'cb_home2_open';
   var doc = root.document;
-  /* plain words for Home only (Fable review, 18 Nov: our words out of the top); the page behind keeps its own name */
   var PLAIN_WORDS = { compare: 'Compare with your old books' };
   var ALIAS = { selling: 'sell', money: 'money', running: 'buy', trade: 'trade', sell: 'sell', customers: 'customers', buy: 'buy', people: 'people' };
   var ROW_SHAPE = { items: '.ix-item', key: 'data-pillar', row: '.ix-row', panel: '.ix-panel' };
@@ -27,7 +24,6 @@
   function quiet(where, failure) {
     if (typeof root.cbQuiet === 'function') root.cbQuiet(where, failure);
   }
-  /* esc is the one in helpers.js (esc · fmtMoney · monthNames), loaded before this file by both pages */
   /** one stored word of this viewer, '' when the browser refuses or keeps none */
   function lsGet(key) {
     try {
@@ -183,7 +179,6 @@
       panel.setAttribute('data-testid', 'ix2-panel-' + group.id);
       home.panels[group.id] = panel;
     });
-    /* the two Sides buttons (We lean on / Leans on us) leave the top: they stand in the foot (INDEX-2 §4) */
     var tools = (home.shell.el || doc).querySelector('.cbsh-tools');
     if (tools) home.host.querySelector('.ix-fs').appendChild(tools);
   }
@@ -368,7 +363,6 @@
     (root.requestAnimationFrame || root.setTimeout)(function () { home.queued = false; adopt(home); });
   }
 
-  /* one open at a time (a second press closes it); the open row is remembered for this viewer */
   function open(home, id, keep) {
     root.CBShell.openRow(home.list, id, true, ROW_SHAPE); /* the shell's one way to open a row (shell.js openRow) */
     home.host.classList.toggle('has-open', !!id);
