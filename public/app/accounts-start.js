@@ -9,7 +9,12 @@
  */
 'use strict';
 /** addBankTodo(list) → adds the bank row to the To do list once (kept out of accTodo so that stays short) */
-function addBankTodo(list) {
+function addBankTodo(list, repaint) {
+  /* the Bank code loads late (cb-late, batch 1128): a To do painted before it ran has no bank row, so the row is added when the group is ready and the list is painted once more (walk-bank-rec B8) */
+  if (typeof bankTodoItem !== 'function' && repaint && window.CBLate && !CBLate.isReady()) {
+    CBLate.ready('bank').then(() => { const had = list.length; addBankTodo(list); if (list.length > had) repaint(); });
+    return;
+  }
   const bank = typeof bankTodoItem === 'function' && !CBBooksActing.hides('bank') ? bankTodoItem() : null;
   if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
 }
