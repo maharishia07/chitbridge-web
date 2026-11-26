@@ -325,7 +325,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `embed.html` | 7 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
 | `employees.html` | 32 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
 | `finance.html` | 70 | the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures). |
-| `intake.html` | 4 | the intake inbox: captured messages waiting to become chits (/api/capture/pending). |
+| `intake.html` | 5 | the intake inbox: captured messages waiting to become chits (/api/capture/pending). |
 | `iot-howitworks.html` | 0 | the how-IoT-works showcase page: a standalone explainer with no data |
 | `know-your-business.html` | 20 | the Know your business page: the shop's registrations, licences and filings as the server knows them. |
 | `lifecycle-test.html` | 2 | the IoT lifecycle live check: register, connect a device, ingest, verify. |

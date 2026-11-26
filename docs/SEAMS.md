@@ -11,10 +11,10 @@ of file each thing is; this says what already does the job.
 |---|---|---|---|
 | 144 | `item` | `bank-band.js` |  |
 | 120 | `list` | `cap-flag.js` |  |
-| 100 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
+| 101 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 90 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 90 | `again` | `signin-ui.js` |  |
-| 86 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 87 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 81 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 81 | `read` | `books-grant-drill.js` |  |
 | 81 | `rows` | `cap-settings.js` |  |
@@ -33,8 +33,8 @@ of file each thing is; this says what already does the job.
 | 46 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 46 | `sentence` | `one-person.js` |  |
 | 46 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
+| 45 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 44 | `load` | `books-grant-view.js` |  |
-| 44 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 42 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 41 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 41 | `opts` | `books-grant-filters.js` |  |
@@ -182,6 +182,7 @@ of file each thing is; this says what already does the job.
 | 10 | `friendlyErr` | `cb-words.js` |  |
 | 10 | `plain` | `country-compare.js` |  |
 | 10 | `same` | `period-pick.js` |  |
+| 10 | `keep` | `signin-session.js` | the apps' session, stored (cb_sess) — |
 | 9 | `forms` | `app.html` | A noun in its six Arabic count forms, ready to drop into a sentence template. |
 | 9 | `openChit` | `app.html` |  |
 | 9 | `draw` | `books-clients-door.js` |  |
@@ -199,7 +200,6 @@ of file each thing is; this says what already does the job.
 | 9 | `adopt` | `home2.js` | take the shell's cards into their rows, then repaint the rows and the Do-first row |
 | 9 | `readiness` | `lab-kit.js` | the grouped readiness block: |
 | 9 | `ended` | `page-frame.js` |  |
-| 9 | `keep` | `signin-session.js` | the apps' session, stored (cb_sess) — |
 | 8 | `bgRenderApp` | `app.html` | Deliberately NOT applied to renderApp itself: |
 | 8 | `navTo` | `app.html` |  |
 | 8 | `lsGet` | `app.html` | viewport + divider prefs (local; durable home = entity Settings, backlog) |
