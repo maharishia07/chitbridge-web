@@ -778,7 +778,7 @@ async function route(S, r) {
       await pick('lg-acc-2100'); checks.control = await headPct(p); await snap('03-control-parties');
       /* 04 · the parties differ (Customers, one entry with no party) */
       S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
-      await pick('lg-acc-1300'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); checks.differ = await headPct(p);   /* on a phone CBList folds the chips and the notice into ONE chip */ await snap('04-parties-differ');
+      await pick('lg-acc-1300'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); checks.differ = await headPct(p); console.log('DBGDIFF', tag, await headParts(p));   /* on a phone CBList folds the chips and the notice into ONE chip */ await snap('04-parties-differ');
       S.closing = null; S.extra = null;
       /* 05 · a plain ledger (Rent) */
       await pick('lg-acc-6010'); checks.plain = await headPct(p); await snap('05-plain-ledger');

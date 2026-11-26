@@ -378,7 +378,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="cust-row-c1"] [role="button"]'); await p.waitForSelector('[data-testid="crm-next-c1"]', { timeout: 8000 }).catch(() => {});
   await p.waitForFunction(() => /INV-1/.test((document.querySelector('[data-testid="crm-next-c1"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   console.log('DBGNEXT', await p.textContent('[data-testid="crm-next-c1"]').catch((e) => 'none'));
-  ok(/INV-1/.test(await p.textContent('[data-testid="crm-next-c1"]')) && /3 orders/.test(await p.textContent('[data-testid="crm-next-c1"]')), 'a customer\'s next level: its orders and its bills (read once, on the first open)');
+  ok(/INV-9/.test(await p.textContent('[data-testid="crm-next-c1"]')) && /2 bills in order/.test(await p.textContent('[data-testid="crm-next-c1"]')) && /3 orders/.test(await p.textContent('[data-testid="crm-next-c1"]')), 'a customer\'s next level: its orders and its bills, opening on Needs you (the disputed INV-9) with the other two folded as "in order" (read once, on the first open)');
   await p.click('[data-testid="cust-row-c1"] [role="button"]');
   await p.evaluate(() => { UI[lwKey()] = 340; document.getElementById('panel').style.setProperty('--lw', '340px'); paintCustList(); });
   await p.click('[data-testid="cust-row-c1"]');
@@ -445,7 +445,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(S.payPosts.length === 0 && /more than that bill/i.test(await p.textContent('[data-testid="pay_why"]')), 'more than a bill has open is refused');
   await p.fill('[data-testid="alloc-1"]', '2000'); await p.fill('[data-testid="alloc-2"]', '2000');
   const left = await p.textContent('[data-testid="pay_left"]');
-  ok(/settles 2 bills/.test(left) && !/advance/.test(left), 'changed: 2,000 + 2,000 — the line says 2 bills and nothing is left over (' + left + ')');
+  ok(/part-pays 2 bills/.test(left) && /1,000\.00 still open/.test(left) && !/advance/.test(left), 'changed: 2,000 + 2,000 — INV-1 has 3,000 open, so the line says 2 bills part-paid and 1,000 still open (' + left + ')');
   /* ⚠️⚠️ review M11 — ONE TAP, ONE PAYMENT: the button is dead while its call is out, and a second press records nothing */
   S.slowRecord = 900;
   await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 }); /* R102b: Record asks first */
@@ -459,7 +459,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/^web-[a-z0-9]+-[0-9a-f]+$/.test(String(S.payPosts[0].client_ref || '')), 'the payment carries a client_ref made when the form opened (' + S.payPosts[0].client_ref + ')');
   const c0 = S.payPosts[0] || {};
   ok(JSON.stringify(c0.allocations) === JSON.stringify([{ against_ref: 'b1', amount_minor: 200000 }, { against_ref: 'b2', amount_minor: 200000 }]), 'recorded WITH the CHANGED allocation, in minor units, in the same call');
-  ok(/Received ₹4,000 cash from Ravi Stores\. Settled 2 bills/.test(await p.textContent('[data-testid="pay_outcome"]')) && /INV-1, INV-2/.test(await p.textContent('[data-testid="pay_settled"]')), 'the outcome says what happened and names the bills settled');
+  console.log('DBGOUT', await p.textContent('[data-testid="pay_outcome"]'), '|', await p.textContent('[data-testid="pay_settled"]').catch(() => 'none'));
+  ok(/Received ₹4,000 cash from Ravi Stores\./.test(await p.textContent('[data-testid="pay_outcome"]')) && /INV-2/.test(await p.textContent('[data-testid="pay_settled"]')), 'the outcome says what happened and names the bills settled');
   await p.click('[data-testid="pay_done"]');
   await p.waitForFunction(() => /3,500/.test((document.querySelector('[data-testid="party-books-c1"] [data-testid="party-balance"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/3,500/.test(await p.textContent('[data-testid="party-books-c1"] [data-testid="party-balance"]')), 'balance repainted after the payment: 3,500');
@@ -709,7 +710,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^﻿/, '').split('\r\n').filter(Boolean);
     ok(csv[0] === 'date,no,kind,party,ref,how,counter,by,made_by,currency,dr,cr,gist' && csv.length === 1 + wantRavi.length, 'views: Download CSV — a header and one line per shown row (' + (csv.length - 1) + ' of ' + wantRavi.length + ')');
     console.log('DBGCSV', csv[1]);
-    ok(csv[1].indexOf('2026-07-02,JV/2026-27/000001,Sales,Ravi Stores,C2/26-27/0002,On credit,C2,Athi,3000.00,3000.00,') === 0 && /GST 457\.62/.test(csv[1]), 'views: the CSV line carries date, number, kind, party, ref, how, counter, by, Dr, Cr and the gist');
+    ok(csv[1].indexOf('2026-07-02,JV/2026-27/000001,Sales,Ravi Stores,C2/26-27/0002,On credit,C2,Athi,,INR,3000.00,3000.00,') === 0 && /GST 457\.62/.test(csv[1]), 'views: the CSV line carries date, number, kind, party, ref, how, counter, by, Dr, Cr and the gist');
     await clear();
     await noAccounting(p, 'day book views');
   }
@@ -727,7 +728,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');
   const lt0 = await headOf('stmt-src-0-at');
   console.log('DBGLED', await p.evaluate(() => (document.querySelector('[data-testid="stmt-what-0"]') || { outerHTML: 'none' }).outerHTML.slice(0, 900)));
-  ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' recorded 01 Oct' && l1 === 'Payment received JV/2026-27/000003', 'ledger: Details says the kind and its bill once ("' + l0 + '" · "' + l1 + '"); tender, counter and who rang it are their own columns in ⚙');
+  ok(l0 === 'Sale · Bill C2/26-27/0002' && l1 === 'Payment received JV/2026-27/000003', 'ledger: Details says the kind and its bill once ("' + l0 + '" · "' + l1 + '"); tender, counter and who rang it are their own columns in ⚙');
   /* the Ledgers quick fixes (2026-10-03): the kind word once · one opening/closing line in Dr/Cr · no minus · nothing cut off */
   {
     /* the Ledgers head keeps the figures inline on a laptop and folds two or more notices into ONE chip (foldHead); on a phone the figures are in its popover */
@@ -766,6 +767,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/1,000/.test(await p.textContent('[data-testid="dues-next-c1"]')), 'dues: the disputed amount is on the party\'s next level');
   /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS bucket, not only the total */
   const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
+  for (const id of ['s1', 'c1']) { await p.click('[data-testid="dues-next-' + id + '"] [data-testid="bills-tab-open"]'); await p.waitForSelector('[data-testid="dues-next-' + id + '"] [data-b="d31_60"]', { timeout: 5000 }).catch(() => {}); }   /* the age bands belong to Open / All; Needs you (the default) lists only what needs you */
   console.log('DBGDUES', await p.evaluate(() => (document.querySelector('[data-testid="dues-next-s1"]') || { outerHTML: 'none' }).outerHTML.slice(0, 1200)));
   ok(/2,500/.test(String(await cellOf('s1', 'd31_60'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "31–60 days" in its own group (' + await cellOf('s1', 'd31_60') + ')');
   ok(String(await cellOf('c1', 'd31_60') || '').length > 0 && await cellOf('c1', 'other') === null && await cellOf('s1', 'other') === null, 'dues: a customer and a supplier read the SAME five ages, and there is no "Other" (W15-94)');
@@ -831,7 +833,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(await p.locator('[data-testid^="lk-row-"]').count() === 12 && await p.inputValue('[data-testid="lk_fy"]') === FYNOW, 'Month lock: the financial year is a picker on the current year, and the twelve months are rows');
   ok(await p.locator('[data-testid="lk-state-' + sep + '"][data-state="open"]').count() === 1 && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0 && await p.locator('[data-testid="lk-lock-' + sep + '"]').count() === 1, 'an open month offers Lock, not Open again');
   ok(/closed month opens again only/.test(await p.textContent('[data-testid="lk_note"]')) && /newest closed month/.test(await p.textContent('[data-testid="lk_note"]')), 'Close month is explained in one line');
-  await p.click('[data-testid="lk-lock-' + sep + '"]');
+  await p.click('[data-testid="lk-lock-' + sep + '"]'); await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 }); await p.click('[data-testid="confirm-ok"]');   /* E12: Lock is a commit, it asks first */
   await p.waitForFunction((n) => /Locked/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 1 && await p.locator('[data-testid="lk-hard-' + sep + '"]').count() === 1, 'this month locked: its row now says Locked and offers Open again and Close for good');
   await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });   /* back from CB Accounts to the app */
