@@ -842,6 +842,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
   await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 3000 }).catch(() => {});
   await p.waitForFunction(() => /locked/.test((document.querySelector('[data-testid="pay_why"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  console.log('DBGLOCK', await p.textContent('[data-testid="pay_why"]').catch(() => 'nowhy'), '|', await p.locator('[data-testid="pay_outcome"]').count(), '|', JSON.stringify(S.payPosts.slice(-1)), JSON.stringify(S.locked));
   ok(/locked/.test(await p.textContent('[data-testid="pay_why"]')) && await p.locator('[data-testid="pay_outcome"]').count() === 0, 'a payment in a locked month is refused, and the form says why');
   /* M11: pressing Next again on the SAME form is a retry — it carries the same client_ref, so the server can answer with what it kept */
   const nPosts = S.payPosts.length;
