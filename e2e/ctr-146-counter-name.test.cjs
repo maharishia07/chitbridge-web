@@ -13,7 +13,7 @@ const { liftFns } = require('./lib/lift-fn.cjs');
 const store = {}; let id = 'C5';
 const sandbox = { String, ls: { get: (k, d) => (k in store ? store[k] : d) }, shopLs: (k) => 'shop:' + k, tillId: () => id, cbQuiet() {}, personOn: () => false, onAgent: () => false, tillGivenKey: () => 'shop:cb_till_given', TILL_CLAIM: null };
 vm.createContext(sandbox);
-vm.runInContext(liftFns('public/till.html', ['counterName', 'counterPill', 'counterTitle']) + '\nthis.counterName = counterName; this.counterPill = counterPill; this.counterTitle = counterTitle;', sandbox);
+vm.runInContext(liftFns('public/till.html', ['leftoverCounter', 'counterName', 'counterPill', 'counterTitle']) + '\nthis.counterName = counterName; this.counterPill = counterPill; this.counterTitle = counterTitle;', sandbox);
 
 let bad = 0;
 const ok = (m, c, info) => { console.log((c ? '  ok   ' : '  FAIL ') + m + (c || !info ? '' : ' -> ' + info)); if (!c) bad++; };
