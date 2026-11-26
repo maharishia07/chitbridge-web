@@ -1309,7 +1309,7 @@
     'books began part-way': 'بدأت الدفاتر في منتصف السنة',
     'no bank statement signed': 'لا كشف بنكي معتمد',
     'no statement kept': 'لا كشف محفوظ',
-    'not signed off yet': 'لم يُعتمد بعد',
+    'not signed off': 'لم يُعتمد بعد',
     'nothing unexplained': 'لا شيء غير مفسَّر',
     'unexplained {a}': '{a} غير مفسَّر',
     '{a} unexplained': '{a} غير مفسَّر',

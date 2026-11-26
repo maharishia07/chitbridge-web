@@ -232,8 +232,8 @@ function bkhGapCellHtml(state, account, month, key, mayAdd) {
       if (state === 'unfiled') return '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-unfiled-' + key + '" title="' + bkhE(tx('Signed off; no statement file is kept for this month')) + '">' + bkhE(tx('Signed off')) + '</span></td>';
       if (state === 'missing')
   return mayAdd
-          ? '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><button data-cbsid="BKS014-B44" type="button" class="bks-miss" data-testid="bank-stmts-miss-' + key + '" data-acct="' + bkhE(account.code || '') + '" onclick="bankStmtPickGap(this)" title="' + bkhE(tx('Add a statement for this account')) + '">' + '<span aria-hidden="true">○</span><span class="sr-only">' + bkhE(tx('Not signed off')) + '</span>' + '</button></td>'
-          : '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-miss-' + key + '">' + '<span aria-hidden="true">○</span><span class="sr-only">' + bkhE(tx('Not signed off')) + '</span>' + '</span></td>';
+          ? '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><button data-cbsid="BKS014-B44" type="button" class="bks-miss" data-testid="bank-stmts-miss-' + key + '" data-acct="' + bkhE(account.code || '') + '" onclick="bankStmtPickGap(this)" title="' + bkhE(tx('Add a statement for this account')) + '">' + '<span aria-hidden="true">○</span><span class="sr-only">' + bkhE(tx('no statement kept')) + '</span>' + '</button></td>'
+          : '<td data-m="' + bkhE(bkstMonth(month)) + '" class="bks-gap"><span class="bks-sum" data-testid="bank-stmts-miss-' + key + '">' + '<span aria-hidden="true">○</span><span class="sr-only">' + bkhE(tx('no statement kept')) + '</span>' + '</span></td>';
   return '';
 }
 /** a month with a statement kept: its press (open the lines), its mark, its count and the crossed-statements warning */
@@ -271,7 +271,7 @@ function bankHomeGridHtml() {
   return (
     '<div class="pe-note bkh-signed" data-testid="bank-home-signed">' + bkhSignedLinesHtml(data) + '</div>' +
     '<div class="bks-wrap bkh-gridwrap"><table class="bks-grid" data-testid="bank-stmts-grid"><thead>' + bkhHeadRowHtml(data) + '</thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ● ' + bkhE(tx('not signed off yet')) + ' · ○ ' + bkhE(tx('no statement kept')) + '</div>'
+    '<div class="pe-note bkh-key" data-testid="bank-home-key">✓ ' + bkhE(tx('signed off')) + ' · ● ' + bkhE(tx('not signed off')) + ' · ○ ' + bkhE(tx('no statement kept')) + '</div>'
   );
 }
 /** a month pressed, or Continue: that statement's lines */

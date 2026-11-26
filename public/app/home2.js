@@ -66,12 +66,18 @@
     var first = cards[0];
     return { n: '', w: '', full: first ? sayText('Set up') + ' ' + nameOf(first) : '', tone: 'q', amber: 0 }; /* nothing started: the row says nothing (the Start here row names the steps), never the same "Set up ›" six times */
   }
+  /** RW3-07: the first two words of what a figure counts, and a third when the second is only a connector (3 letters or fewer: to, of, in, on, for, and): "23 entries to fix", never "23 entries to" */
+  function firstWords(text) {
+    var words = String(text).split(/ +/).filter(Boolean), keep = words.slice(0, 2);
+    if (words.length > 2 && keep[1].length <= 3) keep.push(words[2]);
+    return keep.join(' ');
+  }
   /** the figure and the words of a closed row from one fact: the leading number, then the first two words of what it counts (a 0 is never shown) */
   function figureOf(fact, pick) {
     var parts = /^(\S*\d\S*)\s*(.*)$/.exec(fact);
     var num = parts && !/^0\b/.test(parts[1]) ? parts : null;
     /* closed row = ONE figure + ONE word (Fable review §3): the figure, then the first two words of what it counts; the whole fact rides the title */
-    var rest = num ? num[2].split(' · ')[0].split(/ +/).slice(0, 2).join(' ') : fact || nameOf(pick);
+    var rest = num ? firstWords(num[2].split(' · ')[0]) : fact || nameOf(pick);
     return { n: num ? num[1] : '', w: rest };
   }
   /* a row's one figure: the first needs-you fact, else the first fact of a card in use, else its first step (never a 0) */

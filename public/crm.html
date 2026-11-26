@@ -275,7 +275,8 @@ function crmCard(html, bad) {
     on → the Dues column and the dues alert exist; off → neither is drawn, no blank column */
 async function readLedgerSwitch() {
   try {
-    const reply = await api('me');
+    CRM.meRead = api('me'); /* RW3-15: the Shop window link reads this same answer (the handle: user_id), never a second /me */
+    const reply = await CRM.meRead;
     const shop = (reply && reply.entity) || reply || {};
     if (typeof shop.ledger_on === 'boolean') CRM.ledger = shop.ledger_on;
     else CRM.ledger = await api('booksHealth').then(() => true, () => false); /* an api that does not say (no ledger_on): the old probe, 404 = off */

@@ -1148,7 +1148,7 @@
     'books began part-way': 'livres commencés en cours d\'exercice',
     'no bank statement signed': 'aucun relevé bancaire validé',
     'no statement kept': 'aucun relevé conservé',
-    'not signed off yet': 'pas encore validé',
+    'not signed off': 'pas encore validé',
     'nothing unexplained': 'rien d\'inexpliqué',
     'unexplained {a}': '{a} inexpliqué',
     '{a} unexplained': '{a} inexpliqué',
