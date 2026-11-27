@@ -331,6 +331,7 @@
         .then(
           function (reply) {
             S.data = reply;
+            if (reply && reply.roles && root.CBRoles) root.CBRoles.adopt(reply.roles); /* UX-226b: the server's role words */
             S.err = !(reply && reply.lean && reply.use);
           },
           function () {
