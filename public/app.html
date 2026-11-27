@@ -1662,7 +1662,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/chit-price-moved.js"></script>   <!-- a draft sent after its prices moved: the question (CTR-245) -->
 <script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>
-<script src="/app/modal-dialog.js"></script><script src="/app/chit-pay.js"></script><script src="/app/compose-catalogue-fill.js"></script>   <!-- the dialog pattern · Mark paid · the compose product picker fill -->
+<script src="/app/modal-dialog.js"></script><script src="/app/chit-pay.js"></script><script src="/app/compose-catalogue-fill.js"></script><script src="/app/compose-tax-choice.js"></script>   <!-- the dialog pattern · Mark paid · the compose product picker fill -->
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
 <script>
 /* =========================================================================
@@ -8415,7 +8415,7 @@ function ccStepItems() {
       ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">From <b>${esc(UI._supplier.name)}</b>&rsquo;s catalogue</div>`
       : '') +
     `<div id="cc_catpick">${ccCatPickHTML()}</div>
-     <div style="display:flex;gap:6px;margin-top:6px"><input data-cbsid="RAL001-I09" class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input data-cbsid="RAL001-I10" class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" aria-label="Qty" title="Qty"><input data-cbsid="RAL001-I11" class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button data-cbsid="CMP007" class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input data-cbsid="RAL001-I09" class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input data-cbsid="RAL001-I10" class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" aria-label="Qty" title="Qty"><input data-cbsid="RAL001-I11" class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px">${ccTaxChoiceSelect()}<button data-cbsid="CMP007" class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
      <div style="display:flex;gap:6px;margin-top:6px"><input data-cbsid="RAL001-I12" class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button data-cbsid="RAL001-B02" class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>`;
   const lines = `<div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:end;font-weight:700;font-size:var(--fs-2);margin-top:6px"></div>`;
@@ -8860,12 +8860,14 @@ function ccAddManual() {
     if (e) e.textContent = 'Enter an item name.';
     return;
   }
-  var it = { particulars: nm, unit: 'unit', price: +val('cc_mprice') || 0, qty: Math.max(1, +val('cc_mqty') || 1) };
+  var it = { particulars: nm, unit: 'unit', price: +val('cc_mprice') || 0, qty: Math.max(1, +val('cc_mqty') || 1), tax_choice: val('cc_mtax') || '' }; /* TAXLINE-1132: the typed line says its tax */
   CC.items.push(it);
   var node = document.getElementById('cc_mname');
   if (node) node.value = '';
   var b = document.getElementById('cc_mprice');
   if (b) b.value = '';
+  var taxNode = document.getElementById('cc_mtax');
+  if (taxNode) taxNode.selectedIndex = 0; /* each typed line starts at the default */
   ccRenderItems();
   ccMatchMine(it);
 }
@@ -9240,6 +9242,20 @@ function ccRenderTotal() {
     : '';
 }
 /** one compose line as it is minted: list price stays, the offer discount and its name ride on the line, total is what is owed */
+/** the shop country's tax pack (the one reader), null when none */
+function ccTaxPack() {
+  const country = String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase();
+  return (window.CBTaxPacks && CBTaxPacks.packFor && country && CBTaxPacks.packFor(country)) || null;
+}
+/** the tax fields a typed line sends: its choice's (zero / exempt carry the pack kind), nothing for standard or a catalogue line (the api stamps / reads the shelf) */
+function ccTaxFieldsOf(item) {
+  return item && item.tax_choice && typeof composeTaxFields === 'function' ? composeTaxFields(ccTaxPack(), item.tax_choice) : {};
+}
+/** the tax choice beside a typed line (default = the first the pack offers: standard); empty when the pack offers none */
+function ccTaxChoiceSelect() {
+  const choices = typeof composeTaxChoices === 'function' ? composeTaxChoices(ccTaxPack()) : [];
+  return choices.length ? '<select data-cbsid="RAL001-I18" class="inp" id="cc_mtax" data-testid="chit-item-tax" aria-label="Tax" title="Tax" style="width:104px">' + choices.map((choice) => '<option value="' + choice.key + '">' + esc(tx(choice.label)) + '</option>').join('') + '</select>' : '';
+}
 function ccMintedLine(item) {
   const gross = ccLineTotal(item);
   const offerOff = Math.min(CBMoney.round(+item._offer_off || 0), gross);
@@ -9250,7 +9266,8 @@ function ccMintedLine(item) {
     price: +item.price || 0,
     total: CBMoney.round(gross - offerOff),
     comment: item.comment || '',
-    ref: item.ref || null
+    ref: item.ref || null,
+    ...ccTaxFieldsOf(item)
   };
   if (offerOff > 0) ccNameTheOffer(row, item, offerOff);
   return row;
