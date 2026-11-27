@@ -2,6 +2,11 @@
  * tests/compose-tax-choice-1132.test.cjs — TAXLINE-1132: a line typed in Compose carries a tax choice (public/app/compose-tax-choice.js + app.html ccMintedLine), paired with api PR #1400.
  * HAND      AU A$100.00 typed GST-free: gst_rate 0 + tax_kind gst_free, GST 0.00, total 100.00 (the engine's answer, api services.computeTax) · standard: no tax field (the api stamps 10: GST 10.00, total 110.00) ·
  *           AE zero-rated 0, exempt 0 · IN offers nil / exempt only (no standard rate).
+ * MIN walk (the last section walks one shop through AU, AE and IN as a person changing country would: choices, then the fields each sends; no browser walk drives the typed line yet, e2e/ui-codes-g1 only reads its code)
+ * MIN cream-and-dark-1366-390 (the module draws nothing and types no colour or width; the select takes the page's own .inp class, so both themes and both widths follow the page)
+ * MIN aa-contrast (no colour typed in the module or on the select: contrast is the page's token pair for .inp)
+ * MIN could-not-read-words (no pack or a pack without the kind: no choice is offered rather than a wrong one, and a zero without its kind sends nothing, so the api's standard rate is never silently dropped)
+ * MIN string-layer (the select's option labels go through tx(), and the module names no country: every word is the pack's)
  * Run: node tests/compose-tax-choice-1132.test.cjs
  */
 'use strict';
@@ -42,5 +47,26 @@ step('GST-free typed line posts 0 GST: the api engine on the exact line Compose 
   assert.equal(answer.tax_status[0].status, 'ZERO');
   assert.equal(answer.tax_status[0].reason, 'gst_free');
   assert.equal(answer.invoice.ValDtls.TotInvVal, 100);
+});
+step('walk: one shop through AU, AE, IN: the choices follow the pack and each sends the pack kind, never a typed rate', () => {
+  ['AU', 'AE', 'IN'].forEach((country) => {
+    const choices = context.composeTaxChoices(pack(country));
+    assert.ok(choices.length >= 2, country + ' offers at least zero and exempt');
+    choices.forEach((choice) => {
+      const fields = context.composeTaxFields(pack(country), choice.key);
+      assert.ok(choice.key === 'standard' ? Object.keys(fields).length === 0 : fields.gst_rate === 0 && !!fields.tax_kind, country + ' ' + choice.key + ' sends ' + JSON.stringify(fields));
+    });
+  });
+});
+step('no pack, or a choice the pack does not have: nothing is offered and nothing wrong is sent (could not read: said by an empty select, never a guessed kind)', () => {
+  assert.deepEqual(context.composeTaxChoices(undefined), []);
+  assert.deepEqual(context.composeTaxFields(null, 'zero'), {});
+  assert.deepEqual(context.composeTaxFields({ supplyKinds: {} }, 'exempt'), {});
+  assert.deepEqual(context.composeTaxFields(pack('AU'), 'no-such-choice'), {});
+});
+step('no colour, no fixed width and no country word in the module; the select reads the page .inp class and its labels pass through tx (theme, 1366 and 390, string layer)', () => {
+  assert.ok(!/#[0-9a-fA-F]{3,6}|rgb\(|px|width/.test(source.replace(/\/\*[\s\S]*?\*\//g, '')), 'the module states no colour or width');
+  assert.ok(!/(Australia|India|Emirates|GST|VAT)/.test(source.replace(/\/\*[\s\S]*?\*\//g, '')), 'no country word in code');
+  assert.ok(/class="inp" id="cc_mtax"/.test(app) && /esc\(tx\(choice\.label\)\)/.test(app), 'the select takes .inp and tx()');
 });
 console.log('compose-tax-choice-1132: ' + steps + ' steps');
