@@ -20,6 +20,22 @@
   practiceKit.checkedHeader = checkedHeader;
   practiceKit.yendCell = yendCell;
   practiceKit.bankWords = bankWords;
+  /** UX-225: "1 client" · "3 clients" — the one plural helper (txn, accounts-shell.js), never a bare 'clients' after a number */
+  practiceKit.clientsText = function (n) { return typeof root.txn === 'function' ? root.txn('{count} client', '{count} clients', n) : n + (n === 1 ? ' client' : ' clients'); };
+  /** UX-225: more than one role among the clients (the row's own role, the server's grant) — only then does a row need its role said */
+  practiceKit.mixedRoles = function (rows) { return rows.some(function (r) { return r.role !== rows[0].role; }); };
+  /** UX-225: the one role every client is held in, said once beside the count ('' when mixed or none; the read-only auditor words stay allReadOnly's) */
+  practiceKit.roleOnce = function () {
+    var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
+    return rows.length && !practiceKit.mixedRoles(rows) && practiceKit.ROLE[rows[0].role] ? practiceKit.translate(practiceKit.ROLE[rows[0].role]) : '';
+  };
+  /** the list's columns for this seat: none a nothing-column (Year end only when some client has a year to close or a blocker); a read-only seat files no return and locks no month (no Due / Months-not-locked); the Role column only when the firm holds clients in more than one role */
+  practiceKit.seatCols = function (cols, rows) {
+    if (!rows.some(function (r) { return r.year_end || r.stage_blocker; })) cols = cols.filter(function (key) { return key !== 'yend'; });
+    if (practiceKit.auditSeat(practiceKit.practiceState.data)) cols = cols.filter(function (key) { return key !== 'bas' && key !== 'unlocked'; });
+    if (practiceKit.mixedRoles(rows)) cols.splice(1, 0, 'role');
+    return cols;
+  };
   practiceKit.checkedWords = checkedWords;
   practiceKit.checkedLeft = checkedLeft;
   practiceKit.checkedCell = checkedCell;

@@ -9,10 +9,10 @@ of file each thing is; this says what already does the job.
 
 | used by | name | defined in | what it is for |
 |---|---|---|---|
-| 219 | `list` | `amend.js` | list(entity_id, chit_id) — |
+| 220 | `list` | `amend.js` | list(entity_id, chit_id) — |
 | 207 | `rows` | `crm.js` | still in them: |
 | 192 | `read` | `bank-rec-log.js` | one account's bank reconciliation log: |
-| 182 | `words` | `variant.browser.js` |  |
+| 183 | `words` | `variant.browser.js` |  |
 | 165 | `withEntity` | `books-hooks.js` |  |
 | 148 | `problem` | `problem.js` | problem(req, res, spec) — |
 | 145 | `answer` | `availability.js` | from March; then nearest. |
@@ -38,8 +38,8 @@ of file each thing is; this says what already does the job.
 | 85 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 82 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 82 | `read` | `books-grant-drill.js` |  |
+| 82 | `rows` | `cap-settings.js` |  |
 | 82 | `count` | `money-check.js` | the count /health reads |
-| 81 | `rows` | `cap-settings.js` |  |
 | 80 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
 | 79 | `items` | `books-store.js` | PERF1: |
 | 79 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
@@ -52,9 +52,9 @@ of file each thing is; this says what already does the job.
 | 71 | `host` | `chit-sheet.js` |  |
 | 70 | `shape` | `books-practice.js` | a client's practice row: |
 | 70 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
+| 69 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 69 | `open` | `bank-statement-file.js` | The event is written in the same request unless the request is read only (an auditor: |
 | 68 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
-| 68 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 67 | `holds` | `assign-register.js` | ONE statement; the switch rides in it: |
 | 66 | `verdict` | `books-advice-in.js` | the verdict for a received advice: |
 | 66 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
@@ -85,11 +85,11 @@ of file each thing is; this says what already does the job.
 | 50 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 50 | `rate` | `convert.js` | A rate, with its evidence. |
 | 50 | `owner` | `books.js` | const { postVerdict, openingGate } = require('../lib/books-approval'); /* W25 postVerdict · RC-7 openingGate: |
+| 49 | `shell` | `pick.js` |  |
 | 49 | `statement` | `books-practice.js` | the one statement a client's books answer ($1 the client, $2 today). |
 | 49 | `counts` | `capabilities.js` | what the PUBLIC /health shows: |
 | 49 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 49 | `ledger` | `tax-lines.js` | ITC only when I am a regular taxpayer AND the seller charged tax (regular seller, not zero-rated to me). |
-| 48 | `shell` | `pick.js` |  |
 | 48 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 48 | `rules` | `docnumber.js` | the rule set for a country — |
 | 48 | `hold` | `orders.js` |  |

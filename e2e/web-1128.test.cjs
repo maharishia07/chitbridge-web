@@ -9,7 +9,7 @@ const { liftFns } = require('./lib/lift-fn.cjs');
 const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8');
 
 /* COUNT-SOURCE: the practice head, and the CRM nav, read the server's total; finance group heads say what the filter is */
-assert.ok(/escapeHtml\(clientCount\(practiceKit\.practiceState\.data\)\)/.test(src('app/books-practice.js')) && /function clientCount\(data\) \{.*data && data\.total/.test(src('app/books-practice.js')), 'practice head reads data.total ?? clients.length (through clientCount, the batch 1127 helper)');
+assert.ok(/escapeHtml\(practiceKit\.clientsText\(clientCount\(practiceKit\.practiceState\.data\)\)\)/.test(src('app/books-practice.js')) && /function clientCount\(data\) \{.*data && data\.total/.test(src('app/books-practice.js')), 'practice head reads data.total ?? clients.length (through clientCount, the batch 1127 helper)');
 assert.ok(/CRM\.total != null \? CRM\.total : CRM\.rows\.length/.test(src('app/cap-crm-assign.js')), 'CRM nav reads the server total');
 assert.ok(/crmKeepHeadlines\(reply\)/.test(src('app/cap-crm.js')) && /CRM\.total = crmTotalOf\(reply\)/.test(src('app/cap-crm-assign.js')));
 assert.ok(/return reply && reply\.total != null/.test(src('app/cap-crm-assign.js')), 'the headline total is the server total (+ walk-ins), read in crmTotalOf');

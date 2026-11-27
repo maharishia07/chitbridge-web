@@ -42,10 +42,22 @@
   function sameFilter(f, g) {
     return !!f && !!g && JSON.stringify(f) === JSON.stringify(g);
   }
-  /** the band shown: the one the person chose, else the one the server opened first */
+  /* UX-225 (cold walk AU r2, U1): a read-only seat (the server's own band.seat, derived from the grants held: one source) does not file a return and does not lock a month, so those tiles are not shown to it and
+     the band the bookkeeper calls "On us today" is its follow-up list. ONE list here; the seat is the server's, never decided on this page. Roles only restrict: the same read, fewer tiles. */
+  var NOT_FOR_AUDITOR = { return_overdue: 1, return_due_30: 1, months_unlocked: 1 };
+  var BAND_NAME_AUDITOR = { on_us: 'To follow up' };
+  function auditSeat(data) {
+    return !!(data && data.band && data.band.seat === 'auditor');
+  }
+  practiceKit.auditSeat = auditSeat;
+  function bandName(key, data) {
+    return (auditSeat(data) && BAND_NAME_AUDITOR[key]) || BAND_NAME[key] || key;
+  }
+  /** the band shown: the one the person chose, else the one the server opened first; the tiles this seat does not act on left out (a copy, the server's answer is untouched) */
   function bandShown(data) {
     var bands = (data.band && data.band.bands) || [];
-    return bands.filter(function (x) { return x.key === practiceKit.practiceState.band; })[0] || bands.filter(function (x) { return x.first; })[0] || bands[0] || null;
+    var one = bands.filter(function (x) { return x.key === practiceKit.practiceState.band; })[0] || bands.filter(function (x) { return x.first; })[0] || bands[0] || null;
+    return one && auditSeat(data) ? Object.assign({}, one, { tiles: one.tiles.filter(function (t) { return !NOT_FOR_AUDITOR[t.key]; }) }) : one;
   }
   /* REP-66 (practice pictures, Athi 16 Nov): ONE small picture per band, drawn by CBDraw (the one chart helper), inside the tile grid's own free cell so the list never moves down.
      Every figure is a tile's n (the server's count); the picture adds nothing of its own and never invents a part: a tile with no count is left out. Its text equivalent is the svg <desc>
@@ -72,6 +84,8 @@
   /** the words under a picture: "<total> [of <listed>] <unit>" when the picture has a unit, else its parts' figures side by side */
   function pictureCountText(spec, parts, total, listed) {
     if (!spec.unit) return parts.map(function (p) { return p.value; }).join(' · ');
+    if (spec.unit === 'clients' && listed === total) return ''; /* UX-225: the heading already says "N clients" (no repeated label); the picture says it only when it differs ("75 of 76") */
+    if (spec.unit === 'clients') return listed > total ? total + ' ' + practiceKit.translate('of') + ' ' + practiceKit.clientsText(listed) : practiceKit.clientsText(total); /* UX-225: the one plural helper */
     return total + (listed > total ? ' ' + practiceKit.translate('of') + ' ' + listed : '') + ' ' + practiceKit.translate(spec.unit);
   }
   function pictureHTML(shown) {
@@ -83,7 +97,7 @@
     var statusBarSvg = root.CBDraw.statusBar(parts, { palette: paletteHere(), width: narrow ? 112 : 200, id: spec.id, tid: spec.id, codes: PIC_CODES.status, title: practiceKit.translate(spec.title), desc: parts.map(function (p) { return p.label; }).join(', ') });
     var total = parts.reduce(function (sum, p) { return sum + p.value; }, 0);
     var listed = ((practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || []).length; /* W4-06: the strip counts the clients with books in; when the title says more, the strip says "75 of 76 clients" */
-    return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + practiceKit.escapeHtml(shown.key) + '" data-total="' + total + '">' + statusBarSvg + '<span class="sub" data-cbsid="HOM001-P04" data-testid="practice-pic-count">' + practiceKit.escapeHtml(pictureCountText(spec, parts, total, listed)) + '</span></div>';
+    return '<div class="bp-pic" style="--pw:' + (narrow ? 99 : 176) + '" data-testid="practice-pic" data-pic="' + practiceKit.escapeHtml(shown.key) + '" data-total="' + total + '">' + statusBarSvg + (pictureCountText(spec, parts, total, listed) ? '<span class="sub" data-cbsid="HOM001-P04" data-testid="practice-pic-count">' + practiceKit.escapeHtml(pictureCountText(spec, parts, total, listed)) + '</span>' : '') + '</div>';
   }
   /* REP-66b (year on year, Athi 16 Nov): sales this year to date against the same dates last year, drawn by CBDraw.compare from the figures the server carried on each client's health
      (sales_ytd_minor, sales_prev_ytd_minor, sales_yoy_pct, the dates and sales_yoy_state). This page adds, subtracts and divides nothing: it picks the rows by state, orders them by the carried change and prints
@@ -129,7 +143,7 @@
     var svgs = compareList(ranked.fall, 'bp-cmp-fall', 'Sales down most on last year', view) + (narrow ? '' : compareList(ranked.rise, 'bp-cmp-rise', 'Sales up most on last year', view));
     if (!svgs) return '';
     var shown = shownCount(ranked, view);
-    return '<div class="bp-cmp" data-testid="practice-cmp" data-shown="' + shown + '" data-listed="' + clients.length + '"><span class="sub" data-cbsid="HOM001-P12" data-testid="practice-cmp-caption">' + practiceKit.escapeHtml(practiceKit.translate('Sales to date vs last year') + (first ? ' · ' + practiceKit.dayWords(first.health.sales_yoy_from) + ' – ' + practiceKit.dayWords(first.health.sales_yoy_to) : '') + ' · ' + shown + ' ' + practiceKit.translate('of') + ' ' + clients.length + ' ' + practiceKit.translate('clients listed')) + '</span><div class="bp-cmp-row">' + svgs + '</div></div>';
+    return '<div class="bp-cmp" data-testid="practice-cmp" data-shown="' + shown + '" data-listed="' + clients.length + '"><span class="sub" data-cbsid="HOM001-P12" data-testid="practice-cmp-caption">' + practiceKit.escapeHtml(practiceKit.translate('Sales to date vs last year') + (first ? ' · ' + practiceKit.dayWords(first.health.sales_yoy_from) + ' – ' + practiceKit.dayWords(first.health.sales_yoy_to) : '') + ' · ' + shown + ' ' + practiceKit.translate('of') + ' ' + practiceKit.clientsText(clients.length) + ' ' + practiceKit.translate('listed')) + '</span><div class="bp-cmp-row">' + svgs + '</div></div>';
   }
   /** chart 2: this client's pair in the opened row, with the figures in words under it and the reason when there is no change */
   function pairHTML(r) {
@@ -169,7 +183,7 @@
     var bands = (data.band && data.band.bands) || [], shown = bandShown(data);
     if (!shown) return '';
     var tabs = bands.length > 1 ? '<div class="bp-bands" role="tablist" aria-label="' + practiceKit.escapeHtml(practiceKit.translate('Practice bands')) + '">' + bands.map(function (x) {
-      return '<button type="button" role="tab" class="bp-bandtab' + (x.key === shown.key ? ' on' : '') + '" aria-selected="' + (x.key === shown.key) + '" data-cbsid="CMP036-D01" data-bp-band="' + practiceKit.escapeHtml(x.key) + '" data-testid="practice-band-' + practiceKit.escapeHtml(x.key) + '">' + practiceKit.escapeHtml(practiceKit.translate(BAND_NAME[x.key] || x.key)) + '</button>';
+      return '<button type="button" role="tab" class="bp-bandtab' + (x.key === shown.key ? ' on' : '') + '" aria-selected="' + (x.key === shown.key) + '" data-cbsid="CMP036-D01" data-bp-band="' + practiceKit.escapeHtml(x.key) + '" data-testid="practice-band-' + practiceKit.escapeHtml(x.key) + '">' + practiceKit.escapeHtml(practiceKit.translate(bandName(x.key, data))) + '</button>';
     }).join('') + '</div>' : '';
     var tiles = shown.tiles.filter(function (t) { return TILE[t.key]; }).map(function (t) {
       var def = TILE[t.key], on = sameFilter(practiceKit.practiceState.filter, def[1]);
