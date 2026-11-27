@@ -245,6 +245,13 @@
     if (report.k !== 'periods') return undefined;
     return function (row) { if (row.start_date && row.end_date) grantKit.openMonth(String(row.start_date).slice(0, 10), String(row.end_date).slice(0, 10)); }; /* a Months row opens that month's Day book */
   }
+  /** UX-223: the Months list shows months that are OVER (the rule the year line counts by). A client whose books started this month has none yet: say so and name the month that is running, never "Nothing to show here" */
+  function noMonthEnded() {
+    var running = (((grantKit.viewState.answer || {}).periods) || []).filter(function (p) { return Number(p.period) >= 1 && !p.before_books && p.end_date; })[0];
+    var names = typeof root.monthNames === 'function' ? root.monthNames('long') : [], at = running ? String(running.start_date).slice(0, 10) : '';
+    var body = running ? grantKit.words('Months show here once they have ended.') + ' ' + (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + grantKit.words('ends on') + ' ' + root.shopDay(String(running.end_date).slice(0, 10)) + '.' : grantKit.words('Months show here once they have ended.');
+    return { title: grantKit.words('No month has ended yet'), body: body };
+  }
   /** the list's configuration for one report: its columns, search, drill and empty state */
   var SEARCH_FROM = 10;
   var BAR_FROM = 12;
@@ -275,7 +282,7 @@
       },
       rowClass: function (row) { return row.change_over ? 'bv-over' : ''; },
       onOpen: rowOpener(report),
-      empty: report.k === 'daybook' && grantKit.viewState.since ? { title: grantKit.words('Nothing has changed since your last check'), body: grantKit.words('No entries were posted since then.') } : { title: grantKit.words('Nothing to show here'), body: grantKit.words(grantKit.viewState.day || !grantKit.viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
+      empty: report.k === 'periods' ? noMonthEnded() : report.k === 'daybook' && grantKit.viewState.since ? { title: grantKit.words('Nothing has changed since your last check'), body: grantKit.words('No entries were posted since then.') } : { title: grantKit.words('Nothing to show here'), body: grantKit.words(grantKit.viewState.day || !grantKit.viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
     };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

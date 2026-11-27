@@ -170,7 +170,7 @@
       onDay: function (day) { grantKit.viewState.day = day; grantKit.reload(); },
       onOpen: function () {
         var from = answer.fy_from || '', to = answer.asOf || '', carry = '&view=tb' + (from && to ? '&fy=' + encodeURIComponent(from.slice(0, 4)) + '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to) : '');
-        root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry));
+        root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry, grantKit.viewState.o.member.role));
       }
     };
   }

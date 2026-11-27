@@ -105,8 +105,9 @@
     return '/accounts.html?acting=' + encodeURIComponent(store.id) + (doing ? '&prepare=' + doing : '') + '#/daybook';
   }
   /** W15-71: the auditor's way to the client's Bank (and Month lock) on the books page: the same page, the auditor's seat, read only */
-  function auditAddressOf(store, tab, carry) {
-    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=auditor' + (carry || '') + '#/' + (tab || 'bank');
+  /** UX-223: `role` is the seat the firm HOLDS for this client ('adviser' = a grant that acts for the shop); the page enters that seat, never an auditor seat the firm has no grant for (that answered "You do not have access") */
+  function auditAddressOf(store, tab, carry, role) {
+    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=' + (role === 'adviser' ? 'adviser' : 'auditor') + (carry || '') + '#/' + (tab || 'bank');
   }
   /** E10: the screen and the period the firm was reading ride the address to Bank and back (&view= and &fy= or &from=&to=), so the way back returns to the same year, not the year under review */
   function carriedOf(search) {
