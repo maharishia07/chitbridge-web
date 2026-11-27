@@ -99,11 +99,39 @@
     var e = m && m.editions;
     return e && Object.prototype.hasOwnProperty.call(e, k) ? e[k] : null;
   }
-  /** the active edition's id list, or null = every entry ('full', '*', or an edition the manifest does not know — never a blank Home) */
+  /** UX-221: what this seat may open, as the api's /me said it (seat: { owner, money, lead, entries }, the api's lib/seat-abilities), kept on this device so the NEXT first paint is already right. null while unknown, which hides nothing */
+  var SEAT_KEY = 'cb_seat';
+  function seatNow() {
+    try { return JSON.parse(root.localStorage.getItem(SEAT_KEY) || 'null'); } catch (failure) { if (typeof root.cbQuiet === 'function') root.cbQuiet('edition: no remembered seat, the first paint shows everything', failure); return null; }
+  }
+  /** the answer /me just gave (avatar.js hands it over): kept; when it changes what was drawn, the page is drawn once more (a person we had no answer for yet, unless the answer is "everything") */
+  function seatNote(seat) {
+    if (!seat || typeof seat !== 'object') return;
+    var was = JSON.stringify(seatNow()), now = JSON.stringify(seat);
+    if (was === now) return;
+    try { root.localStorage.setItem(SEAT_KEY, now); } catch (failure) { if (typeof root.cbQuiet === 'function') root.cbQuiet('edition: seat not remembered, the next paint asks again', failure); return; }
+    if (was !== 'null' || seat.owner !== true || seat.money !== true || seat.entries) root.setTimeout(function () { if (root.CBAvatar && root.CBAvatar.redraw) root.CBAvatar.redraw(); else root.location.reload(); }, 0);
+  }
+  /** is this entry the one the seat works from first (the Till for Counter staff) */
+  function isLead(id) {
+    var seat = seatNow();
+    return !!(seat && seat.lead && seat.lead === id);
+  }
+  /** the ids the seat is kept from: an entry that needs the owner (manifest needs.owner) or the money (needs.money) it has no part in, and anything outside the seat's own list */
+  function seatKeeps(entry, seat) {
+    var needs = entry.needs || {};
+    if (seat.owner === false && needs.owner) return false;
+    if (seat.money === false && needs.money) return false;
+    return !Array.isArray(seat.entries) || seat.entries.indexOf(entry.id) >= 0;
+  }
+  /** the active edition's id list narrowed by the seat, or null = every entry ('full', '*', or an edition the manifest does not know — never a blank Home). An edition and a seat only HIDE; the server still answers every page */
   function ids(m) {
     m = m || M;
-    var r = row(m, key());
-    return r && Array.isArray(r.entries) ? r.entries : null;
+    var r = row(m, key()), base = r && Array.isArray(r.entries) ? r.entries : null, seat = seatNow();
+    if (!seat || !m || !m.entries) return base;
+    var all = m.entries.filter(function (entry) { return entry && (!base || base.indexOf(entry.id) >= 0); });
+    var kept = all.filter(function (entry) { return seatKeeps(entry, seat); }).map(function (entry) { return entry.id; });
+    return kept.length === all.length ? base : kept;
   }
   function list(m) {
     m = m || M;
@@ -174,5 +202,5 @@
     return index;
   }
 
-  root.CBEdition = { key: key, clearTab: clearTab, use: use, load: load, list: list, info: info, shows: shows, view: view, hidesHref: hidesHref, prune: prune };
+  root.CBEdition = { seat: seatNow, seatNote: seatNote, isLead: isLead, key: key, clearTab: clearTab, use: use, load: load, list: list, info: info, shows: shows, view: view, hidesHref: hidesHref, prune: prune };
 })(typeof window !== 'undefined' ? window : this);
