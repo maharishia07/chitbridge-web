@@ -358,4 +358,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*268 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*269 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
