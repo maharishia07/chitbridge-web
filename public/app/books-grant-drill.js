@@ -68,7 +68,7 @@
       state.lines = state.lines.concat(answer.lines || []);
       if (ctx.mk) ctx.mk.ingest(answer.lines, answer); /* ACC-358: each ledger line carries its entry's mark */
       if (!ids.length) return null;
-      return read(ctx, 'readDaybook', {}, { entries: ids.join(','), from: answer.from, to: answer.to }).then(function (book) {
+      return read(ctx, 'readDaybook', {}, { entries: ids.join(','), limit: ids.length, from: answer.from, to: answer.to }).then(function (book) {
         (book.entries || []).forEach(function (entry) { state.entries[entry.entry_id] = entry; });
         if (ctx.mk) ctx.mk.ingest(book.entries, book);
         if (ctx.ev) ctx.ev.ingest(book.entries); /* CMP062: the ledger line's entry carries its evidence, the same chip as the Day book */
