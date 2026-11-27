@@ -15,14 +15,46 @@
   grantKit.duesVoice = duesVoice;
   function paintRows(host, report) {
     if (report.panels) return paintDues(host, report);
-    var rows = report.rows(grantKit.viewState.answer || {}).concat(grantKit.totalRows(report.k, grantKit.viewState.answer || {})).map(function (row, n) {
-      return Object.assign({ _n: n }, row);
-    });
+    var rows = rowsOf(report);
     var config = Object.assign({ foldHead: true } /* a phone's head folds to one chip */, listConfig(report, rows));
     if (report.k === 'daybook') narrowDaybook(host, config);
     grantKit.viewState.o.mountList(host, config);
     if (report.k === 'daybook') { wireDaybook(host, report); root.setTimeout(function () { rememberNarrowing(host); }, 0); }
   }
+  /** the rows of a read as the list draws them (numbered); the Day book asks again at every paint, so a page "Show more" adds is in them */
+  function rowsOf(report) {
+    return report.rows(grantKit.viewState.answer || {}).concat(grantKit.totalRows(report.k, grantKit.viewState.answer || {})).map(function (row, n) {
+      return Object.assign({ _n: n }, row);
+    });
+  }
+  /** the range's Σ Dr / Cr as the server added them (never added up here), or '' while the server sent none */
+  function pagerSums(answer) {
+    var totals = answer.totals;
+    if (!totals || totals.dr_minor == null) return '';
+    return ' · ' + grantKit.words('Total debit') + ' ' + root.CBBooksActing.figure(totals.dr_minor, answer.currency) + ' · ' + grantKit.words('Total credit') + ' ' + root.CBBooksActing.figure(totals.cr_minor, answer.currency);
+  }
+  /** the Day book's own "Show more" (its own code: the ledger drill's NET005-B05 is another element) */
+  function moreButton() {
+    return '<button data-cbsid="NET005-B11" type="button" class="act quiet" id="bv_more" data-testid="bv-more">' + esc(grantKit.words('Show more')) + '</button>';
+  }
+  /** the pager's markup: "Show more" while the server has a next page, then "held of total" and the range's sums; '' when the range is empty */
+  function pagerHtml(answer) {
+    var held = (answer.entries || []).length, total = Number(answer.total || held);
+    var heldOf = '<span class="sub" data-testid="bv-held">' + held + ' ' + esc(grantKit.words('of')) + ' ' + total + esc(pagerSums(answer)) + '</span>';
+    if (!answer.next && held >= total) return total ? '<div class="nw-acts">' + heldOf + '</div>' : '';
+    return '<div class="nw-acts">' + (answer.next ? moreButton() : '') + heldOf + '</div>';
+  }
+  /** 1132: under the Day book, how many entries are held of the range's total (the server's) with its Dr / Cr, and "Show more" while the server has a next page; the filters work on what is held, and a search or the CSV read the rest first */
+  grantKit.paintPager = function (node, report, onMore) {
+    if (!node) return;
+    var answer = grantKit.viewState.answer;
+    node.innerHTML = answer && !grantKit.viewState.since ? pagerHtml(answer) : '';
+    var button = node.querySelector('#bv_more');
+    if (button) button.onclick = function () {
+      button.disabled = true;
+      onMore(report).then(null, function () { button.disabled = false; });
+    };
+  };
   /* ── A3C rank 3: review by exception. The Day book's Mark · Evidence · Type filters (books-grant-filters.js) on the one list control; the choice is remembered for this client and rides the address (&dbf_mark= &dbf_ev= &dbf_kind=) ── */
   function narrowDaybook(host, config) {
     var F = root.CBBooksGrantFilters;
@@ -224,8 +256,9 @@
       tools: { search: rows.length >= SEARCH_FROM, bar: rows.length > BAR_FROM } /* W19: a short list is read at a glance; no search box under ten rows, no tools bar up to twelve (T6: first data by 20% / 30%) */,
       defaultCols: shownCols(report).map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
       rows: function () {
-        return rows;
+        return report.k === 'daybook' ? rowsOf(report) : rows;
       },
+      loadAll: report.k === 'daybook' && !grantKit.viewState.since ? { incomplete: function () { var a = grantKit.viewState.answer; return !!(a && a.next && !a.capped && !a.failed); }, run: function () { return grantKit.loadAllDaybook(report); } } : undefined, /* a search over 100 of 307 would say "Nothing matches" for an entry that exists */
       id: function (row) {
         return row._n;
       },
