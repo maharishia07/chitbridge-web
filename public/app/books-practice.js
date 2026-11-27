@@ -264,7 +264,7 @@
     var cols = (BAND_COLS[bandKey] || BAND_COLS.pipeline).slice();
     /* W4-06: a column no row has anything in is not drawn (never 149 blank cells): Year end only when some client has a year to close or a blocker; Held by only when some client is held (the tick bar still assigns) */
     var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
-    cols = practiceKit.seatCols(cols, rows); /* W4-06 a column nothing fills is not drawn; UX-225 the seat and the roles decide the rest (books-practice-cells.js) */
+    cols = practiceKit.seatCols(cols, rows); /* W4-06 a column nothing fills is not drawn; UX-225 the seat and the roles decide the rest */
     if (holdersOn() && rows.some(function (r) { return Array.isArray(r.holders) && r.holders.length; })) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
     return cols.concat(flagsOn() ? ['saved'] : []);
   }
