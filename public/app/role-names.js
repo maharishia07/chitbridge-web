@@ -6,6 +6,9 @@
  * CALLED BY cap-employees-give.js (Delegate work) · cap-catalogue.js · cap-bank-store.js · cap-books.js · cap-books-lock.js · cap-employees.js · cap-settings.js · cap-tasks.js · network-app.js
  * FLOW      a screen asks CBRoles.name(role) / .line(role) / .firm(role, given) / .refusal(what); nothing here reads the server or decides who may do anything
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/locale
+ * ID        CMP073
+ * OWNER     cb-ux-locale
+ * RISK      plain
  *
  * e2e/guard-role-names.cjs fails when a screen spells a role name or a refusal outside this file (its allow-list only shrinks).
  */
@@ -27,7 +30,7 @@
     bank: 'Your seat cannot open the bank statements. Ask the owner.',
     reports: 'Your seat cannot open the reports. Ask the owner.'
   };
-  function say(text) {
+  function translated(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
   function role(key) {
@@ -35,19 +38,19 @@
   }
   /** the one word for the role */
   function name(key) {
-    return say(role(key).name);
+    return translated(role(key).name);
   }
   /** "Accountant: acts for you" */
   function line(key) {
-    return say(role(key).line);
+    return translated(role(key).line);
   }
   /** a firm's name, or the role's word for a firm the server sent no name for */
   function firm(key, given) {
-    return given || say(role(key).firm);
+    return given || translated(role(key).firm);
   }
   /** "Your seat cannot read the books. Ask the owner." — the one refusal; `what` is a key of CANNOT */
   function refusal(what) {
-    return say(CANNOT[what] || CANNOT.any);
+    return translated(CANNOT[what] || CANNOT.any);
   }
   root.CBRoles = { ROLES: ROLES, name: name, line: line, firm: firm, refusal: refusal };
 })(typeof window !== 'undefined' ? window : this);
