@@ -25,7 +25,7 @@ var BK_NEED_ORDER = ['disputed', 'query', 'held', 'no_tax_invoice', 'no_terms', 
 function bkNeedChips(party) {
   var needTotals = party.needs || {},
     kinds = BK_NEED_ORDER.filter(function (kind) {
-      return Number(needTotals[kind]) > 0 && !(kind === 'overdue' && Number(needTotals.no_terms) >= Number(needTotals.bills)) /* ACC-412: every open bill has no terms = no due date = nothing overdue to say (the server counts each, this only stops the word) */;
+      return Number(needTotals[kind]) > 0; /* ACC-412: the api's counts already leave a no-terms bill out of overdue (billBands.overdue), so nothing is re-derived here */
     });
   if (!kinds.length) return '';
   var shown = kinds.slice(0, 3).map(function (kind) {
@@ -59,10 +59,9 @@ function bkNeedFilters() {
 function bkNeedsChip(kind, text, pressed, tidSuffix) {
   return '<button type="button" class="attn-chip" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="needs-head-' + kind + (tidSuffix || '') + '" data-testid="needs-head-' + kind + (tidSuffix || '') + '" aria-pressed="' + (pressed === kind) + '" onclick="bkNeedsHeadPress(\'' + kind + '\')">' + text + '</button>';
 }
-/** the overdue chip(s) of the header line (ACC-412: none when every open bill has no terms = no due date; the server counts each, this only stops the word) */
+/** the overdue chip(s) of the header line, from the api's own overdue counts (a no-terms bill is never in them: ACC-412) */
 function bkNeedsOverdueParts(sum, currency, pressed) {
   var parts = [];
-  if (Number(sum.no_terms) > 0 && Number(sum.no_terms) >= Number(sum.bills)) return parts;
   /* FW-35: both sides on one list = two overdue figures, never one sum of what is owed to us and what we owe */
   if (sum.overdue && sum.overdue_sides && sum.overdue_sides.length > 1) {
     sum.overdue_sides.forEach(function (part) {

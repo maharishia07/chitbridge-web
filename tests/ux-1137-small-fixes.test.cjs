@@ -7,10 +7,10 @@ assert(/\.mk-many \.mk-ghost \.mk-w\{display:none\}/.test(mark) && /var MANY = 3
 assert(/data-mk-all="1"/.test(mark) && /CBConfirm\(fill\(markKit\.MARK_WORDS\.checkAllAsk/.test(mark)); ok('UX-210: one bulk Check all shown, after a confirm');
 assert(/cbDuesTwin/.test(acc) && /id === 'dues' && duesNavHid/.test(acc) && /window\.cbDuesNav\(\)/.test(books)); ok('UX-211: Dues folds into the one side that holds the same list');
 assert(/\.cbl \.cbl-row\.cbl-total:last-child\{position:static\}/.test(css)); ok('UX-212: the Total card is in the flow in card mode');
-assert(needs.includes("kind === 'overdue' && Number(needTotals.no_terms) >= Number(needTotals.bills)") && books.includes("reason === 'overdue' && (row.no_terms")); ok('ACC-412: no terms = never overdue');
+assert(!needs.includes('no_terms) >= Number') && books.includes("reason === 'overdue' && (!row.overdue") && books.includes("item.needs.overdue) > 0")); ok('ACC-412: overdue is the api flag, no web rule');
 // the chip function itself
 const vm = require('vm'), ctx = { window: {}, esc: (x) => x, tx: (x) => x, bkMountAttribute: () => '', escJs: (x) => x, console };
 vm.createContext(ctx); vm.runInContext(needs, ctx);
 const chips = (n) => ctx.bkNeedChips({ party_id: 'p', needs: n });
-assert(!/overdue/.test(chips({ bills: 2, no_terms: 2, overdue: 2 }))); assert(/overdue/.test(chips({ bills: 2, no_terms: 1, overdue: 1 }))); ok('ACC-412: party chips');
+assert(/overdue/.test(chips({ bills: 2, no_terms: 1, overdue: 1 }))); assert(!/overdue/.test(chips({ bills: 2, no_terms: 2, overdue: 0 }))); ok('ACC-412: party chips follow the api overdue count');
 console.log('ux-1137-small-fixes: all ok');
