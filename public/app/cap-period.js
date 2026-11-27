@@ -465,9 +465,13 @@ async function peGstView(body) {
      without the route yet, keeps the GST close & pay below as the whole page. */
   let ret = null;
   try {
-    PE_RET.q = Object.assign({}, peRetRecall());
+    const recalled = peRetRecall();
+    PE_RET.q = Object.assign({}, recalled);
+    delete PE_RET.q.stagger; /* ACC-410: the VAT period and the Emirate are the SHOP's setup answers (the server reads them for any seat); this device no longer sends its own guess */
+    delete PE_RET.q.emirate;
     if (!PE_RET.q.period) PE_RET.q.on = await peBusyDay(); /* open on the quarter that has entries, as the Day book does */
     ret = await peReturnLoad();
+    if (ret && ret.needs === 'stagger' && (recalled.stagger || recalled.emirate)) ret = await peSetupKeep(ret, recalled.stagger, recalled.emirate); /* a pick this device alone held moves into the shop's setup once */
   } catch (e) {
     body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>';
     return;
@@ -727,8 +731,6 @@ function peRetRemember() {
     localStorage.setItem(
       peRetKey(),
       JSON.stringify({
-        stagger: PE_RET.q.stagger || null,
-        emirate: PE_RET.q.emirate || null,
         frequency: PE_RET.q.frequency || null,
         simpler: PE_RET.q.simpler || null
       })
@@ -751,9 +753,10 @@ const peRetDash = () => '<span style="color:var(--grey)">—</span>';
 async function peBusyDay() {
   try {
     const busy = ((await api('booksPeriods')) || {}).periods || [];
+    const today = new Date().toISOString().slice(0, 10); /* ACC-411: the server ignores a day still to come, so a month that has begun is asked at today, not at its last day */
     const last = busy
       .filter((item) => Number(item.entries) > 0 && Number(item.period) >= 1 && item.end_date)
-      .map((item) => String(item.end_date).slice(0, 10))
+      .map((item) => (String(item.end_date).slice(0, 10) > today ? today : String(item.end_date).slice(0, 10)))
       .sort()
       .pop();
     return last || '';
@@ -796,9 +799,49 @@ function peReturnWord(r) {
   const node = document.getElementById('title');
   if (node && typeof BK !== 'undefined' && BK.tab === 'gstclose') node.textContent = word;
 }
+/** ACC-410: the owner's VAT period and Emirate are kept as the shop's setup answers (PUT country-setup particulars, the one home: asked.period · asked.region), so the return reads them for the owner, the adviser and the auditor alike.
+ *  `stagger` is the pack's stagger key ('monthly' maps to the key that is monthly); '' leaves it unchanged. → the reloaded return, or null when the save was refused (not the owner) */
+async function peSetupKeep(returnAnswer, stagger, emirate) {
+  const table = (returnAnswer && returnAnswer.staggers) || {},
+    key = Object.keys(table).find((item) => item === String(stagger) || (stagger === 'monthly' && table[item].monthly)),
+    particulars = {};
+  if (key) particulars.period = key;
+  if (emirate) particulars.region = emirate;
+  if (!Object.keys(particulars).length) return returnAnswer;
+  try {
+    const held = (await api('countrySetup')) || {};
+    await api('countrySetupSave', { body: { country: held.country && held.country.code, currency: held.currency, fy_start_month: held.fy_start_month, particulars } });
+    return await peReturnLoad();
+  } catch (failure) {
+    bkQuiet('setup-keep', failure, null);
+    return null;
+  }
+}
+/** ACC-410: the owner's VAT period and Emirate are kept as the shop's setup answers (PUT country-setup particulars, the one home: asked.period · asked.region), so the return reads them for the owner, the adviser and the auditor alike.
+ *  `stagger` is the pack's stagger key ('monthly' maps to the key that is monthly); '' leaves it unchanged. → the reloaded return, or null when the save was refused (not the owner) */
+async function peSetupKeep(returnAnswer, stagger, emirate) {
+  const table = (returnAnswer && returnAnswer.staggers) || {},
+    key = Object.keys(table).find((item) => item === String(stagger) || (stagger === 'monthly' && table[item].monthly)),
+    particulars = {};
+  if (key) particulars.period = key;
+  if (emirate) particulars.region = emirate;
+  if (!Object.keys(particulars).length) return returnAnswer;
+  try {
+    const held = (await api('countrySetup')) || {};
+    await api('countrySetupSave', { body: { country: held.country && held.country.code, currency: held.currency, fy_start_month: held.fy_start_month, particulars } });
+    return await peReturnLoad();
+  } catch (failure) {
+    bkQuiet('setup-keep', failure, null);
+    return null;
+  }
+}
 /** a pick changed (period · frequency · labels · stagger · Emirate): ask again, repaint; the server's refusal is one sentence in the slot */
 async function peReturnPick(k, v) {
-  PE_RET.q[k] = v;
+  if (k === 'stagger' || k === 'emirate') {
+    delete PE_RET.q.period;
+    const kept = await peSetupKeep(PE_RET.r, k === 'stagger' ? v : '', k === 'emirate' ? v : '');
+    if (kept === null) PE_RET.q[k] = v; /* the save was refused: this view still reads the pick, and says nothing is kept for the shop */
+  } else PE_RET.q[k] = v;
   if (k !== 'period') {
     delete PE_RET.q.period;
     peRetRemember();
@@ -869,7 +912,7 @@ function peReturnAeFields(returnAnswer) {
     stg = returnAnswer.staggers || {};
   const staggerOpts = [['', '—']].concat(
     Object.keys(stg).map((item) => [
-      stg[item].monthly ? 'monthly' : item,
+      item, /* the pack's stagger key, as the shop's setup holds it */
       stg[item].monthly ? tx('Monthly') : txf('Stagger {n} · tax year ends {m}', { n: item, m: stg[item].tax_year_end })
     ])
   );
