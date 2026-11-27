@@ -286,7 +286,7 @@
       (!grantKit.viewState.why && report.k === 'daybook' ? grantKit.TABROW_CSS + grantKit.sinceBar() : '') /* fd1117: the since toggle (and, in that view, its count and Mark as checked) sits IN the tab row, not on a row of its own: the first entry stays under the ceiling */ +
       (grantKit.viewState.why ? '' : '<span class="bv-totals">' + grantKit.facts(report) + '</span>') + '</div>' +
       (grantKit.viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
-      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' + (report.k === 'daybook' ? '<div id="bv_pager" data-testid="bv-pager"></div>' : '') +
+      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' + pagerSlot(report) +
       (grantKit.markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes; fd1117: the marks bar (count and All queries) sits UNDER the list with the notes, so the first data row stays where the ceiling holds it */ +
       (grantKit.viewState.why ? '' : grantKit.riskNote(report) + grantKit.cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
       (grantKit.viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + grantKit.bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
@@ -334,6 +334,10 @@
       });
     } else grantKit.paintRows($('bv_list'), report);
     if (report.k === 'daybook') grantKit.paintPager($('bv_pager'), report, showMore);
+  }
+  /** the slot under the Day book's list that holds its pager (the other reports have none) */
+  function pagerSlot(report) {
+    return report.k === 'daybook' ? '<div id="bv_pager" data-testid="bv-pager"></div>' : '';
   }
   /** 1132 "Show more": the next page of the Day book by the server's cursor, joined to what is held; the range's total and Dr / Cr stay the newest reply's (the server's, never added up here) */
   function nextPage(report) {
