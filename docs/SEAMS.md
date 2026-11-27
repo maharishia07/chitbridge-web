@@ -31,7 +31,7 @@ of file each thing is; this says what already does the job.
 | 90 | `again` | `signin-ui.js` |  |
 | 89 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 89 | `pack` | `books-store-packs.js` |  |
-| 87 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 88 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 87 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
 | 86 | `register` | `regulation.js` | register(pack) → the pack — |
 | 85 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
