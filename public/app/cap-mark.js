@@ -46,6 +46,8 @@
   var SEND = { clear: 'checked', open: 'query', hold: 'on_hold', removed: 'removed' }; /* the neutral class → the kind the server takes */
   markKit.MARK_WORDS = {
     check: 'Check',
+    checkAll: 'Check all shown',
+    checkAllAsk: 'Mark {n} entries as checked?',
     notChecked: 'Not checked',
     altered: 'Changed after review',
     recheck: 'Re-check needed',
@@ -136,6 +138,8 @@
     '.mk-out{font-size:var(--fs-1,12px);min-height:1em}.mk-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.mk-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}' +
     '.mk-why{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
     '.mk-n{display:none}' +
+    /* UX-210: more than 3 unchecked rows on a screen = the word "Check" is not repeated on every row: a ○ and a ? (the name on hover and to a reader), and one bulk "Check all shown" in the bar */
+    '.mk-many .mk-ghost .mk-w{display:none}.mk-all{display:none}.mk-many .mk-all{display:inline-flex}' +
     '.cbl .cbl-row.mk-wait,.cbl .cbl-lrec.mk-wait{box-shadow:inset 5px 0 0 var(--blue,#1f5fa8)}.cbl .cbl-row.mk-answered,.cbl .cbl-lrec.mk-answered{box-shadow:inset 5px 0 0 var(--line,#DDD6C6)}' +
     '@media (max-width:700px){.mk-ghost .mk-w{display:none}.mk-ghost .mk-n{display:inline}.mk{min-width:44px;min-height:44px;justify-content:center;padding:3px 8px}.mk-act{flex:1 1 40%}dialog.mk-sheet{margin:0;width:100vw;max-width:100vw;max-height:100dvh;border-radius:0}dialog.mk-sheet[open]{height:100dvh}}';
   var cssDone = false;
@@ -382,6 +386,37 @@
       }
     }, function () { /* a refused write keeps the old chip: nothing to move */ });
   }
+  var MANY = 3; /* the repeat rule (feedback-no-repeated-row-labels): at most 3 of the same label on a screen */
+  var manyQueued = false;
+  function countMany() {
+    manyQueued = false;
+    var d = markKit.doc, n = d.querySelectorAll ? d.querySelectorAll('button.mk-ghost[data-mk="check"]').length : 0;
+    if (d.body && d.body.classList) d.body.classList.toggle('mk-many', n > MANY);
+  }
+  function watchMany() {
+    var d = markKit.doc;
+    if (!d || !d.body || typeof root.MutationObserver !== 'function') return;
+    new root.MutationObserver(function () {
+      if (manyQueued) return;
+      manyQueued = true;
+      (root.requestAnimationFrame || root.setTimeout)(countMany, 0);
+    }).observe(d.body, { childList: true, subtree: true });
+    countMany();
+  }
+  /** "Check all shown": the unchecked rows this screen draws, each through the same one write, after one confirm */
+  function checkAllShown() {
+    var buttons = Array.prototype.slice.call(markKit.doc.querySelectorAll('button.mk-ghost[data-mk="check"]'));
+    var run = function () {
+      buttons.reduce(function (chain, one) {
+        return chain.then(function () {
+          var host = one.closest('[data-mark]'), hostControl = host && controlOf(host);
+          return hostControl ? hostControl.ctl.set(one.getAttribute('data-id'), 'clear', '', one) : null;
+        });
+      }, Promise.resolve());
+    };
+    if (typeof root.CBConfirm !== 'function') return run();
+    root.CBConfirm(fill(markKit.MARK_WORDS.checkAllAsk, { n: buttons.length }), '', markText(markKit.MARK_WORDS.checkAll), run);
+  }
   /* one delegated press for every chip (captured: a row's own open handler never sees it) */
   var wired = false;
   function wire() {
@@ -390,7 +425,11 @@
     /** a press on a marker button: the Query sheet or the one write for that record */
     function onPress(event) {
       var button = event.target.closest ? event.target.closest('button[data-mk]') : null;
-      if (!button) return;
+      if (!button) {
+        var all = event.target.closest ? event.target.closest('button[data-mk-all]') : null;
+        if (all) { event.stopPropagation(); event.preventDefault(); checkAllShown(); }
+        return;
+      }
       var host = button.closest('[data-mark]'), hostControl = host && controlOf(host);
       if (!hostControl) return;
       event.stopPropagation();
@@ -400,6 +439,7 @@
       else hostControl.ctl.sheet(id, { opener: button });
     }
     markKit.doc.addEventListener('click', onPress, true);
+    watchMany();
     markKit.doc.addEventListener('keydown', function (event) {
       if ((event.key === 'Enter' || event.key === ' ') && event.target.closest && event.target.closest('button[data-mk]')) event.stopPropagation(); /* a chip's key is the chip's, not the row's */
     }, true);
@@ -413,6 +453,7 @@
     var n = (s.open || []).length;
     return '<div class="mk-bar" data-testid="mk-bar" role="group" aria-label="' + esc(markText(markKit.MARK_WORDS.openQueries)) + '">' +
       '<span class="mk-count" data-testid="mk-count">' + esc(fill(markKit.MARK_WORDS.checkedOf, { n: s.checked, m: s.total })) + '</span>' +
+      '<button type="button" class="mk mk-ok mk-all" data-cbsid="CMP058-B06" data-mk-all="1" data-testid="mk-all"><span class="mk-s" aria-hidden="true">✓</span><span>' + esc(markText(markKit.MARK_WORDS.checkAll)) + '</span></button>' +
       (s.total ? '<span class="mk-meter" aria-hidden="true"><i style="width:' + pct + '%"></i></span>' : '') +
       '<button type="button" class="mk mk-ask" data-cbsid="CMP058-B03" data-mk-filter="1" aria-pressed="' + (o.on ? 'true' : 'false') + '" data-testid="mk-filter"><span class="mk-s" aria-hidden="true">?</span><span class="mk-w">' + esc(markText(o.on ? markKit.MARK_WORDS.allEntries : markKit.MARK_WORDS.allQueries)) + ' · ' + n + '</span></button></div>';
   }

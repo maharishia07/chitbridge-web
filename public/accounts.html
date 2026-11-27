@@ -248,7 +248,16 @@ function taxCloseWord() {
   const item = NAV.find((entry) => entry[0] === 'gstclose');
   if (item && (returnWord || word)) item[1] = returnWord || word + ' close & pay';
 }
+/* UX-211: Dues is the two sides together; a book with only ONE side (all suppliers, or all customers) shows the same list under Receivables or Payables, so the menu keeps that one entry
+   (the read is the page's own /dues answer, never a second one; unknown yet = both stay; the open Dues screen keeps its button) */
+window.cbDuesTwin = (active) => active !== 'dues' && !!window.BK && !!BK.duesRaw && typeof bkDuesRows === 'function' && !bkDuesRows('rcv').length !== !bkDuesRows('pay').length;
+window.cbDuesNavHid = false;
+window.cbDuesNav = () => {
+  const on = document.querySelector('#nav .nav-btn.active');
+  if (window.cbDuesTwin(on ? on.dataset.view : '') !== window.cbDuesNavHid && $('nav') && $('nav').innerHTML) navPaint(on ? on.dataset.view : '');
+};
 function navPaint(active) {
+  const duesNavHid = (window.cbDuesNavHid = typeof window.cbDuesTwin === 'function' && window.cbDuesTwin(active));
   taxCloseWord(); /* the menu names the shop's own tax: GST · VAT · Consumption tax close & pay ("Tax close & pay" when no pack is known) */
   const byId = Object.fromEntries(NAV.map((item) => [item[0], item])),
     fold = navFolded();
@@ -257,7 +266,7 @@ function navPaint(active) {
     const head = text
       ? `<button data-cbsid="BKS001-B02" type="button" class="nav-grp" data-grp="${esc(text)}" data-testid="acc-grp-${esc(text.toLowerCase().replace(/ /g, '-'))}" aria-label="${esc(tx(text))}" aria-expanded="${!shut}"><span class="label">${esc(tx(text))}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
       : '';
-    return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.map((id) => byId[id]).filter(Boolean), active) + '</div>';
+    return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.filter((id) => !(id === 'dues' && duesNavHid)).map((id) => byId[id]).filter(Boolean), active) + '</div>';
   }).join('');
 }
 /* M-F-08 (WALK M): a view-only login is refused the ledger's money (api: the books money gate) and the owner's two doors; those entries are GREYED with the reason (one readiness state: grey, say why), never drawn as if they opened */

@@ -25,7 +25,7 @@ var BK_NEED_ORDER = ['disputed', 'query', 'held', 'no_tax_invoice', 'no_terms', 
 function bkNeedChips(party) {
   var needTotals = party.needs || {},
     kinds = BK_NEED_ORDER.filter(function (kind) {
-      return Number(needTotals[kind]) > 0;
+      return Number(needTotals[kind]) > 0 && !(kind === 'overdue' && Number(needTotals.no_terms) >= Number(needTotals.bills)) /* ACC-412: every open bill has no terms = no due date = nothing overdue to say (the server counts each, this only stops the word) */;
     });
   if (!kinds.length) return '';
   var shown = kinds.slice(0, 3).map(function (kind) {
@@ -74,6 +74,7 @@ function bkNeedsChips(sum, side, currency, pressed) {
     if (sum[reason[0]]) parts.push(bkNeedsChip(reason[0], '<b>' + sum[reason[0]] + '</b> ' + esc(reason[1]), pressed));
   });
   /* FW-35: both sides on one list = two overdue figures, never one sum of what is owed to us and what we owe */
+  if (Number(sum.no_terms) > 0 && Number(sum.no_terms) >= Number(sum.bills)) return parts; /* ACC-412: every open bill has no terms = no due date = nothing overdue to say */
   if (sum.overdue && sum.overdue_sides && sum.overdue_sides.length > 1) {
     sum.overdue_sides.forEach(function (part) {
       parts.push(bkNeedsChip('overdue', '<b>' + (part.minor != null ? esc(bkMoney(part.minor, currency)) : part.count) + '</b> ' + esc(tx(part.key === 'customer' ? 'overdue from customers' : 'overdue to suppliers')), pressed, '-' + part.key));

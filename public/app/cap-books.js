@@ -474,6 +474,7 @@ function bkDuesStore(r) {
   ((r && r.parties) || []).forEach(function (item) {
     BK.dues[item.party_id] = item;
   });
+  if (typeof window !== 'undefined' && typeof window.cbDuesNav === 'function') window.cbDuesNav(); /* UX-211: the menu may fold Dues into the one side that holds the same list */
   return BK.dues;
 }
 /** ⭐ A ROW NAMES ITS PARTY (Athi, 2026-10-02): "P-0007 · Chola Auto Care" from the dues map; the name alone if there is no number; never the bare id */
@@ -5509,7 +5510,7 @@ function bkPbTableHTML(pid, pbState, answer, currency) {
     { k: 'bill', label: 'Bill', w: 104, sort: sortable, ln: 1, /* FW-43: a floor, so Date and Bill never print on one another when the side panel narrows the grid */ cell: function (row, index) { return bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true); } },
     { k: 'status', label: on === 'needs' ? 'Why' : 'Status', w: 200, ln: 1, cell: function (row) { return bkBillStatus(row, on); } },
     { k: 'due', label: 'Due date', w: 104, sort: sortable, ln: 2, cell: function (row) { return row.no_terms && row.status !== 'paid' ? '<span data-b="no-due-date" style="color:var(--grey)">' + esc(tx('No due date')) + '</span>' : row.due_date ? esc(bkDate(row.due_date)) : '—'; } },
-    { k: 'days', label: 'Days overdue', w: 96, r: true, sort: sortable, ln: 2, cell: function (row) { return row.status === 'paid' ? '—' : row.days_overdue == null ? esc(tx('not due')) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue)); } },
+    { k: 'days', label: 'Days overdue', w: 96, r: true, sort: sortable, ln: 2, cell: function (row) { return row.status === 'paid' ? '—' : row.no_terms ? '—' : row.days_overdue == null ? esc(tx('not due')) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue)); } },
     { k: 'amount', label: 'Amount', w: 100, r: true, sort: sortable, ln: 0, only: 'all', cell: function (row) { return moneyOf(row.amount_minor); } },
     { k: 'owed', label: 'Still owed', w: 104, r: true, sort: sortable, ln: 2, end: true, cell: function (row) { return row.owed_minor == null ? '<span style="' + grey + '">—</span>' : '<b data-b="owed">' + moneyOf(row.owed_minor) + '</b>'; } },
     {
@@ -5643,6 +5644,7 @@ function bkBillStatus(row, onTab) {
     parts.push('<button type="button" class="optchip" data-cbsid="' + chipCode + '" data-mk="open" data-id="' + esc(row.entry_id) + '" data-class="hold" data-b="mark-hold" ' + warn + ' title="' + esc(heldBy) + '" aria-label="' + esc(tx('On hold') + ' · ' + tx('No tax invoice')) + '">‖ ' + esc(tx('On hold')) + ' · ' + esc(tx('no tax invoice')) + '</button>');
   } else {
     reasons.forEach(function (reason) {
+      if (reason === 'overdue' && row.no_terms) return; /* ACC-412: no terms = no due date = never "Overdue" */
       if (reason === 'overdue' && onTab !== 'needs') return; /* the Days overdue column already says it */
       if (reason === 'no_terms' && onTab !== 'needs') return; /* the Due date cell says it, with the link that fixes it */
       var word = { disputed: 'In dispute', query: '? Open query', held: '‖ On hold', no_tax_invoice: '⚠ No tax invoice', no_terms: 'No terms', overdue: 'Overdue' }[reason];
