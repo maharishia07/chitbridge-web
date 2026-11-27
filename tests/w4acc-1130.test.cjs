@@ -43,7 +43,7 @@ ok('W4-16 the balance sheet profit line runs to the heading day (shown_as_at), n
 });
 ok('W4-06 an empty column is not drawn (Year end and Held by), and the strip says N of M', () => {
   const pr = read('public/app/books-practice.js'), band = read('public/app/books-practice-band.js');
-  assert.ok(pr.includes("return key !== 'yend'") && pr.includes('r.holders.length'));
+  assert.ok(read('public/app/books-practice-cells.js').includes("return key !== 'yend'") && pr.includes('r.holders.length'));
   assert.ok(band.includes("listed > total"));
 });
 ok('W4-15 inside a client the area switcher is not drawn', () => { const sh = read('public/app/shell.js'); assert.ok(sh.includes('.cbsh-is-working .cbsh-sw{display:none}') && sh.includes("classList.toggle('cbsh-is-working'")); });

@@ -12,8 +12,6 @@
   'use strict';
   var practiceKit = (root.CBPracticeKit = root.CBPracticeKit || {});
   practiceKit.translate = translate;
-  /** UX-225: "1 client" · "3 clients" — the one plural helper (txn, accounts-shell.js), never a bare 'clients' after a number */
-  practiceKit.clientsText = function (n) { return typeof root.txn === 'function' ? root.txn('{count} client', '{count} clients', n) : n + (n === 1 ? ' client' : ' clients'); };
   var escapeHtml = (practiceKit.escapeHtml = function (s) { return esc(s); }); /* the one esc (helpers.js) */
   practiceKit.money = minorText;
   practiceKit.dayWords = dayWords;
@@ -137,7 +135,7 @@
   function dayWords(value) {
     return value ? (typeof root.shopDay === 'function' ? root.shopDay(value) : String(value).slice(0, 10)) : '—';
   }
-  var ROLE = { adviser: 'Accountant', auditor: 'Auditor' };
+  var ROLE = (practiceKit.ROLE = { adviser: 'Accountant', auditor: 'Auditor' });
   /** l16 R4-2b: the client this person worked on last (set when a client's books are entered, books-acting.js): its row is marked, in view and focused when the list comes back */
   function lastClient() {
     try { return root.sessionStorage.getItem('cb_last_client') || ''; } catch (failure) { if (root.cbQuiet) root.cbQuiet('practice:last', failure); return ''; }
@@ -240,15 +238,6 @@
     var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
     return rows.length > 0 && rows.every(function (r) { return r.grant && r.grant.read_only === true; });
   }
-  /** UX-225: more than one role among the clients (the row's own role, the server's grant) — only then does a row need its role said */
-  function mixedRoles(rows) {
-    return rows.some(function (r) { return r.role !== rows[0].role; });
-  }
-  /** UX-225: the one role every client is held in, said once beside the count ('' when mixed or none; the read-only auditor words stay allReadOnly's) */
-  function roleOnce() {
-    var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
-    return rows.length && !mixedRoles(rows) && ROLE[rows[0].role] ? translate(ROLE[rows[0].role]) : '';
-  }
   var HEALTH_HEADS = { help: 'Needs help', watch: 'Watch', good: 'Doing well', none: 'Not enough books yet' };
   /** the group a client stands under: its health status, the heading's words, the key the order and the fold read */
   function healthGroup(r) {
@@ -275,9 +264,7 @@
     var cols = (BAND_COLS[bandKey] || BAND_COLS.pipeline).slice();
     /* W4-06: a column no row has anything in is not drawn (never 149 blank cells): Year end only when some client has a year to close or a blocker; Held by only when some client is held (the tick bar still assigns) */
     var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
-    if (!rows.some(function (r) { return r.year_end || r.stage_blocker; })) cols = cols.filter(function (key) { return key !== 'yend'; });
-    if (practiceKit.auditSeat(practiceKit.practiceState.data)) cols = cols.filter(function (key) { return key !== 'bas' && key !== 'unlocked'; }); /* UX-225: a read-only seat does not file a return or lock a month: no Due / Months-not-locked column (the tiles are left out likewise in the band module) */
-    if (mixedRoles(rows)) cols.splice(1, 0, 'role'); /* UX-225: the Role column only when the firm holds clients in more than one role; one role is said once in the heading */
+    cols = practiceKit.seatCols(cols, rows); /* W4-06 a column nothing fills is not drawn; UX-225 the seat and the roles decide the rest (books-practice-cells.js) */
     if (holdersOn() && rows.some(function (r) { return Array.isArray(r.holders) && r.holders.length; })) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
     return cols.concat(flagsOn() ? ['saved'] : []);
   }
@@ -394,7 +381,7 @@
   /** the section's head, band and the slot for the list, from the server's counts */
   function sectionHTML() {
     return (
-   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.clientsText(clientCount(practiceKit.practiceState.data))) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : roleOnce() ? ' <span class="sub" data-testid="practice-role-all">· ' + escapeHtml(roleOnce()) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
+   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(practiceKit.clientsText(clientCount(practiceKit.practiceState.data))) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : practiceKit.roleOnce() ? ' <span class="sub" data-testid="practice-role-all">· ' + escapeHtml(practiceKit.roleOnce()) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
    (root.CBAssign ? root.CBAssign.slotHTML() : '') +

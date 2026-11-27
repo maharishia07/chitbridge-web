@@ -38,8 +38,8 @@ of file each thing is; this says what already does the job.
 | 85 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 82 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 82 | `read` | `books-grant-drill.js` |  |
+| 82 | `rows` | `cap-settings.js` |  |
 | 82 | `count` | `money-check.js` | the count /health reads |
-| 81 | `rows` | `cap-settings.js` |  |
 | 80 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
 | 79 | `items` | `books-store.js` | PERF1: |
 | 79 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
@@ -85,11 +85,11 @@ of file each thing is; this says what already does the job.
 | 50 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 50 | `rate` | `convert.js` | A rate, with its evidence. |
 | 50 | `owner` | `books.js` | const { postVerdict, openingGate } = require('../lib/books-approval'); /* W25 postVerdict · RC-7 openingGate: |
+| 49 | `shell` | `pick.js` |  |
 | 49 | `statement` | `books-practice.js` | the one statement a client's books answer ($1 the client, $2 today). |
 | 49 | `counts` | `capabilities.js` | what the PUBLIC /health shows: |
 | 49 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 49 | `ledger` | `tax-lines.js` | ITC only when I am a regular taxpayer AND the seller charged tax (regular seller, not zero-rated to me). |
-| 48 | `shell` | `pick.js` |  |
 | 48 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 48 | `rules` | `docnumber.js` | the rule set for a country — |
 | 48 | `hold` | `orders.js` |  |
