@@ -138,8 +138,8 @@
     if (!panel.firms.length) return '';
     return '<div class="nw-why" id="bg_firms" role="group" data-testid="bg-firms"><strong>' + esc(words('Firms asking to read your books')) + '</strong>' + panel.firms.map(function (f, i) {
       return '<div class="nw-acts" data-testid="bg-firm-' + i + '"><span>' + esc(f.parent_name || words('A firm')) + '</span> ' +
-        '<button data-cbsid="NET004-B14" type="button" class="act" data-firm="' + esc(f.id) + '" data-say="approve" data-testid="bg-firm-accept-' + i + '">' + esc(words('Accept')) + '</button>' +
-        '<button data-cbsid="NET004-B15" type="button" class="act quiet" data-firm="' + esc(f.id) + '" data-say="decline" data-testid="bg-firm-decline-' + i + '">' + esc(words('Decline')) + '</button></div>';
+        '<button data-cbsid="NET004-B14" type="button" class="act" id="bg_firm_accept_' + i + '" data-firm="' + esc(f.id) + '" data-say="approve" data-testid="bg-firm-accept-' + i + '">' + esc(words('Accept')) + '</button>' +
+        '<button data-cbsid="NET004-B15" type="button" class="act quiet" id="bg_firm_decline_' + i + '" data-firm="' + esc(f.id) + '" data-say="decline" data-testid="bg-firm-decline-' + i + '">' + esc(words('Decline')) + '</button></div>';
     }).join('') + '</div>';
   }
   /** Accept or Decline one firm's request: the network's own routes; after Accept the screen reloads and Give access offers the firm */
