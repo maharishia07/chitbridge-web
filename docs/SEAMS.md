@@ -27,7 +27,7 @@ of file each thing is; this says what already does the job.
 | 101 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 100 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 92 | `refusal` | `availability.js` | and is not judged here (stamp keeps its own rule for those). |
-| 91 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 90 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 90 | `again` | `signin-ui.js` |  |
 | 89 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 89 | `pack` | `books-store-packs.js` |  |
@@ -195,7 +195,7 @@ of file each thing is; this says what already does the job.
 | 24 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
 | 24 | `keep` | `signin.js` | see. |
 | 24 | `mark` | `auth.js` | res.locals.<k> = v for the request log (server.js) — |
-| 23 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
+| 24 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
 | 23 | `send` | `cap-quotes.js` |  |
 | 23 | `account` | `cap-settings.js` |  |
 | 23 | `said` | `cap-shop.js` |  |
