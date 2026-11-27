@@ -550,7 +550,7 @@
   function codeSentence(reply) {
     var lasts = lastsWords(reply);
     if (reply && reply.otp) return T('Their first code is') + ' ' + reply.otp + (lasts ? ' — ' + T('good for') + ' ' + lasts + '.' : '.');
-    return (reply && reply.delivery_note) || T('A new code is ready.');
+    return reply && reply.delivery_note ? reply.delivery_note + ' ' + T('They sign in with their sign-in name and that code.') /* UX-226 O11: which code, and what the person does next */ : T('A new code is ready.');
   }
 
   function resetPin(p, btn) {

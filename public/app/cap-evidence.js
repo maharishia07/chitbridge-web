@@ -103,7 +103,7 @@
   /** UX-198: the mark on the chip: the ONE attach clip (cbAttachClip, app/attach-ui.js) for a file state, a warning sign for a flag; with no clip drawer on the page, the word alone */
   function chipMark(look) {
     if (look.sym !== 'clip') return '<span aria-hidden="true">' + look.sym + '</span>';
-    return typeof root.cbAttachClip === 'function' ? root.cbAttachClip({ count: look.count, name: look.word }) : '';
+    return typeof root.cbAttachClip === 'function' ? root.cbAttachClip({ count: look.count, name: look.word }) : esc(look.word); /* UX-226 U3: no clip drawer on this page (the firm's Day book): the word, never an empty pill */
   }
   function useEvidence(cfg) {
     addCss();

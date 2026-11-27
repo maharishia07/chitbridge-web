@@ -683,7 +683,7 @@ var CBSettings = (function () {
             })
             .join('') +
           '</select>' +
-          btn('sx_key_mint', T('Make a key'), null, '', 'ACC002-B16') +
+          btn('sx_key_mint', T('Make a key'), (function (r) { return r && r.ok === false && typeof CBRoles !== 'undefined' ? { ok: false, why: CBRoles.refusal('owner') } : null; })(H.data.keys && H.data.keys.r && H.data.keys.r.may && H.data.keys.r.may.revoke), '', 'ACC002-B16') /* UX-226 C6: making a key is the owner's, as revoking is (may.revoke): greyed for a seat that cannot */ +
           '</span>'
       );
       $('sx_key_mint').onclick = function () {
