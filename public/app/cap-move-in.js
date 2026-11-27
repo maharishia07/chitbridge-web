@@ -61,12 +61,9 @@ var MI_REFUSED = {
 
 function miFresh() {
   MIV.f = { source: 'xero', kind: 'accounts', side: 'customer', as_at: '', name: '', csv: null, xlsx: null, country: miShopCountry() };
-  MIV.pre = null;
+  MIV.pre = MIV.plan = MIV.out = MIV.refused = null;
   MIV.dec = {};
-  MIV.plan = null;
-  MIV.out = null;
   MIV.err = '';
-  MIV.refused = null;
 }
 /** the shop's own country (two letters): the session's, else the books' own (GET /health country, miKnowShop), or '' while unknown */
 function miShopCountry() {
@@ -401,7 +398,8 @@ function miFile(input) {
   if (!file) return;
   var form = MIV.f;
   form.name = file.name;
-  form.csv = form.xlsx = null;
+  form.csv = null;
+  form.xlsx = null;
   MIV.pre = MIV.out = null; /* CON-163: a new file never sits under the last run's result */
   MIV.dec = {};
   MIV.plan = null;
