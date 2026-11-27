@@ -8,7 +8,8 @@ const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); };
 
 const shop = read('public/app/cap-shop.js');
-const a = shop.indexOf('function shopFactsOf('); const fn = shop.slice(a, shop.indexOf('\n  }\n', a) + 4);
+const a = shop.indexOf('function shopCardHTML(');
+const fn = 'function shopFactsOf(whoseRow, actorId) { var e = ' + /var actorId = isActorSeat\(\), e = ([^;]*);/.exec(shop.slice(a))[1] + '; return e; }';
 const ctx = {}; vm.runInNewContext(fn.replace('function shopFactsOf', 'this.f = function'), ctx);
 const casey = { display_name: 'Casey Nguyen', gstn: null, shop: { display_name: 'Yarra Bike Works', gstn: '51992702030', address: '1 Main St' } };
 ok(ctx.f(casey, true).display_name === 'Yarra Bike Works' && ctx.f(casey, true).gstn === '51992702030', 'a seat reads the shop name and ABN, not its own name');
