@@ -2034,10 +2034,11 @@ async function crmFuAct(id, body, done) {
 }
 
 /* ═══ 3 · ADD PARTY — one field; look on ChitBridge and in your parties first (F1) ═══════════════════════════════ */
-var ADD = { role: 'customer', q: '', busy: false, found: null };
+var ADD = { role: 'customer', q: '', busy: false, found: null, mine: null }; /* mine: the server's ?q answer (CRM-259); null = not asked yet, the loaded list answers meanwhile */
 function crmAddOpen(q) {
   ADD.q = q || '';
   ADD.found = null;
+  ADD.mine = null;
   ADD.busy = false;
   ui.dialog({
     mount: 'CRM001-U201',
@@ -2106,11 +2107,22 @@ function crmAddType(ev) {
 async function crmAddSearch() {
   var q = ADD.q.trim();
   ADD.found = null;
+  ADD.mine = null;
   if (q.length < 2 || (q.indexOf('@') >= 0 && !/\S+@\S+\.\S+/.test(q))) {
     crmAddResults();
     return;
   }
   var mine = q;
+  /* CRM-259: 'Already your party' is the server's search (?q on the one list, 4 rows), not a filter over every row in the page */
+  api('crmParties', { query: { q: q, limit: 4 } }).then(
+    function (found) {
+      if (ADD.q.trim() === mine) {
+        ADD.mine = crmNormalize((found && found.parties) || []);
+        crmAddResults();
+      }
+    },
+    function () {} /* the loaded list keeps answering */
+  );
   try {
     var reply = await api('entitySearch', { query: { q: q } });
     if (ADD.q.trim() === mine) ADD.found = (reply && (reply.results || reply.entities)) || (Array.isArray(reply) ? reply : []);
@@ -2137,11 +2149,9 @@ function crmAddResults() {
       '<p class="hint" style="margin:0">' + esc(tx('Type a name to add a local party, or a User ID / e-mail to find them on the network.')) + '</p>';
     return;
   }
-  var mine = CRM.rows
-    .filter(function (item) {
-      return crmAddMatches(item, ql);
-    })
-    .slice(0, 4);
+  var mine = (ADD.mine || CRM.rows.filter(function (item) {
+    return crmAddMatches(item, ql);
+  })).slice(0, 4);
   mine.forEach(function (item) {
     h +=
       '<div class="result" data-testid="crm-add-mine"><span><span class="k">' +
