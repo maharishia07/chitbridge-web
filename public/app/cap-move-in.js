@@ -158,7 +158,8 @@ function miDecisions() {
 
 /* ── the view (BK.views.movein) ── */
 function miView(body) {
-  if (!MIV.f) miFresh();
+  /* CON-163: a finished run's result is shown once, at the end of its own run; opening Move in again starts a new file, never the last result */
+  if (!MIV.f || MIV.out) miFresh();
   miKnowShop();
   body.innerHTML =
     '<div data-testid="mi-steps"><div id="mi_rail"></div><div id="mi_sub" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px"></div>' +
@@ -331,6 +332,7 @@ function miPreviewStepHTML() {
     counts = plan.counts || {};
   return (
     '<div data-testid="mi-preview-step">' +
+    (MIV.err ? '<div data-testid="mi-error" role="alert" style="color:var(--warn-2);font-weight:600;margin-bottom:8px">' + esc(MIV.err) + '</div>' : '') /* CON-162: a failed Import says so here, where the press was */ +
     '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' +
     miBigNumber(counts.add, tx('will add'), 'mi-n-add') +
     miBigNumber(counts.merge, tx('will merge'), 'mi-n-merge') +
@@ -400,6 +402,7 @@ function miFile(input) {
   if (!file) return;
   var form = MIV.f;
   form.name = file.name;
+  MIV.out = null; /* CON-163: a new file never sits under the last run's result */
   form.csv = null;
   form.xlsx = null;
   MIV.pre = null;
