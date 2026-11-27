@@ -214,7 +214,7 @@
   /** a shop with no network may still sit with an adviser firm: the empty page says so (Fable A12), instead of ignoring it */
   function firmsLine() {
     var names = (N.firms || []).filter(Boolean); if (!(N.firms || []).length) return '';
-    var tell = names.length === 1 && typeof root.txf === 'function' ? root.txf('Your books are open to {firm}.', { firm: names[0] }) : T('Your books are open to an adviser firm.');
+    var tell = names.length === 1 && typeof root.txf === 'function' ? root.txf('Your books are open to {firm}.', { firm: names[0] }) : T('Your books are open to your accountant.');
     return '<div class="sub" data-testid="nw-firms">' + esc(tell) + '</div>';
   }
   function openBooksDoor() {
