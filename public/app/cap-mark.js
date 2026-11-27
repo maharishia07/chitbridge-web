@@ -406,7 +406,7 @@
   /** "Check all shown": the unchecked rows this screen draws, each through the same one write, after one confirm */
   function checkAllShown() {
     var buttons = Array.prototype.slice.call(markKit.doc.querySelectorAll('button.mk-ghost[data-mk="check"]'));
-    var run = function () {
+    var runAll = function () {
       buttons.reduce(function (chain, one) {
         return chain.then(function () {
           var host = one.closest('[data-mark]'), hostControl = host && controlOf(host);
@@ -414,8 +414,8 @@
         });
       }, Promise.resolve());
     };
-    if (typeof root.CBConfirm !== 'function') return run();
-    root.CBConfirm(fill(markKit.MARK_WORDS.checkAllAsk, { n: buttons.length }), '', markText(markKit.MARK_WORDS.checkAll), run);
+    if (typeof root.CBConfirm !== 'function') return runAll();
+    root.CBConfirm(fill(markKit.MARK_WORDS.checkAllAsk, { n: buttons.length }), '', markText(markKit.MARK_WORDS.checkAll), runAll);
   }
   /* one delegated press for every chip (captured: a row's own open handler never sees it) */
   var wired = false;
@@ -453,9 +453,12 @@
     var n = (s.open || []).length;
     return '<div class="mk-bar" data-testid="mk-bar" role="group" aria-label="' + esc(markText(markKit.MARK_WORDS.openQueries)) + '">' +
       '<span class="mk-count" data-testid="mk-count">' + esc(fill(markKit.MARK_WORDS.checkedOf, { n: s.checked, m: s.total })) + '</span>' +
-      '<button type="button" class="mk mk-ok mk-all" data-cbsid="CMP058-B06" data-mk-all="1" data-testid="mk-all"><span class="mk-s" aria-hidden="true">✓</span><span>' + esc(markText(markKit.MARK_WORDS.checkAll)) + '</span></button>' +
       (s.total ? '<span class="mk-meter" aria-hidden="true"><i style="width:' + pct + '%"></i></span>' : '') +
       '<button type="button" class="mk mk-ask" data-cbsid="CMP058-B03" data-mk-filter="1" aria-pressed="' + (o.on ? 'true' : 'false') + '" data-testid="mk-filter"><span class="mk-s" aria-hidden="true">?</span><span class="mk-w">' + esc(markText(o.on ? markKit.MARK_WORDS.allEntries : markKit.MARK_WORDS.allQueries)) + ' · ' + n + '</span></button></div>';
+  }
+  /** the one bulk press (UX-210), a sibling of the bar: shown by CSS only while more than 3 unchecked rows are on the screen */
+  function checkAllHTML() {
+    return '<button type="button" class="mk mk-ok mk-all" data-cbsid="CMP058-B06" data-mk-all="1" data-testid="mk-all"><span class="mk-s" aria-hidden="true">✓</span><span>' + esc(markText(markKit.MARK_WORDS.checkAll)) + '</span></button>';
   }
   function queryRows(c, titleOf) {
     var list = (c.sum && c.sum.open) || [];
@@ -473,7 +476,7 @@
     options = options || {};
     var state = { on: false };
     function show() {
-      host.innerHTML = barHTML(markState, state);
+      host.innerHTML = barHTML(markState, state) + (markState.sum ? checkAllHTML() : '');
       var f = host.querySelector('[data-mk-filter]');
       if (f) f.onclick = function () { state.on = !state.on; show(); if (options.onFilter) options.onFilter(state.on); };
     }

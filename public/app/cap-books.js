@@ -466,12 +466,12 @@ function bkRefused(e, what) {
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
 var BK = { dues: null, duesAt: 0, stmt: {}, owed: {}, tab: 'daybook' };
 /** the /dues answer becomes the party map (party_id → no · name · balance) every screen reads — one place stores it */
-function bkDuesStore(r) {
-  BK.duesRaw = r; /* the answer as the server sent it: the Day book's to-do counts read it when it lands */
+function bkDuesStore(answer) {
+  BK.duesRaw = answer; /* the answer as the server sent it: the Day book's to-do counts read it when it lands */
   BK.dues = {};
-  BK.duesCur = (r && r.currency) || null;
+  BK.duesCur = (answer && answer.currency) || null;
   BK.duesAt = Date.now();
-  ((r && r.parties) || []).forEach(function (item) {
+  ((answer && answer.parties) || []).forEach(function (item) {
     BK.dues[item.party_id] = item;
   });
   if (typeof window !== 'undefined' && typeof window.cbDuesNav === 'function') window.cbDuesNav(); /* UX-211: the menu may fold Dues into the one side that holds the same list */
