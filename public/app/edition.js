@@ -122,6 +122,7 @@
     var needs = entry.needs || {};
     if (seat.owner === false && needs.owner) return false;
     if (seat.money === false && needs.money) return false;
+    if (seat.sells === false && needs.sells) return false; /* UX-226 A5: the Bookkeeper seat keeps the books and does not ring sales (the api's till door refuses it too) */
     return !Array.isArray(seat.entries) || seat.entries.indexOf(entry.id) >= 0;
   }
   /** the active edition's id list narrowed by the seat, or null = every entry ('full', '*', or an edition the manifest does not know — never a blank Home). An edition and a seat only HIDE; the server still answers every page */
