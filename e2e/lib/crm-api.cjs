@@ -73,7 +73,7 @@ function list(rows, opt) {
 function listPage(rows, extra) {
   /* CRM-32: every list row carries the server's "not billed yet" figure (n 0 = none), whoever built the row */
   const parties = rows.map((a) => (a.unbilled ? a : Object.assign({}, a, { unbilled: { n: 0, minor: 0, currency: null } })));
-  return Object.assign({ parties, walk_ins: [], count: parties.length, total: parties.length, page: 1, limit: 5000, truncated: false, may: mayOf(null),   /* W2-CRM: the owner's may unless the handler hands the request's in */
+  return Object.assign({ parties, walk_ins: [], count: parties.length, total: parties.length, page: 1, limit: 500, next: null, truncated: false, may: mayOf(null),   /* W2-CRM: the owner's may unless the handler hands the request's in */
     alerts: { dues_overdue: parties.filter((a) => a.dues && a.dues.overdue).length } }, extra || {});
 }
 
