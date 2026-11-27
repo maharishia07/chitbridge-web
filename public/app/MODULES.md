@@ -145,7 +145,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-worklist-raida.js` | — | the RAIDA register on a work line (risks · actions · issues · decisions · assumptions): load, open, close, the rows and the section. Split out of cap- |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (142)
+## Shared (143)
 
 | file | loading | what it is |
 |---|---|---|
@@ -205,6 +205,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `chit-sheet.js` | eager |  |
 | `chit-unpay.js` | eager |  |
 | `compose-catalogue-fill.js` | eager | COMPOSE, ONCE ITS MODAL IS OPEN: fill the product picker in place |
+| `compose-tax-choice.js` | eager | COMPOSE: the tax choice on a line the person TYPES (no catalogue item names its tax) |
 | `core-answers.js` | eager | small readers of an api answer, split out of core.js (file-size ratchet, batch 1128), code moved verbatim |
 | `core-copy.js` | eager | copies and redaction for core.js's api client, split out of core.js (web split 1129), code moved verbatim |
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
@@ -310,7 +311,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | page | app/ scripts | what it is |
 |---|---|---|
 | `accounts.html` | 110 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
-| `app.html` | 63 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
+| `app.html` | 64 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 20 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 26 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the bank reconciliation, then "add" into |
 | `bill-print.html` | 3 | the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by |
@@ -356,4 +357,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*267 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*268 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
