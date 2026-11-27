@@ -56,5 +56,10 @@
   function adopt(map) {
     if (map && typeof map === 'object') Object.keys(map).forEach(function (key) { if (map[key] && map[key].name) ROLES[key] = map[key]; });
   }
-  root.CBRoles = { ROLES: ROLES, name: name, line: line, firm: firm, refusal: refusal, adopt: adopt };
+  /** UX-226b C6: the disabled + title attributes of a control a seat (not the owner) cannot use: the one refusal as its title; empty for the owner */
+  function seatGate(what) {
+    var seat = typeof SESSION !== 'undefined' && SESSION && SESSION.actorId;
+    return seat ? ' disabled title="' + refusal(what).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"' : '';
+  }
+  root.CBRoles = { ROLES: ROLES, name: name, line: line, firm: firm, refusal: refusal, adopt: adopt, seatGate: seatGate };
 })(typeof window !== 'undefined' ? window : this);

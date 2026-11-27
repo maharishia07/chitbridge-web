@@ -127,6 +127,11 @@
       );
     }, 0);
   }
+  /** UX-226b: the server's role words replace the first-paint map; the reply passes through */
+  function adoptRoleWords(reply) {
+    if (reply && reply.roles && root.CBRoles) root.CBRoles.adopt(reply.roles);
+    return reply;
+  }
   function mount(slots, o) {
     o = o || {};
     addCss();
@@ -330,8 +335,7 @@
       return get('/api/entities/sides')
         .then(
           function (reply) {
-            S.data = reply;
-            if (reply && reply.roles && root.CBRoles) root.CBRoles.adopt(reply.roles); /* UX-226b: the server's role words */
+            S.data = adoptRoleWords(reply);
             S.err = !(reply && reply.lean && reply.use);
           },
           function () {
