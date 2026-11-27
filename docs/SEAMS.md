@@ -43,8 +43,8 @@ of file each thing is; this says what already does the job.
 | 80 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
 | 79 | `items` | `books-store.js` | PERF1: |
 | 79 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
+| 78 | `toast` | `cb-words.js` |  |
 | 78 | `failed` | `service.js` | what every catch answers: |
-| 77 | `toast` | `cb-words.js` |  |
 | 77 | `record` | `access-events.js` |  |
 | 74 | `adopt` | `counter-kinds.js` | A line the server names gets the server's row; a line the catalogue took the client's kind off (`changes[].to  |
 | 73 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
@@ -75,8 +75,8 @@ of file each thing is; this says what already does the job.
 | 57 | `account` | `home-facts.js` | OMITTED: |
 | 56 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 54 | `refuse` | `bank-rec-log.js` | a refusal in words (422); `code` names the kind when it is not the general one |
+| 53 | `closeModal` | `app.html` |  |
 | 53 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
-| 52 | `closeModal` | `app.html` |  |
 | 52 | `status` | `books-backfill.js` | read: |
 | 52 | `posted` | `books-event-guard.js` | post through the one writer; a look-alike rides on the answer as a non-blocking warning |
 | 51 | `gate` | `country-setup.js` | gate(h, entity): |
@@ -162,9 +162,9 @@ of file each thing is; this says what already does the job.
 | 28 | `figures` | `bank-demo.js` |  |
 | 28 | `card` | `cap-shop.js` |  |
 | 28 | `cblog` | `core.js` | const __cblog = []; |
+| 28 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 28 | `chart` | `fx-rates.js` |  |
 | 28 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
-| 27 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 27 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 27 | `refusalOf` | `bill-number-taken.js` | the refusal thrown as data: |
 | 27 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
