@@ -27,6 +27,8 @@ const SEATS = {
 };
 /** the api's sentence (routes/books.js READ_MONEY_WORDS) and its Problem body (code OWNER_ONLY, the legacy keys beside it) */
 const WORDS = "Only the owner or the shop's auditor may read these figures.";
+/** the sentence the page draws now (UX-224: CBRoles.refusal("books"), not the api's long list of who may read) */
+const SAY = "Your seat cannot read the books. Ask the owner.";
 const refusal = { type: 'about:blank', title: 'Forbidden', status: 403, code: 'OWNER_ONLY', detail: WORDS, error: WORDS, message: WORDS, may: false, why: WORDS };
 const monthRows = (withFigures) => [4, 5, 6].map((m) => {
   const row = books.periodRow('2026-27', m - 3, m === 4 ? 'soft_locked' : 'open');
@@ -88,7 +90,7 @@ const VIEWS = [['tb', 'Trial balance'], ['pl', 'P&L'], ['bs', 'Balance sheet'], 
           await page.waitForTimeout(900);
           const state = await page.evaluate(() => { const host = document.getElementById('screen') || document.body; const e = host.querySelector('.empty'); return { empty: e ? e.innerText : '', text: host.innerText, blank: host.innerText.trim().length < 20 }; });
           if (seat === 'staff') {
-            ok(state.empty.indexOf(WORDS) >= 0, tag + ': ' + name + ' says the server\'s sentence in the one refused state');
+            ok(state.empty.indexOf(SAY) >= 0, tag + ': ' + name + ' says the one refusal (CBRoles) in the one refused state');
             ok(!/API 403|Forbidden|OWNER_ONLY|\bundefined\b|\bnull\b|TypeError/.test(state.text) && !state.blank, tag + ': ' + name + ' shows no raw error and is not blank');
           } else {
             ok(state.empty.indexOf(WORDS) < 0 && !state.blank, tag + ': ' + name + ' draws for the owner, no refusal state');

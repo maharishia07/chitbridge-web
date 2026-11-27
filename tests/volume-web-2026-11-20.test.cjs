@@ -47,8 +47,7 @@ const slice = (src, from, to) => { const a = src.indexOf(from), b = src.indexOf(
     assert.ok(/bkDvPartialNote\(d\)/.test(dl) && /toast\(note\)/.test(dl));
   });
   await ok('one sentence of who may read a gated books screen', () => {
-    assert.ok(cb.includes("Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures."));
-    assert.ok(!cb.includes("Only the owner or the shop's auditor may read these figures"));
+    assert.ok(cb.includes("CBRoles.refusal('books')") && !cb.includes('may read these figures')); /* UX-224: the one refusal, in role-names.js */
   });
   await ok("mark: a save answered with the other seat's Query shows the Query and who changed it; a 409 re-reads", async () => {
     const root = { tx: (s) => s, document: { querySelectorAll: () => [], createElement: () => ({ setAttribute() {}, appendChild() {}, style: {} }), head: { appendChild() {} }, body: {}, documentElement: {}, addEventListener() {} }, Promise, Date, JSON, Math, Object, Array, String, Number, RegExp, Error, Intl, setTimeout };

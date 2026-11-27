@@ -1185,7 +1185,7 @@
   function personOf(s) {
     if (!s || typeof s !== 'object') return null;
     var r = s.role,
-      label = r === 'entity' ? 'Owner' : r === 'actor' ? 'Co-assist' : r === 'customer' ? 'Customer' : r || '';
+      label = r === 'entity' ? 'Owner' : r === 'actor' ? (root.CBRoles ? root.CBRoles.name('staff') : 'Staff') : r === 'customer' ? 'Customer' : r || '';
     var entity = entityWord(s.entity);
     return { name: s.name || '', role: label + (entity ? ' · ' + entity : ''), entity: entity, owner: r === 'entity', token: s.token || '' };
   }

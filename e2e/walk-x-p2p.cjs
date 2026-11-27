@@ -455,7 +455,7 @@ const walk = async (w) => {
         await p.click(T('pg-close')).catch(() => {}); await p.waitForTimeout(2500);
         const t2 = await text(p), name = await shot(p, 'd23-viewer');
         const payRefused = /view-only/i.test(paySaw) && !/Paid ₹/.test(paySaw);
-        return { ok: /Payables|Accounts/.test(t0) && payRefused && /Only the owner may do this/.test(t2), saw: name + ' · opened: ' + t0.slice(0, 60) + '; pay: "' + paySaw.slice(0, 120) + '"' + (payRefused ? '' : ' [a VIEW-ONLY login RECORDED a payment — WX-P2P-15]') + '; gst: ' + (t2.match(/Only the owner may do this\.?/) || ['no refusal sentence'])[0] };
+        return { ok: /Payables|Accounts/.test(t0) && payRefused && /Your seat cannot do this/.test(t2), saw: name + ' · opened: ' + t0.slice(0, 60) + '; pay: "' + paySaw.slice(0, 120) + '"' + (payRefused ? '' : ' [a VIEW-ONLY login RECORDED a payment — WX-P2P-15]') + '; gst: ' + (t2.match(/Only the owner may do this\.?/) || ['no refusal sentence'])[0] };
       });
       await vUI.ctx.close();
     } else w.note('D24', 'view-only co-assist', 'no viewer login (' + VIEWER + ') on this stack — see the findings file for how to make one');
