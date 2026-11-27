@@ -2214,6 +2214,41 @@ function crmAddField(id) {
   var node = document.getElementById(id);
   return node ? String(node.value || '').trim() : '';
 }
+/** is the typed e-mail empty (optional) or shaped like an address; the server judges it again */
+function crmAddEmailOk(email) {
+  return !email || /^\S+@\S+\.\S+$/.test(email);
+}
+/** CRM-260: the contact the add door did not take (the e-mail; a supplier's phone), written once through the party's own edit route */
+async function crmAddContactRest(first, made, phone, email) {
+  var rest = {};
+  if (email) rest.email = email;
+  if (phone && first === 'supplier') rest.phone = phone;
+  if (!Object.keys(rest).length) return;
+  await api(first === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: made.customer_list_id || made.supplier_list_id }, body: rest });
+}
+/** the phone and e-mail typed in the quick add: none for a party found on the network (it keeps its own) */
+function crmAddContact(kind) {
+  return kind === 'found' ? { phone: '', email: '' } : { phone: crmAddField('crm_addphone'), email: crmAddField('crm_addemail') };
+}
+/** the toast's first words for the role that was added */
+function crmAddDoneWords(role) {
+  return role === 'both' ? 'Customer and supplier added' : role === 'supplier' ? 'Supplier added' : 'Customer added';
+}
+/** after the add: the contact the add door did not take (through the party's own edit route), the sheet closed, the toast, the list loaded again and the new party opened */
+async function crmAddDone(made, role, first, contact) {
+  var id = made.customer_identity_id || made.supplier_entity_id;
+  await crmAddContactRest(first, made, contact.phone, contact.email);
+  closeModal();
+  toast(tx(crmAddDoneWords(role)) + ': ' + (made.display_name || ADD.q));
+  await crmLoad(true);
+  var p = id && CRM.byKey[id];
+  crmGo(p ? '#/party/' + encodeURIComponent(crmKey(p)) : '#/parties');
+}
+/** the body of one add call: a party found on the network by its handle, or a local one by name (and phone, for a customer) */
+function crmAddBody(kind, rl, byHandle, name, phone) {
+  if (kind === 'found') return rl === 'supplier' ? { supplier_bridge_id: byHandle.bridge_id } : { handle: byHandle.user_id };
+  return rl === 'customer' && phone ? { name: name, phone: phone } : { name: name };
+}
 async function crmAddGo(kind, byHandle) {
   if (ADD.busy) return;
   ADD.busy = true;
@@ -2223,32 +2258,21 @@ async function crmAddGo(kind, byHandle) {
     ep = first === 'supplier' ? 'supAdd' : 'custAdd',
     name = ADD.q.trim().replace(/\s+/g, ' ');
   /* CRM-260: a local party may be added with a phone and an e-mail, typed here; the server judges both (the same checks as the party's own edit) */
-  var phone = kind === 'found' ? '' : crmAddField('crm_addphone'),
-    email = kind === 'found' ? '' : crmAddField('crm_addemail');
-  if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+  var contact = crmAddContact(kind),
+    phone = contact.phone,
+    email = contact.email;
+  if (!crmAddEmailOk(email)) {
     toast(tx('That e-mail does not look right.'));
     ADD.busy = false;
     return;
   }
   var bodyFor = function (rl) {
-    if (kind === 'found') return rl === 'supplier' ? { supplier_bridge_id: byHandle.bridge_id } : { handle: byHandle.user_id };
-    return rl === 'customer' && phone ? { name: name, phone: phone } : { name: name };
+    return crmAddBody(kind, rl, byHandle, name, phone);
   };
   try {
     var reply = await api(ep, { body: bodyFor(first) });
     if (both) await api('supAdd', { body: bodyFor('supplier') }); /* "Both" = the two EXISTING adds; the second finds the same party and adds the other role */
-    var made = (reply && (reply.customer || reply.supplier)) || {},
-      id = made.customer_identity_id || made.supplier_entity_id;
-    /* the contact the add door did not take: the party's own edit route (customers/:id · suppliers/:id), once, for what is left */
-    var rest = {};
-    if (email) rest.email = email;
-    if (phone && first === 'supplier') rest.phone = phone;
-    if (Object.keys(rest).length) await api(first === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: made.customer_list_id || made.supplier_list_id }, body: rest });
-    closeModal();
-    toast(tx(both ? 'Customer and supplier added' : role === 'supplier' ? 'Supplier added' : 'Customer added') + ': ' + (made.display_name || ADD.q));
-    await crmLoad(true);
-    var p = id && CRM.byKey[id];
-    crmGo(p ? '#/party/' + encodeURIComponent(crmKey(p)) : '#/parties');
+    await crmAddDone((reply && (reply.customer || reply.supplier)) || {}, role, first, contact);
   } catch (e) {
     toast((e && e.message) || tx("Couldn't add that. Try again."));
   }
