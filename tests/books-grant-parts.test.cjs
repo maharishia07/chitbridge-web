@@ -61,8 +61,46 @@ t('queryOf: as at the end of the period for tb, from-to for the p&l, one day for
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('tb')))), { asOf: '2026-09-30' });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('pl')))), { from: '2026-07-01', to: '2026-09-30' });
   state({ day: '2026-08-02', period: { from: '2026-07-01', to: '2026-09-30' } });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('daybook')))), { from: '2026-08-02', to: '2026-08-02' });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('daybook')))), { from: '2026-08-02', to: '2026-08-02', limit: 100 });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('tb')))), { asOf: '2026-08-02' });
+});
+/* ── batch 1132: the firm's Day book asks ONE page, "Show more" the next, the totals stay the server's ── */
+t('1132 the Day book asks ONE page in every shape of its question (period, day, after the year end, no period); the other reads ask none', () => {
+  const asks = (over) => JSON.parse(JSON.stringify(kit.queryOf(report('daybook'))));
+  state({ period: { from: '2026-07-01', to: '2026-09-30' } });
+  assert.deepStrictEqual(asks(), { from: '2026-07-01', to: '2026-09-30', limit: kit.DAYBOOK_PAGE });
+  state({ day: '2026-08-02' });
+  assert.strictEqual(asks().limit, 100);
+  state({});
+  assert.strictEqual(asks().limit, 100, 'no period typed: still one page, never the whole range');
+  state({ since: true, period: { from: '2026-07-01', to: '2026-09-30' } });
+  assert.strictEqual(asks().limit, 500, 'the since view names its own cap');
+  state({ period: { from: '2026-07-01', to: '2026-09-30' } });
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(JSON.parse(JSON.stringify(kit.queryOf(report('tb')))), 'limit'), false);
+});
+t('1132 GUARD: every read of the Day book in the firm view carries a limit (fails on the whole-range read of 27 Nov)', () => {
+  ['books-grant-view.js', 'books-grant-drill.js'].forEach((name) => {
+    const text = fs.readFileSync(path.join(APP, name), 'utf8');
+    const calls = text.split(String.fromCharCode(10)).filter((line) => /'readDaybook'/.test(line) && !/^\s*(\/\/|\*)/.test(line));
+    assert.ok(calls.length, name + ' reads the Day book');
+    calls.forEach((line) => assert.ok(/limit/.test(line), name + ' reads the Day book with no limit: ' + line.trim().slice(0, 120)));
+  });
+  const reports = fs.readFileSync(path.join(APP, 'books-grant-reports.js'), 'utf8');
+  assert.ok(/report\.k === 'daybook' && !grantKit\.viewState\.since \? \{ limit: grantKit\.DAYBOOK_PAGE \}/.test(reports.replace(/\s+/g, ' ')), 'queryOf no longer adds the Day book page');
+});
+t('1132 the pager says held of total with the server Dr / Cr, offers Show more while the server has a next page, and draws nothing summed on the page', () => {
+  state({ answer: { currency: 'AUD', entries: [{ entry_id: 'a', amount_minor: 999999 }, { entry_id: 'b', amount_minor: 999999 }], total: 307, next: '2026-08-02|JV/2', totals: { dr_minor: 123456, cr_minor: 123456 } } });
+  const node = { innerHTML: '', querySelector: () => null };
+  kit.paintPager(node, report('daybook'), () => Promise.resolve());
+  assert.ok(/data-testid="bv-more"/.test(node.innerHTML) && /data-cbsid="NET005-B11"/.test(node.innerHTML));
+  assert.ok(/2 «of» 307/.test(node.innerHTML), node.innerHTML);
+  assert.ok(/AUD 123456/.test(node.innerHTML) && !/1999998/.test(node.innerHTML), 'the totals are the servers own, never the held entries added up');
+  state({ answer: { currency: 'AUD', entries: [{ entry_id: 'a' }], total: 1, next: null, totals: { dr_minor: 5, cr_minor: 5 } } });
+  kit.paintPager(node, report('daybook'), () => Promise.resolve());
+  assert.ok(!/bv-more/.test(node.innerHTML) && /1 «of» 1/.test(node.innerHTML), 'the last page: no Show more');
+  state({ since: true, answer: { entries: [{}], total: 1 } });
+  kit.paintPager(node, report('daybook'), () => Promise.resolve());
+  assert.strictEqual(node.innerHTML, '', 'the changed-since list has its own cap and no pager');
 });
 t('queryOf fails closed to the server default: no period and no day asks nothing', () => {
   state({});

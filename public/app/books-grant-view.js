@@ -122,7 +122,7 @@
   function knowCurrency() {
     var acting = root.CBBooksActing.current() || {};
     if (current().k !== 'periods' || acting.currency || !grantKit.viewState.range) return Promise.resolve();
-    return root.CBBooksGrantApi.run(grantKit.viewState.o.call, 'readDaybook', { query: { from: grantKit.viewState.range.from, to: grantKit.viewState.range.to }, headers: root.CBBooksActing.headers() }).then(function (a) { root.CBBooksActing.setCurrency(a && a.currency); }, function () { /* no currency learned: the figures show a dash, never a wrong symbol */ });
+    return root.CBBooksGrantApi.run(grantKit.viewState.o.call, 'readDaybook', { query: { from: grantKit.viewState.range.from, to: grantKit.viewState.range.to, limit: 1 }, headers: root.CBBooksActing.headers() }).then(function (a) { root.CBBooksActing.setCurrency(a && a.currency); }, function () { /* no currency learned: the figures show a dash, never a wrong symbol */ });
   }
   function load() {
     if (onActions()) return Promise.resolve();
@@ -286,7 +286,7 @@
       (!grantKit.viewState.why && report.k === 'daybook' ? grantKit.TABROW_CSS + grantKit.sinceBar() : '') /* fd1117: the since toggle (and, in that view, its count and Mark as checked) sits IN the tab row, not on a row of its own: the first entry stays under the ceiling */ +
       (grantKit.viewState.why ? '' : '<span class="bv-totals">' + grantKit.facts(report) + '</span>') + '</div>' +
       (grantKit.viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
-      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' +
+      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' + pagerSlot(report) +
       (grantKit.markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes; fd1117: the marks bar (count and All queries) sits UNDER the list with the notes, so the first data row stays where the ceiling holds it */ +
       (grantKit.viewState.why ? '' : grantKit.riskNote(report) + grantKit.cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
       (grantKit.viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + grantKit.bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
@@ -333,7 +333,38 @@
         b.onclick = function () { grantKit.viewState.mk.sheet(b.getAttribute('data-mk-q'), { title: (b.querySelector('b') || {}).textContent, opener: b }); };
       });
     } else grantKit.paintRows($('bv_list'), report);
+    if (report.k === 'daybook') grantKit.paintPager($('bv_pager'), report, showMore);
   }
+  /** the slot under the Day book's list that holds its pager (the other reports have none) */
+  function pagerSlot(report) {
+    return report.k === 'daybook' ? '<div id="bv_pager" data-testid="bv-pager"></div>' : '';
+  }
+  /** 1132 "Show more": the next page of the Day book by the server's cursor, joined to what is held; the range's total and Dr / Cr stay the newest reply's (the server's, never added up here) */
+  function nextPage(report) {
+    var answer = grantKit.viewState.answer, mine = grantKit.viewState;
+    if (!answer || !answer.next) return Promise.resolve(false);
+    return root.CBBooksGrantApi.run(mine.o.call, report.ep, { query: Object.assign({}, grantKit.queryOf(report), { after: answer.next }), headers: root.CBBooksActing.headers() }).then(function (reply) {
+      if (!alive() || grantKit.viewState !== mine || mine.answer !== answer) return false;
+      answer.entries = (answer.entries || []).concat(reply.entries || []);
+      answer.next = reply.next || null;
+      answer.total = reply.total;
+      answer.totals = reply.totals;
+      ingestEntries(report, reply);
+      return true;
+    });
+  }
+  function showMore(report) {
+    return nextPage(report).then(function (more) { if (more) return Promise.resolve(flagsRead).then(function () { flagsRead = null; paintList(report); }); });
+  }
+  /** a search or the CSV needs every row: the rest of the range is read page after page (at most 100 pages), a failure is kept and said, never hidden */
+  grantKit.loadAllDaybook = function (report) {
+    var answer = grantKit.viewState.answer;
+    if (!answer || answer.loadingAll) return answer && answer.loadingAll;
+    answer.loadingAll = (function step(n) {
+      return !answer.next || n >= 100 ? Promise.resolve() : nextPage(report).then(function (more) { return more ? step(n + 1) : null; });
+    })(0).then(function () { if (answer.next) answer.capped = true; }, function () { answer.failed = true; }).then(function () { answer.loadingAll = null; flagsRead = null; });
+    return answer.loadingAll;
+  };
   function pickDay() {
     grantKit.viewState.day = $('bv_day').value;
     reload();
