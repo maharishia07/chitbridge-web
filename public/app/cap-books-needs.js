@@ -114,3 +114,13 @@ function bkNeedOpen(event, pid, kind) {
   var list = CBList.get('dues');
   if (list) list.open(pid, true);
 }
+/* UX-211: Dues is the two sides together; a book holding only ONE side shows the same list under Receivables or Payables, so the menu keeps that one entry (the page's own /dues read; unknown yet = both stay; an open Dues keeps its button) */
+window.cbDuesTwin = function (active) {
+  return active !== 'dues' && !!BK.duesRaw && !bkDuesRows('rcv').length !== !bkDuesRows('pay').length;
+};
+window.cbDuesNavHid = false;
+window.cbDuesNav = function () {
+  var current = document.querySelector('#nav .nav-btn.active'),
+    view = current ? current.dataset.view : '';
+  if (window.cbDuesTwin(view) !== window.cbDuesNavHid && typeof navPaint === 'function' && document.getElementById('nav').innerHTML) navPaint(view);
+};

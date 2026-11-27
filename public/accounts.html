@@ -248,17 +248,8 @@ function taxCloseWord() {
   const item = NAV.find((entry) => entry[0] === 'gstclose');
   if (item && (returnWord || word)) item[1] = returnWord || word + ' close & pay';
 }
-/* UX-211: Dues is the two sides together; a book with only ONE side (all suppliers, or all customers) shows the same list under Receivables or Payables, so the menu keeps that one entry
-   (the read is the page's own /dues answer, never a second one; unknown yet = both stay; the open Dues screen keeps its button) */
-window.cbDuesTwin = (active) => active !== 'dues' && !!window.BK && !!BK.duesRaw && typeof bkDuesRows === 'function' && !bkDuesRows('rcv').length !== !bkDuesRows('pay').length;
-window.cbDuesNavHid = false;
-window.cbDuesNav = () => {
-  const on = document.querySelector('#nav .nav-btn.active');
-  if (window.cbDuesTwin(on ? on.dataset.view : '') !== window.cbDuesNavHid && $('nav') && $('nav').innerHTML) navPaint(on ? on.dataset.view : '');
-};
 function navPaint(active) {
-  const duesNavHid = (window.cbDuesNavHid = typeof window.cbDuesTwin === 'function' && window.cbDuesTwin(active));
-  taxCloseWord(); /* the menu names the shop's own tax: GST · VAT · Consumption tax close & pay ("Tax close & pay" when no pack is known) */
+  taxCloseWord(); const duesNavHid = (window.cbDuesNavHid = typeof window.cbDuesTwin === 'function' && window.cbDuesTwin(active)); /* UX-211: cap-books-needs.js */ /* the menu names the shop's own tax: GST · VAT · Consumption tax close & pay ("Tax close & pay" when no pack is known) */
   const byId = Object.fromEntries(NAV.map((item) => [item[0], item])),
     fold = navFolded();
   $('nav').innerHTML = NAV_GROUPS.map(([text, ids]) => {

@@ -470,11 +470,10 @@ function bkDuesStore(answer) {
   BK.duesRaw = answer; /* the answer as the server sent it: the Day book's to-do counts read it when it lands */
   BK.dues = {};
   BK.duesCur = (answer && answer.currency) || null;
-  BK.duesAt = Date.now();
+  BK.duesAt = Date.now(); if (typeof window !== 'undefined' && typeof window.cbDuesNav === 'function') window.cbDuesNav(); /* UX-211: the menu may fold Dues into its one side */
   ((answer && answer.parties) || []).forEach(function (item) {
     BK.dues[item.party_id] = item;
   });
-  if (typeof window !== 'undefined' && typeof window.cbDuesNav === 'function') window.cbDuesNav(); /* UX-211: the menu may fold Dues into the one side that holds the same list */
   return BK.dues;
 }
 /** ⭐ A ROW NAMES ITS PARTY (Athi, 2026-10-02): "P-0007 · Chola Auto Care" from the dues map; the name alone if there is no number; never the bare id */
@@ -5644,8 +5643,7 @@ function bkBillStatus(row, onTab) {
     parts.push('<button type="button" class="optchip" data-cbsid="' + chipCode + '" data-mk="open" data-id="' + esc(row.entry_id) + '" data-class="hold" data-b="mark-hold" ' + warn + ' title="' + esc(heldBy) + '" aria-label="' + esc(tx('On hold') + ' · ' + tx('No tax invoice')) + '">‖ ' + esc(tx('On hold')) + ' · ' + esc(tx('no tax invoice')) + '</button>');
   } else {
     reasons.forEach(function (reason) {
-      if (reason === 'overdue' && row.no_terms) return; /* ACC-412: no terms = no due date = never "Overdue" */
-      if (reason === 'overdue' && onTab !== 'needs') return; /* the Days overdue column already says it */
+      if (reason === 'overdue' && (row.no_terms || onTab !== 'needs')) return; /* ACC-412: no terms = no due date = never "Overdue"; else the Days overdue column says it */ /* the Days overdue column already says it */
       if (reason === 'no_terms' && onTab !== 'needs') return; /* the Due date cell says it, with the link that fixes it */
       var word = { disputed: 'In dispute', query: '? Open query', held: '‖ On hold', no_tax_invoice: '⚠ No tax invoice', no_terms: 'No terms', overdue: 'Overdue' }[reason];
       parts.push('<span class="optchip" data-b="why-' + reason + '" ' + warn + '>' + esc(tx(word)) + '</span>');
