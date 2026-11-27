@@ -235,7 +235,7 @@
   }
   function openBank() {
     var report = grantKit.viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (grantKit.viewState.period ? root.CBPeriodPick.toAddress(grantKit.viewState.period) : ''); /* E10: the screen and the period ride to Bank and back */
-    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry));
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry, grantKit.viewState.o.member.role));
   }
   /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares (or posts, when the owner's grant says adviser_posts) */
   function prepareButton() {

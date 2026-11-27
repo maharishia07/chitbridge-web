@@ -80,7 +80,7 @@
   }
   /** one line for a year: "FY 2025-26 · 1 Jul 2025 – 30 Jun 2026 · 480 entries · 12 of 12 months locked · 470/480 checked" */
   function yearLine(y) {
-    return line(['FY ' + y.fy, shopDayOf(y.from) + ' – ' + shopDayOf(y.to), entriesWord(y.entries), y.locked + ' ' + phrase('of') + ' ' + y.months + ' ' + phrase('months locked'), checkedWord(y.checked, y.of)]);
+    return line(['FY ' + y.fy, shopDayOf(y.from) + ' – ' + shopDayOf(y.to), entriesWord(y.entries), Number(y.months) > 0 ? y.locked + ' ' + phrase('of') + ' ' + y.months + ' ' + phrase('months locked') : phrase('no month has ended yet'), checkedWord(y.checked, y.of)]);
   }
   /** the dropdown's options, newest year first, each year's line then its months that hold entries; a range typed in the address that is none of these is added at the top */
   function optionsOf(answer, period, quarters) {
