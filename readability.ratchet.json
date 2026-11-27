@@ -1,7 +1,7 @@
 {
   "_about": "readability ratchet (DISCIPLINES §6): one row per own-code file, score = long40 + long80 + complex10 + complex15 + deep3 + deep4 + cryptic + noWhatLine + emptyCatch + noHeader. A file may score LESS than its row, never more. Lower it with `node tools/readability.cjs --write` (web) / `--repo api --write` / `--repo engines --write`; it never raises.",
   "public/accounts.html": {"score":36,"long40":3,"long80":0,"complex10":4,"complex15":1,"deep3":0,"deep4":0,"cryptic":18,"noWhatLine":5,"emptyCatch":5,"noHeader":0},
-  "public/app.html": {"score":1939,"long40":152,"long80":51,"complex10":207,"complex15":84,"deep3":9,"deep4":2,"cryptic":865,"noWhatLine":330,"emptyCatch":239,"noHeader":0},
+  "public/app.html": {"score":1927,"long40":152,"long80":51,"complex10":208,"complex15":83,"deep3":9,"deep4":2,"cryptic":853,"noWhatLine":330,"emptyCatch":239,"noHeader":0},
   "public/app/accounts-shell-unsaved.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "public/app/accounts-shell.js": {"score":31,"long40":2,"long80":0,"complex10":3,"complex15":1,"deep3":1,"deep4":0,"cryptic":20,"noWhatLine":2,"emptyCatch":2,"noHeader":0},
   "public/app/accounts-start.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
@@ -183,6 +183,7 @@
   "public/app/chit-sheet.js": {"score":96,"long40":7,"long80":2,"complex10":14,"complex15":8,"deep3":0,"deep4":0,"cryptic":59,"noWhatLine":0,"emptyCatch":6,"noHeader":0},
   "public/app/chit-unpay.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "public/app/compose-catalogue-fill.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
+  "public/app/compose-tax-choice.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "public/app/core-answers.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "public/app/core-copy.js": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "public/app/core.js": {"score":123,"long40":9,"long80":4,"complex10":6,"complex15":4,"deep3":3,"deep4":3,"cryptic":42,"noWhatLine":10,"emptyCatch":42,"noHeader":0},
