@@ -27,14 +27,28 @@
       return Object.assign({ _n: n }, row);
     });
   }
+  /** the range's Σ Dr / Cr as the server added them (never added up here), or '' while the server sent none */
+  function pagerSums(answer) {
+    var totals = answer.totals;
+    if (!totals || totals.dr_minor == null) return '';
+    return ' · ' + grantKit.words('Total debit') + ' ' + root.CBBooksActing.figure(totals.dr_minor, answer.currency) + ' · ' + grantKit.words('Total credit') + ' ' + root.CBBooksActing.figure(totals.cr_minor, answer.currency);
+  }
+  /** the Day book's own "Show more" (its own code: the ledger drill's NET005-B05 is another element) */
+  function moreButton() {
+    return '<button data-cbsid="NET005-B11" type="button" class="act quiet" id="bv_more" data-testid="bv-more">' + esc(grantKit.words('Show more')) + '</button>';
+  }
+  /** the pager's markup: "Show more" while the server has a next page, then "held of total" and the range's sums; '' when the range is empty */
+  function pagerHtml(answer) {
+    var held = (answer.entries || []).length, total = Number(answer.total || held);
+    var heldOf = '<span class="sub" data-testid="bv-held">' + held + ' ' + esc(grantKit.words('of')) + ' ' + total + esc(pagerSums(answer)) + '</span>';
+    if (!answer.next && held >= total) return total ? '<div class="nw-acts">' + heldOf + '</div>' : '';
+    return '<div class="nw-acts">' + (answer.next ? moreButton() : '') + heldOf + '</div>';
+  }
   /** 1132: under the Day book, how many entries are held of the range's total (the server's) with its Dr / Cr, and "Show more" while the server has a next page; the filters work on what is held, and a search or the CSV read the rest first */
   grantKit.paintPager = function (node, report, onMore) {
+    if (!node) return;
     var answer = grantKit.viewState.answer;
-    if (!node || !answer || grantKit.viewState.since) { if (node) node.innerHTML = ''; return; }
-    var held = (answer.entries || []).length, total = Number(answer.total || held), totals = answer.totals;
-    var sums = totals && totals.dr_minor != null ? ' · ' + grantKit.words('Total debit') + ' ' + root.CBBooksActing.figure(totals.dr_minor, answer.currency) + ' · ' + grantKit.words('Total credit') + ' ' + root.CBBooksActing.figure(totals.cr_minor, answer.currency) : '';
-    if (!answer.next && held >= total) { node.innerHTML = total ? '<div class="nw-acts"><span class="sub" data-testid="bv-held">' + held + ' ' + esc(grantKit.words('of')) + ' ' + total + esc(sums) + '</span></div>' : ''; return; }
-    node.innerHTML = '<div class="nw-acts">' + (answer.next ? '<button data-cbsid="NET005-B05" type="button" class="act quiet" id="bv_more" data-testid="bv-more">' + esc(grantKit.words('Show more')) + '</button>' : '') + '<span class="sub" data-testid="bv-held">' + held + ' ' + esc(grantKit.words('of')) + ' ' + total + esc(sums) + '</span></div>';
+    node.innerHTML = answer && !grantKit.viewState.since ? pagerHtml(answer) : '';
     var button = node.querySelector('#bv_more');
     if (button) button.onclick = function () {
       button.disabled = true;

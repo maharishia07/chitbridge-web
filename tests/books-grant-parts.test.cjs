@@ -92,7 +92,7 @@ t('1132 the pager says held of total with the server Dr / Cr, offers Show more w
   state({ answer: { currency: 'AUD', entries: [{ entry_id: 'a', amount_minor: 999999 }, { entry_id: 'b', amount_minor: 999999 }], total: 307, next: '2026-08-02|JV/2', totals: { dr_minor: 123456, cr_minor: 123456 } } });
   const node = { innerHTML: '', querySelector: () => null };
   kit.paintPager(node, report('daybook'), () => Promise.resolve());
-  assert.ok(/data-testid="bv-more"/.test(node.innerHTML) && /data-cbsid="NET005-B05"/.test(node.innerHTML));
+  assert.ok(/data-testid="bv-more"/.test(node.innerHTML) && /data-cbsid="NET005-B11"/.test(node.innerHTML));
   assert.ok(/2 «of» 307/.test(node.innerHTML), node.innerHTML);
   assert.ok(/AUD 123456/.test(node.innerHTML) && !/1999998/.test(node.innerHTML), 'the totals are the servers own, never the held entries added up');
   state({ answer: { currency: 'AUD', entries: [{ entry_id: 'a' }], total: 1, next: null, totals: { dr_minor: 5, cr_minor: 5 } } });
