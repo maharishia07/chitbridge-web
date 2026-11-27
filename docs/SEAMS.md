@@ -9,10 +9,10 @@ of file each thing is; this says what already does the job.
 
 | used by | name | defined in | what it is for |
 |---|---|---|---|
-| 219 | `list` | `amend.js` | list(entity_id, chit_id) — |
+| 220 | `list` | `amend.js` | list(entity_id, chit_id) — |
 | 207 | `rows` | `crm.js` | still in them: |
 | 192 | `read` | `bank-rec-log.js` | one account's bank reconciliation log: |
-| 182 | `words` | `variant.browser.js` |  |
+| 183 | `words` | `variant.browser.js` |  |
 | 165 | `withEntity` | `books-hooks.js` |  |
 | 148 | `problem` | `problem.js` | problem(req, res, spec) — |
 | 145 | `answer` | `availability.js` | from March; then nearest. |
@@ -27,7 +27,7 @@ of file each thing is; this says what already does the job.
 | 101 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 100 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 92 | `refusal` | `availability.js` | and is not judged here (stamp keeps its own rule for those). |
-| 90 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 91 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 90 | `again` | `signin-ui.js` |  |
 | 89 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 89 | `pack` | `books-store-packs.js` |  |
@@ -67,6 +67,7 @@ of file each thing is; this says what already does the job.
 | 64 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
 | 63 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 62 | `facts` | `bill-steps.js` | MY state_log — |
+| 59 | `name` | `role-names.js` | the one word for the role |
 | 59 | `live` | `receivables.js` | the allocations that still count: |
 | 58 | `lines` | `cart.js` |  |
 | 58 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
@@ -120,9 +121,9 @@ of file each thing is; this says what already does the job.
 | 38 | `says` | `adopt.js` |  |
 | 38 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 37 | `note` | `device-id.js` | note(where, problem) — |
+| 37 | `names` | `shortcuts.js` |  |
 | 37 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
-| 36 | `names` | `shortcuts.js` |  |
 | 35 | `bkMoney` | `cap-books.js` |  |
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |
 | 35 | `reason` | `lab-kit.js` | W9: |
@@ -159,11 +160,11 @@ of file each thing is; this says what already does the job.
 | 29 | `allowed` | `trips.js` | let _idsFrom = null, |
 | 29 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 29 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
-| 28 | `figures` | `bank-demo.js` |  |
 | 28 | `card` | `cap-shop.js` |  |
 | 28 | `cblog` | `core.js` | const __cblog = []; |
 | 28 | `chart` | `fx-rates.js` |  |
 | 28 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
+| 27 | `figures` | `bank-demo.js` |  |
 | 27 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 27 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 27 | `refusalOf` | `bill-number-taken.js` | the refusal thrown as data: |
@@ -208,4 +209,3 @@ of file each thing is; this says what already does the job.
 | 22 | `held` | `books-grant-api.js` |  |
 | 22 | `show` | `books-grant-drill.js` |  |
 | 22 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
-| 22 | `chips` | `country-profiles.js` | words as chips; null when there are none |
