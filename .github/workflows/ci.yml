@@ -88,6 +88,7 @@ jobs:
           node tests/chunk0-proofs.test.cjs
           node tests/chunk0-web-proofs2.test.cjs
           node tests/pm-53-edition-chip.test.cjs
+          node tests/ux221-seat-hides.test.cjs
       # RECON-QA-1 (18 Nov): 34 offline guards that no runner reached (library level none). Each ran green once on sit-grund in the api image (node 22, no browser, no sibling repo), 18 Nov; fin-d7-terms-bank was stale and fixed first.
       - name: Offline guards no runner reached before 18 Nov (RECON-QA-1)
         run: |

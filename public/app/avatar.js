@@ -541,6 +541,7 @@
   var SHOP_COUNTRY = null,
     SHOP_LEDGER_ON; /* l16 firmhome: /me's ledger_on (true | false); null = /me answered without it; undefined = /me not answered yet. Home asks GET /books/health only when it is not true/false */
   function announceShop(entity) {
+    if (root.CBEdition) root.CBEdition.seatNote(entity && entity.seat); /* UX-221: what this seat may open (edition.js keeps it) */
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
     SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
     try {
@@ -549,12 +550,8 @@
       if (root.console) root.console.warn('avatar: cb:me not announced', e);
     }
   }
-  function shopCountry() {
-    return SHOP_COUNTRY;
-  }
-  function ledgerOn() {
-    return SHOP_LEDGER_ON;
-  }
+  function shopCountry() { return SHOP_COUNTRY; }
+  function ledgerOn() { return SHOP_LEDGER_ON; }
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
