@@ -56,6 +56,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-connector-reissue.js` | — | the connector REISSUE step-up: re-type the gateway name + a one-time code emailed to the entity, then a fresh package or key. Split out of cap-connect |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
+| `cap-crm-add.js` | — | cap-crm-add.js — CB CRM: the quick add's own parts (the phone and e-mail typed in it, the server's "Already your party" search, what happens after the add) |
 | `cap-crm-assign.js` | — | cap-crm-assign.js — CB CRM: who holds a follow-up (the signed token's claims, the Unassigned bucket, the Assign button's body) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |

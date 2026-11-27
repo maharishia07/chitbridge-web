@@ -2037,8 +2037,7 @@ async function crmFuAct(id, body, done) {
 var ADD = { role: 'customer', q: '', busy: false, found: null, mine: null }; /* mine: the server's ?q answer (CRM-259); null = not asked yet, the loaded list answers meanwhile */
 function crmAddOpen(q) {
   ADD.q = q || '';
-  ADD.found = null;
-  ADD.mine = null;
+  ADD.found = ADD.mine = null;
   ADD.busy = false;
   ui.dialog({
     mount: 'CRM001-U201',
@@ -2056,11 +2055,8 @@ function crmAddOpen(q) {
       '" placeholder="' +
       esc(tx('Name, User ID, phone or e-mail')) +
       '" autocomplete="off"></label>' +
-      '<div style="display:flex;gap:8px"><label style="flex:1">' +
-      esc(tx('Phone')) +
-      ' <span class="hint">' + esc(tx('(optional)')) + '</span><input data-cbsid="CRM001-I05" class="inp" id="crm_addphone" data-testid="crm-addphone" type="tel" inputmode="tel" autocomplete="off" style="width:100%"></label>' +
-      '<label style="flex:1">' +
-      esc(tx('E-mail')) +
+      '<div style="display:flex;gap:8px"><label style="flex:1">' + esc(tx('Phone')) +
+      ' <span class="hint">' + esc(tx('(optional)')) + '</span><input data-cbsid="CRM001-I05" class="inp" id="crm_addphone" data-testid="crm-addphone" type="tel" inputmode="tel" autocomplete="off" style="width:100%"></label><label style="flex:1">' + esc(tx('E-mail')) +
       ' <span class="hint">' + esc(tx('(optional)')) + '</span><input data-cbsid="CRM001-I06" class="inp" id="crm_addemail" data-testid="crm-addemail" type="email" inputmode="email" autocomplete="off" style="width:100%"></label></div>' +
       '<div class="supacts"><span class="hint">' +
       esc(tx('As')) +
@@ -2106,23 +2102,13 @@ function crmAddType(ev) {
 }
 async function crmAddSearch() {
   var q = ADD.q.trim();
-  ADD.found = null;
-  ADD.mine = null;
+  ADD.found = ADD.mine = null;
   if (q.length < 2 || (q.indexOf('@') >= 0 && !/\S+@\S+\.\S+/.test(q))) {
     crmAddResults();
     return;
   }
   var mine = q;
-  /* CRM-259: 'Already your party' is the server's search (?q on the one list, 4 rows), not a filter over every row in the page */
-  api('crmParties', { query: { q: q, limit: 4 } }).then(
-    function (found) {
-      if (ADD.q.trim() === mine) {
-        ADD.mine = crmNormalize((found && found.parties) || []);
-        crmAddResults();
-      }
-    },
-    function () {} /* the loaded list keeps answering */
-  );
+  crmAddAskServer(mine); /* CRM-259: 'Already your party' is the server's search, not a filter over the page */
   try {
     var reply = await api('entitySearch', { query: { q: q } });
     if (ADD.q.trim() === mine) ADD.found = (reply && (reply.results || reply.entities)) || (Array.isArray(reply) ? reply : []);
@@ -2209,46 +2195,6 @@ function crmAddResults() {
       '</button></div>';
   box.innerHTML = h;
 }
-/** the text of one of the quick add's own fields, trimmed ('' when the field is not open) */
-function crmAddField(id) {
-  var node = document.getElementById(id);
-  return node ? String(node.value || '').trim() : '';
-}
-/** is the typed e-mail empty (optional) or shaped like an address; the server judges it again */
-function crmAddEmailOk(email) {
-  return !email || /^\S+@\S+\.\S+$/.test(email);
-}
-/** CRM-260: the contact the add door did not take (the e-mail; a supplier's phone), written once through the party's own edit route */
-async function crmAddContactRest(first, made, phone, email) {
-  var rest = {};
-  if (email) rest.email = email;
-  if (phone && first === 'supplier') rest.phone = phone;
-  if (!Object.keys(rest).length) return;
-  await api(first === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: made.customer_list_id || made.supplier_list_id }, body: rest });
-}
-/** the phone and e-mail typed in the quick add: none for a party found on the network (it keeps its own) */
-function crmAddContact(kind) {
-  return kind === 'found' ? { phone: '', email: '' } : { phone: crmAddField('crm_addphone'), email: crmAddField('crm_addemail') };
-}
-/** the toast's first words for the role that was added */
-function crmAddDoneWords(role) {
-  return role === 'both' ? 'Customer and supplier added' : role === 'supplier' ? 'Supplier added' : 'Customer added';
-}
-/** after the add: the contact the add door did not take (through the party's own edit route), the sheet closed, the toast, the list loaded again and the new party opened */
-async function crmAddDone(made, role, first, contact) {
-  var id = made.customer_identity_id || made.supplier_entity_id;
-  await crmAddContactRest(first, made, contact.phone, contact.email);
-  closeModal();
-  toast(tx(crmAddDoneWords(role)) + ': ' + (made.display_name || ADD.q));
-  await crmLoad(true);
-  var p = id && CRM.byKey[id];
-  crmGo(p ? '#/party/' + encodeURIComponent(crmKey(p)) : '#/parties');
-}
-/** the body of one add call: a party found on the network by its handle, or a local one by name (and phone, for a customer) */
-function crmAddBody(kind, rl, byHandle, name, phone) {
-  if (kind === 'found') return rl === 'supplier' ? { supplier_bridge_id: byHandle.bridge_id } : { handle: byHandle.user_id };
-  return rl === 'customer' && phone ? { name: name, phone: phone } : { name: name };
-}
 async function crmAddGo(kind, byHandle) {
   if (ADD.busy) return;
   ADD.busy = true;
@@ -2259,13 +2205,8 @@ async function crmAddGo(kind, byHandle) {
     name = ADD.q.trim().replace(/\s+/g, ' ');
   /* CRM-260: a local party may be added with a phone and an e-mail, typed here; the server judges both (the same checks as the party's own edit) */
   var contact = crmAddContact(kind),
-    phone = contact.phone,
-    email = contact.email;
-  if (!crmAddEmailOk(email)) {
-    toast(tx('That e-mail does not look right.'));
-    ADD.busy = false;
-    return;
-  }
+    phone = contact.phone;
+  if (!crmAddEmailOk(contact.email)) return crmAddBadEmail();
   var bodyFor = function (rl) {
     return crmAddBody(kind, rl, byHandle, name, phone);
   };

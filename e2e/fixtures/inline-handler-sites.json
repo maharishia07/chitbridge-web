@@ -323,6 +323,7 @@
  "app/cap-compare.js": [],
  "app/cap-connector.js": [],
  "app/cap-country.js": [],
+ "app/cap-crm-add.js": [],
  "app/cap-crm-assign.js": [],
  "app/cap-crm-calls.js": [],
  "app/cap-crm-chits.js": [],
