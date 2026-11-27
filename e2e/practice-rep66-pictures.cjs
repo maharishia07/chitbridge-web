@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const { loadShopTime } = require('./lib/lift-fn.cjs');
 const pub = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8');
-const root = { esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])), Promise, tx: (s) => s, innerWidth: 1366, document: { readyState: 'loading', addEventListener() {}, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {} } } } };
+const root = { esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])), Promise, tx: (s) => s, txn: (a, b, n) => (Math.abs(n) === 1 ? a : b).split('{count}').join(n), innerWidth: 1366, document: { readyState: 'loading', addEventListener() {}, createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }), head: { appendChild() {} }, documentElement: { classList: { add() {} } } } };
 const ctx = { window: root, globalThis: root, setInterval() {}, setTimeout() {}, Intl, Date };
 vm.runInNewContext(pub('engine/chart-draw.js'), ctx, {});
 vm.runInNewContext(pub('engine/chart-draw-status.js'), ctx, {});
@@ -36,6 +36,16 @@ t('On us today: the three kinds of work left equal their tiles, each in its own 
   assert.deepStrictEqual(titles(html).map(num), [7, 41, 12]);
   assert.ok(/Bank not explained: 7/.test(html) && /Clients with entries to check \(quarter\): 41/.test(html) && /Clients with months to lock: 12/.test(html));
   assert.ok(/data-testid="practice-pic-count">7 · 41 · 12</.test(html));
+});
+t('UX-225: one client is "1 client", never "1 clients"; the picture does not repeat the heading count', () => {
+  const html = T.pictureHTML({ key: 'pipeline', tiles: [{ key: 'books_in', n: 1 }] });
+  assert.ok(/>1 client</.test(html) && !/1 clients/.test(html), html);
+  T.use({ clients: [{}] });
+  const same = T.pictureHTML({ key: 'pipeline', tiles: [{ key: 'books_in', n: 1 }] });
+  assert.ok(!/practice-pic-count/.test(same) && /data-total="1"/.test(same), same);
+  T.use({ clients: [{}, {}, {}] });
+  assert.ok(/>1 of 3 clients</.test(T.pictureHTML({ key: 'pipeline', tiles: [{ key: 'books_in', n: 1 }] })));
+  T.use({ clients: [] });
 });
 t('a tile with no count or zero is left out, never drawn as 0; no parts = no picture; the advice band has none', () => {
   assert.deepStrictEqual(titles(T.pictureHTML({ key: 'pipeline', tiles: [{ key: 'books_in', n: 5 }, { key: 'complete', n: 0 }, { key: 'checked', n: null }] })).map(num), [5]);
