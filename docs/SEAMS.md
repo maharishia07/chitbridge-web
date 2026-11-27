@@ -31,12 +31,12 @@ of file each thing is; this says what already does the job.
 | 90 | `again` | `signin-ui.js` |  |
 | 89 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 89 | `pack` | `books-store-packs.js` |  |
-| 87 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 88 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 87 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
 | 86 | `register` | `regulation.js` | register(pack) → the pack — |
 | 85 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
 | 85 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
-| 82 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 83 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 82 | `read` | `books-grant-drill.js` |  |
 | 82 | `count` | `money-check.js` | the count /health reads |
 | 81 | `rows` | `cap-settings.js` |  |
@@ -52,8 +52,8 @@ of file each thing is; this says what already does the job.
 | 71 | `host` | `chit-sheet.js` |  |
 | 70 | `shape` | `books-practice.js` | a client's practice row: |
 | 70 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
+| 69 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 69 | `open` | `bank-statement-file.js` | The event is written in the same request unless the request is read only (an auditor: |
-| 68 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 68 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 67 | `holds` | `assign-register.js` | ONE statement; the switch rides in it: |
 | 66 | `verdict` | `books-advice-in.js` | the verdict for a received advice: |
@@ -142,12 +142,12 @@ of file each thing is; this says what already does the job.
 | 31 | `bkDate` | `cap-books.js` |  |
 | 31 | `model` | `chit-sheet.js` |  |
 | 31 | `chip` | `screen-id.js` | var S = { app: |
+| 31 | `panel` | `sides.js` |  |
 | 31 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 31 | `group` | `identity.js` | again in a different costume. |
 | 31 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 30 | `options` | `bank-lines.js` | cfg.extra { columns, actions, head, wrapStatus(row, iconHtml) } what a page adds (the owner's page: |
 | 30 | `head` | `list-ctl.js` |  |
-| 30 | `panel` | `sides.js` |  |
 | 30 | `field` | `ui-field.js` | the part: |
 | 30 | `post` | `books-manual.js` | POST /events — |
 | 30 | `summary` | `catalogue-read.js` | A count a person can act on: |

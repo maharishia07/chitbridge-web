@@ -78,6 +78,7 @@
  "public/app/books-grant-drill.js":["public/network.html"],
  "public/app/books-grant-filters.js":["public/network.html"],
  "public/app/books-grant-list.js":["public/network.html"],
+ "public/app/books-grant-firms.js":["public/network.html"],
  "public/app/books-grant-marks.js":["public/network.html"],
  "public/app/books-grant-member.js":["public/network.html"],
  "public/app/books-grant-reports.js":["public/network.html"],

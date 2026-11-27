@@ -34,6 +34,10 @@
   function $(id) {
     return root.document.getElementById(id);
   }
+  /** what the outside-firms module (books-grant-firms.js) needs of this screen: its state and its helpers */
+  function firmsCtx() {
+    return { panel: panel, escapeHtml: esc, words: words, $: $, reload: reload, paint: paint };
+  }
   function api(key, o) {
     return root.CBBooksGrantApi.run(panel.o.call, key, o);
   }
@@ -95,7 +99,7 @@
         panel.why = null;
         if (panel.view === 'looks') panel.looks = (answer && answer.looks) || [];
         else { panel.given = (answer && answer.given) || []; panel.parents = (answer && answer.parents) || []; }
-        return firmsAsking().then(weekly);
+        return root.CBBooksGrantFirms.asking(firmsCtx()).then(weekly);
       },
       function (failure) {
         panel.why = failure.status === 403 || failure.status === 503 ? failure.message : null;
@@ -103,88 +107,6 @@
         panel.given = []; panel.parents = []; panel.looks = []; /* a refused read leaves no list behind: the empty state below says it was refused, never "nobody" (UX-218) */
       }
     );
-  }
-
-/* ── outside firms (UX-215): the ways in other than a network parent ──
-   The connect routes are the network's own (POST /api/network/connections, .../:id/approve, .../:id/decline, GET /api/network/entities/:id/connections): a firm is the PARENT, this business the CHILD, type agency.
-   Once active, the same edge makes the firm a grant parent, so the one Give access form offers it and the one gate (verdictOf) admits it: no second grant path. */
-  var NETWORK = '/api/network';
-  /** this business's node id (the network's id space, not the identity's): me, then bridge id, then lookup; read once */
-  function ownNode() {
-    if (panel.node) return Promise.resolve(panel.node);
-    return panel.o.call('GET', '/api/entities/me').then(function (me) {
-      return panel.o.call('GET', NETWORK + '/entities/lookup?bridgeId=' + encodeURIComponent((me && (me.bridge_id || me.bridgeId)) || ''));
-    }).then(function (card) {
-      var node = card && (card.entity || card);
-      panel.node = (node && node.id) || null;
-      return panel.node;
-    });
-  }
-  /** the firms that asked to read this business's books and wait for its yes: agency edges, this business the child, the firm the asker */
-  function firmsAsking() {
-    panel.firms = [];
-    if (panel.view !== 'given') return Promise.resolve();
-    return ownNode().then(function (node) {
-      if (!node) return;
-      return panel.o.call('GET', NETWORK + '/entities/' + node + '/connections').then(function (edges) {
-        panel.firms = (Array.isArray(edges) ? edges : []).filter(function (e) {
-          return e.type === 'agency' && e.state === 'requested' && String(e.child_id) === String(node) && String(e.requested_by) === String(e.parent_id);
-        });
-      });
-    }).then(function () {}, function () { panel.firms = []; }); /* a list that cannot be read hides the block; the grants list stays */
-  }
-  /** the block above the list: each firm waiting, with Accept and Decline (owner only; the server refuses any other seat) */
-  function firmsHtml() {
-    if (!panel.firms.length) return '';
-    return '<div class="nw-why" id="bg_firms" role="group" data-testid="bg-firms"><strong>' + esc(words('Firms asking to read your books')) + '</strong>' + panel.firms.map(function (f, i) {
-      return '<div class="nw-acts" data-testid="bg-firm-' + i + '"><span>' + esc(f.parent_name || words('A firm')) + '</span> ' +
-        '<button data-cbsid="NET004-B14" type="button" class="act" id="bg_firm_accept_' + i + '" data-firm="' + esc(f.id) + '" data-say="approve" data-testid="bg-firm-accept-' + i + '">' + esc(words('Accept')) + '</button>' +
-        '<button data-cbsid="NET004-B15" type="button" class="act quiet" id="bg_firm_decline_' + i + '" data-firm="' + esc(f.id) + '" data-say="decline" data-testid="bg-firm-decline-' + i + '">' + esc(words('Decline')) + '</button></div>';
-    }).join('') + '</div>';
-  }
-  /** Accept or Decline one firm's request: the network's own routes; after Accept the screen reloads and Give access offers the firm */
-  function answerFirm(button) {
-    var verb = button.getAttribute('data-say');
-    root.CBAction.run(
-      button,
-      function () { return panel.o.call('POST', NETWORK + '/connections/' + button.getAttribute('data-firm') + '/' + verb); },
-      {
-        key: 'bg-firm-' + verb,
-        failed: words(verb === 'approve' ? "Couldn't accept this firm" : "Couldn't decline this firm"),
-        out: 'bg_out',
-        outcome: function () {
-          reload().then(function () {
-            panel.notice = [words(verb === 'approve' ? 'The firm is connected. Now choose what it may see: Give access.' : 'The request was declined.')];
-            paint();
-          });
-        }
-      }
-    );
-  }
-  /** Invite a firm by its User ID: the same request the firm could raise itself; it reads nothing until it accepts and you then give access */
-  function openInvite() {
-    panel.o.sheet(
-      '<h2>' + esc(words('Invite a firm')) + '</h2><div class="nw-form"><label class="sub" for="bg_firm_id">' + esc(words("The firm's User ID")) + '</label>' +
-      '<input data-cbsid="NET004-I07" id="bg_firm_id" class="inp" type="text" autocomplete="off" data-testid="bg-firm-id">' +
-      '<div class="sub">' + esc(words('The firm is asked to connect. It can read nothing until it accepts and you then give it access.')) + '</div>' +
-      '<div class="nw-out" id="bg_out" data-testid="bg-out" role="status"></div>' +
-      '<div class="nw-acts"><button data-cbsid="NET004-B16" type="button" class="act" id="bg_invite_go" data-testid="bg-invite-go">' + esc(words('Send invitation')) + '</button>' +
-      '<button data-cbsid="NET004-B17" type="button" class="act quiet" id="bg_invite_cancel" data-testid="bg-invite-cancel">' + esc(words('Cancel')) + '</button></div></div>'
-    );
-    $('bg_invite_cancel').onclick = panel.o.closeSheet;
-    /** Send invitation: ask the firm (by User ID) to connect as the one who may read these books once given access */
-    $('bg_invite_go').onclick = function () {
-      var handle = ($('bg_firm_id').value || '').trim();
-      if (!handle) { $('bg_out').textContent = words("Type the firm's User ID."); return; }
-      ownNode().then(function (node) {
-        root.CBAction.run(
-          $('bg_invite_go'),
-          function () { return panel.o.call('POST', NETWORK + '/connections', { parentHandle: handle, childId: node, type: 'agency' }); },
-          { key: 'bg-invite', failed: words("Couldn't send the invitation"), out: 'bg_out',
-            outcome: function () { panel.o.closeSheet(); reload().then(function () { panel.notice = [words('Invitation sent. When the firm accepts, choose what it may see: Give access.')]; paint(); }); } }
-        );
-      });
-    };
   }
 
   /** what the adviser posted for the owner in the last 7 days: the same queue, filtered (accepted, delegated, since): a line to read, never a list to clear */
@@ -218,7 +140,7 @@
       backButton() + '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
       '<button data-cbsid="NET004-B03" type="button" class="act quiet" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button>' +
       '<button data-cbsid="NET004-B18" type="button" class="act quiet" id="bg_invite" data-testid="bg-invite">' + esc(words('Invite a firm')) + '</button></div>' +
-      (panel.view === 'given' ? firmsHtml() : '') +
+      (panel.view === 'given' ? root.CBBooksGrantFirms.html(firmsCtx()) : '') +
       '<div class="sub" data-testid="bg-note">' + esc(words('You choose who, in which role, and until when. Every look and every step is recorded.')) + '</div>' +
       noticeHtml() +
       (panel.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(panel.why) + '</div>' : '') +
@@ -233,8 +155,8 @@
     greyGive();
     if (panel.why) $('bg_invite').setAttribute('disabled', '');
     $('bg_give').onclick = openGive;
-    $('bg_invite').onclick = openInvite;
-    Array.prototype.forEach.call(panel.host.querySelectorAll('[data-firm]'), function (button) { button.onclick = function () { answerFirm(button); }; });
+    $('bg_invite').onclick = function () { root.CBBooksGrantFirms.invite(firmsCtx()); };
+    Array.prototype.forEach.call(panel.host.querySelectorAll('[data-firm]'), function (button) { button.onclick = function () { root.CBBooksGrantFirms.answer(firmsCtx(), button); }; });
     if ($('bg_seethem')) $('bg_seethem').onclick = function () { panel.view = 'posted'; panel.seeThem = false; reload(); };
     ({ looks: paintLooks, given: paintGiven, accept: paintAccept, posted: paintPosted })[panel.view]($('bg_list'));
   }
