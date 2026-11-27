@@ -35,16 +35,16 @@ const held = { period: { label: 'Nov 2026', due: '2026-12-28' }, net_minor: -150
   });
 
   /* the owner's screen ----------------------------------------------------------------------------------------- */
-  const src = read('cap-period.js');
-  const grab = (name) => { const m = new RegExp(String.raw`(?:async )?function ${name}\([^)]*\) \{[\s\S]*?
+  const src = read('cap-period.js'), keep = read('cap-period-stock.js');
+  const grab = (name, from) => { const m = new RegExp(String.raw`(?:async )?function ${name}\([^)]*\) \{[\s\S]*?
 \}
-`).exec(src); assert.ok(m, name + ' not found'); return m[0]; };
+`).exec(from || src); assert.ok(m, name + ' not found'); return m[0]; };
   const calls = [];
   const ctx = { Object, String, Date, JSON, PE_RET: { q: {}, r: null }, tx: (s) => s, bkQuiet: (w, f, fb) => fb, peReturnLoad: async () => ({ reloaded: true }),
     api: async (name, o) => { calls.push([name, o && o.body]); return name === 'countrySetup' ? { country: { code: 'AE' }, currency: 'AED', fy_start_month: 1 } : {}; },
     peBusyDay0: null };
   vm.createContext(ctx);
-  vm.runInContext(grab('peSetupKeep'), ctx);
+  vm.runInContext(grab('peSetupKeep', keep), ctx);
   const staggers = { 1: { tax_year_end: 'Jan' }, 2: { tax_year_end: 'Feb' }, 3: { tax_year_end: 'Mar' }, 4: { monthly: true } };
   await ok('the owner\'s "Monthly" and Emirate Dubai are saved as the shop\'s setup answers (period = the monthly key, region)', async () => {
     const out = await ctx.peSetupKeep({ staggers }, 'monthly', 'Dubai');
@@ -62,7 +62,7 @@ const held = { period: { label: 'Nov 2026', due: '2026-12-28' }, net_minor: -150
     assert.strictEqual(await ctx.peSetupKeep({ staggers }, '4', ''), null);
   });
   await ok('the device sends no stagger and no Emirate of its own, and does not remember them', () => {
-    assert.ok(/delete PE_RET\.q\.stagger;/.test(src) && /delete PE_RET\.q\.emirate;/.test(src));
+    assert.ok(/\{ stagger: null, emirate: null \}/.test(src));
     assert.ok(!/stagger: PE_RET\.q\.stagger \|\| null/.test(src) && !/emirate: PE_RET\.q\.emirate \|\| null/.test(src));
   });
   await ok('the stagger picker offers the pack\'s own keys, the value the setup holds (so a held "4" shows as Monthly)', () => {

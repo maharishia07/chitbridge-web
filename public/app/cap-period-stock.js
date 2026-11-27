@@ -1,5 +1,5 @@
 /* app/cap-period-stock.js — CB ACCOUNTS › Month & year end › Closing stock. Split out of cap-period.js (file-size ratchet, 20 Nov), code moved verbatim.
- * OWNS      the Closing stock tab: peStockView · peStockList · peStockAdd · peStockSave; and peAssetAsk (the Add asset question, moved here for the size ratchet)
+ * OWNS      peSetupKeep (ACC-410: the owner's VAT period and Emirate kept as the shop's setup answers; here for the size ratchet); the Closing stock tab: peStockView · peStockList · peStockAdd · peStockSave; and peAssetAsk (the Add asset question, moved here for the size ratchet)
  * CALLED BY public/accounts.html (script tag, after cap-period.js); BK.views closingstock opens peStockView
  * FLOW      Closing stock tab → peStockView → peStockList (the server's lines) → peStockAdd → peStockSave (POST /closing-stock) → the list paints again
  * CARD      14-accounting/periods-month-lock-year-close
@@ -125,4 +125,22 @@ function peAssetAsk(body, paidBox) {
     body: esc(txf('It cost {amt}, bought {date}, paid from {from}. It goes into the books now.', { amt: bkMoney(body.cost_minor), date: body.date, from })),
     yes: tx('Add asset')
   };
+}
+/** ACC-410: the owner's VAT period and Emirate are kept as the shop's setup answers (PUT country-setup particulars, the one home: asked.period · asked.region), so the return reads them for the owner, the adviser and the auditor alike.
+ *  `stagger` is the pack's stagger key ('monthly' maps to the key that is monthly); '' leaves it unchanged. → the reloaded return, or null when the save was refused (not the owner) */
+async function peSetupKeep(returnAnswer, stagger, emirate) {
+  const table = (returnAnswer && returnAnswer.staggers) || {},
+    key = Object.keys(table).find((item) => item === String(stagger) || (stagger === 'monthly' && table[item].monthly)),
+    particulars = {};
+  if (key) particulars.period = key;
+  if (emirate) particulars.region = emirate;
+  if (!Object.keys(particulars).length) return returnAnswer;
+  try {
+    const held = (await api('countrySetup')) || {};
+    await api('countrySetupSave', { body: { country: held.country && held.country.code, currency: held.currency, fy_start_month: held.fy_start_month, particulars } });
+    return await peReturnLoad();
+  } catch (failure) {
+    bkQuiet('setup-keep', failure, null);
+    return null;
+  }
 }
