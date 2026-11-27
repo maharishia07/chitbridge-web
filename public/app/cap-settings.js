@@ -667,6 +667,11 @@ var CBSettings = (function () {
     function heard(k) {
       return k.seen && k.seen.at ? _keyAgo(k.seen.at) + (k.seen.ip ? ' · ' + k.seen.ip : '') : T('Never reached us');
     }
+    /** UX-226 C6: making a key is the owner's, the same gate as revoking one: the keys read says it (may.revoke), so a seat that cannot sees Make a key greyed, not live until pressed */
+    function mintMay() {
+      var read = H.data.keys && H.data.keys.r && H.data.keys.r.may && H.data.keys.r.may.revoke;
+      return read && read.ok === false && typeof CBRoles !== 'undefined' ? { ok: false, why: CBRoles.refusal('owner') } : null;
+    }
     function paintKeyBar() {
       $('sx_key_bar').innerHTML = bar(
         '<span class="sx-add"><label class="sx-lbl" for="sx_key_name">' +
@@ -683,7 +688,7 @@ var CBSettings = (function () {
             })
             .join('') +
           '</select>' +
-          btn('sx_key_mint', T('Make a key'), null, '', 'ACC002-B16') +
+          btn('sx_key_mint', T('Make a key'), mintMay(), '', 'ACC002-B16') +
           '</span>'
       );
       $('sx_key_mint').onclick = function () {

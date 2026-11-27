@@ -32,7 +32,7 @@ async function obShowSaved() {
         '</b> · ' +
         esc(entry.entry_no || '') +
         (entry.by_name ? ' · ' + esc(entry.by_name) : '') +
-        (entry.at ? ' · ' + esc(bkDate ? bkDate(String(entry.at).slice(0, 10)) : String(entry.at).slice(0, 10)) : '') +
+        (entry.at ? ' · ' + esc(bkDate ? bkDate(entry.at) : String(entry.at).slice(0, 10)) /* UX-226 A4: the moment, said in the shop's zone like every other time on the screen (the UTC day was a day behind in Sydney) */ : '') +
         '</div>'
       );
     })

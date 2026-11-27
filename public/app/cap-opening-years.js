@@ -14,7 +14,7 @@ function yearLine(prev, currency) {
   else if (prev && prev.matches === true) line = '<span class="ob-ok" data-testid="ob-match">' + esc(tx("matches what last year carried out")) + ' ✓</span>';
   else if (prev && prev.matches === false)
     line = '<span class="ob-bad">' + esc(txf("Opening {a} vs what last year carried out {b}: {gap} apart", { a: bkMoney(prev.next_opening_minor, currency), b: bkMoney(prev.closing_minor, currency), gap: bkMoney(prev.apart_minor, currency) })) + '</span>';
-  else if (!prev) line = '<span style="color:var(--grey)">' + esc(tx('Typed in by you')) + '</span>';
+  else if (!prev) line = '<span style="color:var(--grey)">' + esc(tx('First year: balances typed in')) + '</span>';
   return line;
 }
 /** the year strip: read only, every figure the server's carry */
