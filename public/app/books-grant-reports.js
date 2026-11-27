@@ -92,7 +92,12 @@
   }
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
-    return Object.assign({}, report.more || {}, baseQuery(report));
+    return Object.assign({}, report.more || {}, baseQuery(report), pageOf(report));
+  }
+  /** DISCIPLINES §2 (1132): the Day book asks ONE page (the server's own default size); "Show more" asks the next by the server's cursor. The since read already names its own limit */
+  grantKit.DAYBOOK_PAGE = 100;
+  function pageOf(report) {
+    return report.k === 'daybook' && !grantKit.viewState.since ? { limit: grantKit.DAYBOOK_PAGE } : {};
   }
   function baseQuery(report) {
     var period = grantKit.viewState.period, after = report.k === 'daybook' && !grantKit.viewState.day && grantKit.afterYearEnd() && root.CBBooksGrantFilters.afterRange(period);
