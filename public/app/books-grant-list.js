@@ -275,7 +275,13 @@
       },
       rowClass: function (row) { return row.change_over ? 'bv-over' : ''; },
       onOpen: rowOpener(report),
-      empty: report.k === 'bas' && grantKit.viewState.answer && grantKit.viewState.answer.needs ? { title: grantKit.words(grantKit.viewState.answer.needs === 'stagger' ? 'This return is waiting on the shop' : 'No return to show'), body: grantKit.words(grantKit.viewState.answer.why || 'The shop has not said how it files this return yet.') + (grantKit.viewState.answer.needs === 'stagger' ? ' ' + grantKit.words('The owner sets it once; you then see the same boxes as the owner.') : '') } /* ACC-410: the server says what it waits for (the VAT period the authority gave); never an empty return */ : report.k === 'daybook' && grantKit.viewState.since ? { title: grantKit.words('Nothing has changed since your last check'), body: grantKit.words('No entries were posted since then.') } : { title: grantKit.words('Nothing to show here'), body: grantKit.words(grantKit.viewState.day || !grantKit.viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
+      empty: waitingEmpty(report) || (report.k === 'daybook' && grantKit.viewState.since ? { title: grantKit.words('Nothing has changed since your last check'), body: grantKit.words('No entries were posted since then.') } : { title: grantKit.words('Nothing to show here'), body: grantKit.words(grantKit.viewState.day || !grantKit.viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') })
     };
+  }
+  /** ACC-410: a return the shop's setup still waits for says what it waits for (the server's sentence), never an empty list; null for every other read */
+  function waitingEmpty(report) {
+    var answer = grantKit.viewState.answer, stagger = answer && answer.needs === 'stagger';
+    if (report.k !== 'bas' || !answer || !answer.needs) return null;
+    return { title: grantKit.words(stagger ? 'This return is waiting on the shop' : 'No return to show'), body: grantKit.words(answer.why || 'The shop has not said how it files this return yet.') + (stagger ? ' ' + grantKit.words('The owner sets it once; you then see the same boxes as the owner.') : '') };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -30,8 +30,8 @@ const held = { period: { label: 'Nov 2026', due: '2026-12-28' }, net_minor: -150
   });
   await ok('firm view: the empty state says what the return waits for (the server\'s sentence), not "Nothing to show here"', () => {
     const src = read('books-grant-list.js');
-    assert.ok(/report\.k === 'bas' && grantKit\.viewState\.answer && grantKit\.viewState\.answer\.needs/.test(src));
-    assert.ok(/viewState\.answer\.why/.test(src) && /This return is waiting on the shop/.test(src));
+    assert.ok(/empty: waitingEmpty\(report\) \|\|/.test(src) && /report\.k !== 'bas' \|\| !answer \|\| !answer\.needs/.test(src));
+    assert.ok(/answer\.why/.test(src) && /This return is waiting on the shop/.test(src));
   });
 
   /* the owner's screen ----------------------------------------------------------------------------------------- */
