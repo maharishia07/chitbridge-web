@@ -139,6 +139,6 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | /offer-lab.html | Offer Lab (old address) | forwards to offer-lab-next.html |
 | /combo-lab.html | Combo Lab (old address) | forwards to offer-lab-next.html?mode=combo |
 
-## The workshop (app.html) — 1081 rows in public/app/screens.js, listed in C:/dev/SCREENS.md
+## The workshop (app.html) — 1080 rows in public/app/screens.js, listed in C:/dev/SCREENS.md
 
-Counter (CTR) 8 · Rail (RAL) 6 · Work (WRK) 4 · Catalogue (CAT) 5 · Business (BUS) 13 · Insight (INS) 2 · Account (ACC) 1 · The app itself (APP) 1 · Its own app (OWN) 3 · Inside a screen (SCR) 56 · Detail (DTL) 3 · Popup (POP) 191 · Control (CTL) 756 · Message (MSG) 1 · Panel (PNL) 6 · Inside a screen (OWN) 1 · Component (CMP) 4 · Control (CMP) 19 · Control (ACC) 1
+Counter (CTR) 8 · Rail (RAL) 6 · Work (WRK) 4 · Catalogue (CAT) 5 · Business (BUS) 13 · Insight (INS) 2 · Account (ACC) 1 · The app itself (APP) 1 · Its own app (OWN) 3 · Inside a screen (SCR) 56 · Detail (DTL) 3 · Popup (POP) 192 · Control (CTL) 756 · Message (MSG) 1 · Panel (PNL) 6 · Inside a screen (OWN) 1 · Component (CMP) 2 · Control (CMP) 18 · Control (ACC) 1 · Control (SCR) 1

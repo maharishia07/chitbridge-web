@@ -48,6 +48,7 @@ const WANT = {
   'SCR039-B03': ['app/step-flow.js', 'class="pri"'],
   'SCR040-C01': ['app/attach-ui.js', 'cb-attach-item'],
   'SCR040-B01': ['app/attach-ui.js', 'cb-attach-btn'],
+  'SCR040-I01': ['app/attach-ui.js', 'data-clip='],
   'SCR041-I01': ['app/list-legacy.js', 'listctl-search-'],
   'SCR041-S01': ['app/list-legacy.js', 'listctl-filter-'],
   'SCR041-S02': ['app/list-legacy.js', 'listctl-sort-'],
@@ -82,7 +83,7 @@ Object.keys(SRC).filter((f) => f !== 'app/ui.js').forEach((f) => {
 });
 const dup = written.filter((c, i) => written.indexOf(c) !== i);
 check(dup.length === 0, 'no code is written on two elements' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(written.length === 25 && Object.keys(WANT).length === 25, 'the files hold 25 coded elements, counted by code: ' + written.length + ' written, ' + Object.keys(WANT).length + ' expected');
+check(written.length === 26 && Object.keys(WANT).length === 26, 'the files hold 26 coded elements, counted by code: ' + written.length + ' written, ' + Object.keys(WANT).length + ' expected');
 
 /** ui.js: the three choice tags write the component code as a literal, none of them through the attribute list */
 const choiceTags = SRC['app/ui.js'].split("'<button data-cbsid=" + '"CMP025-B01"' + " ' + attributeList(").length - 1;

@@ -211,6 +211,23 @@ function cbAttachList(atts, opts) {
  * (app.html:82) — dropped into a flex row unqualified, that button eats the row and pushes everything below it
  * down by 16px. Every button this file emits overrides both.
  */
+/**
+ * ⭐ UX-198 · THE ATTACH CLIP — the ONE drawing of "files are attached here" (Athi 26 Nov: the empty circle on the Day book row read as a receipt button).
+ * No file: an outline paperclip (the convention in Xero, QuickBooks and Gmail). Files held: a filled, heavier clip with a count badge. The tooltip and the
+ * screen-reader name carry the count (a count is never the badge alone). Every screen that shows "something is attached" calls THIS; e2e/attach-clip-one.test.cjs
+ * fails when another file draws its own. spec = { count (files held), name (the words for the title and the reader) }; the CALLER owns the button around it (click = file list).
+ */
+function cbAttachClip(spec) {
+  var count = Math.max(0, Number(spec && spec.count) || 0),
+    held = count > 0,
+    name = String((spec && spec.name) || (held ? 'Files attached' : 'Attach receipt'));
+  return (
+    '<span class="cb-clip" data-cbsid="SCR040-I01" data-clip="' + (held ? 'filled' : 'outline') + '" title="' + esc(name) + '" style="display:inline-flex;align-items:center;gap:2px;position:relative">' +
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="' + (held ? '3' : '1.6') + '" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>' +
+    (held ? '<b data-testid="cb-clip-count" style="font-size:var(--fs-1,12px);line-height:1;min-width:16px;padding:1px 4px;border-radius:99px;background:currentColor"><span style="color:var(--card,#fff)">' + count + '</span></b>' : '') +
+    '<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">' + esc(name) + '</span></span>'
+  );
+}
 function cbAttachButton(ctx) {
   ctx = ctx || {};
   if (!ctx.chit_id) return ''; // nothing to pin to — render no control rather than a dead one
@@ -232,7 +249,7 @@ function cbAttachButton(ctx) {
     '"' +
     ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:var(--fs-1);font-weight:700;' +
     'border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);cursor:pointer">' +
-    esc(ctx.label || '📎 Attach a file') +
+    (ctx.label ? esc(ctx.label) : cbAttachClip({ name: 'Attach a file' }) + ' ' + esc('Attach a file')) +
     '</button>' +
     (ctx.note ? '<span style="font-size:var(--fs-1);color:var(--warn-2);margin-inline-start:8px">' + esc(ctx.note) + '</span>' : '')
   );

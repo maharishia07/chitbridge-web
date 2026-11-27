@@ -532,6 +532,27 @@ function ftSaveBar(testId, whyId, outTestId, onclick, greyed) {
     '" class="hint"></span></div>'
   );
 }
+/* FIN-127: Accounts opens a party's terms in a side panel — this same editor, framed (#terms/party/<id>?panel=1): its party sheet alone, no Finance chrome; a save and Esc are told to the page that framed it, which re-ages its bill rows */
+function ftPanelMode() {
+  return /^#terms\/party\/[^/?]+\?panel=1/.test(location.hash) && window.parent !== window;
+}
+/** tell the page that framed this editor what happened (saved · close); nothing when the editor is not in a panel */
+function ftTellPanel(what) {
+  if (ftPanelMode()) window.parent.postMessage({ cb: 'terms-panel', what: what }, location.origin);
+}
+var FT_PANEL_DONE = false;
+/** in panel mode, once the parties are read: hide the Finance chrome, wire Esc, open the named party's sheet */
+function ftPanelOpenOnce() {
+  if (FT_PANEL_DONE || !ftPanelMode() || FT.state === 'loading') return;
+  FT_PANEL_DONE = true;
+  var chrome = document.createElement('style');
+  chrome.textContent = '#nav,.nav,#ft_shop,#ft_parties,header,.topbar{display:none!important}';
+  document.head.appendChild(chrome);
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') ftTellPanel('close');
+  });
+  ftOpen(decodeURIComponent(/^#terms\/party\/([^/?]+)/.exec(location.hash)[1]));
+}
 async function ftLoad(quiet) {
   var g = ++FT.gen;
   if (!quiet) {
@@ -579,6 +600,7 @@ async function ftLoad(quiet) {
   }
   ftShopPaint();
   if (FT.api) FT.api.refresh();
+  ftPanelOpenOnce();
 }
 function ftSaveShop(btn) {
   var r = ftRead('fts'),
@@ -680,6 +702,7 @@ function ftSaveParty(pid, btn) {
       failed: tx('Could not save terms'),
       done: tx('Saved'),
       outcome: function () {
+        ftTellPanel('saved');
         ftLoad(true).then(function () {
           ftOpen(pid); /* R76: the re-opened dialog wiped the button's "Saved" — say it in the dialog's own line */
           var said = document.getElementById('ftp_why');
