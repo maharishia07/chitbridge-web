@@ -9,10 +9,10 @@ of file each thing is; this says what already does the job.
 
 | used by | name | defined in | what it is for |
 |---|---|---|---|
-| 220 | `list` | `amend.js` | list(entity_id, chit_id) — |
+| 219 | `list` | `amend.js` | list(entity_id, chit_id) — |
 | 207 | `rows` | `crm.js` | still in them: |
 | 192 | `read` | `bank-rec-log.js` | one account's bank reconciliation log: |
-| 183 | `words` | `variant.browser.js` |  |
+| 182 | `words` | `variant.browser.js` |  |
 | 165 | `withEntity` | `books-hooks.js` |  |
 | 148 | `problem` | `problem.js` | problem(req, res, spec) — |
 | 145 | `answer` | `availability.js` | from March; then nearest. |
@@ -137,11 +137,11 @@ of file each thing is; this says what already does the job.
 | 33 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
 | 32 | `form` | `accounts-shell-unsaved.js` |  |
-| 32 | `chip` | `screen-id.js` | var S = { app: |
 | 32 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 32 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 31 | `bkDate` | `cap-books.js` |  |
 | 31 | `model` | `chit-sheet.js` |  |
+| 32 | `chip` | `screen-id.js` | var S = { app: |
 | 31 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 31 | `group` | `identity.js` | again in a different costume. |
 | 31 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
