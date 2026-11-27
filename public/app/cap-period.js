@@ -817,24 +817,6 @@ async function peSetupKeep(returnAnswer, stagger, emirate) {
     return null;
   }
 }
-/** ACC-410: the owner's VAT period and Emirate are kept as the shop's setup answers (PUT country-setup particulars, the one home: asked.period · asked.region), so the return reads them for the owner, the adviser and the auditor alike.
- *  `stagger` is the pack's stagger key ('monthly' maps to the key that is monthly); '' leaves it unchanged. → the reloaded return, or null when the save was refused (not the owner) */
-async function peSetupKeep(returnAnswer, stagger, emirate) {
-  const table = (returnAnswer && returnAnswer.staggers) || {},
-    key = Object.keys(table).find((item) => item === String(stagger) || (stagger === 'monthly' && table[item].monthly)),
-    particulars = {};
-  if (key) particulars.period = key;
-  if (emirate) particulars.region = emirate;
-  if (!Object.keys(particulars).length) return returnAnswer;
-  try {
-    const held = (await api('countrySetup')) || {};
-    await api('countrySetupSave', { body: { country: held.country && held.country.code, currency: held.currency, fy_start_month: held.fy_start_month, particulars } });
-    return await peReturnLoad();
-  } catch (failure) {
-    bkQuiet('setup-keep', failure, null);
-    return null;
-  }
-}
 /** a pick changed (period · frequency · labels · stagger · Emirate): ask again, repaint; the server's refusal is one sentence in the slot */
 async function peReturnPick(k, v) {
   if (k === 'stagger' || k === 'emirate') {

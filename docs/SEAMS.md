@@ -204,7 +204,7 @@ of file each thing is; this says what already does the job.
 | 23 | `pick` | `scalecode.js` | pull out the digits one letter marks, as a string, in order |
 | 23 | `told` | `signin-switched-off.js` | const words = (shop) => 'This account is switched off, so you cannot sign in. |
 | 22 | `figure` | `books-acting.js` | a figure the way the books screens paint it: |
-| 22 | `held` | `books-grant-api.js` |  |
+| 23 | `held` | `books-grant-api.js` |  |
 | 22 | `show` | `books-grant-drill.js` |  |
 | 22 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 22 | `chips` | `country-profiles.js` | words as chips; null when there are none |
