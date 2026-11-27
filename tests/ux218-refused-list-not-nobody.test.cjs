@@ -16,3 +16,11 @@ for (const m of src.matchAll(/title: words\('(Nobody[^']*)'\)/g)) {
 }
 pass('every "Nobody ..." title sits behind the refused branch');
 console.log(ok + ' passed');
+/* UX-215 (one source): the firm's way in uses the network's own connect routes, never a second grant path; Accept reloads the ONE list so the firm shows at once. */
+assert(/'\/connections\/' \+ button\.getAttribute\('data-firm'\) \+ '\/' \+ verb/.test(src) && /e\.type === 'agency' && e\.state === 'requested'/.test(src));
+pass('Accept and Decline call the network approve/decline routes for a pending agency edge the firm asked');
+assert(/outcome: function \(\) \{\s*\n\s*reload\(\)/.test(src));
+pass('after Accept the one grants list is read again (the firm is a parent at once)');
+assert(!/books-grants'?,?\s*\{?\s*(method|m)/.test(src) && (src.match(/'POST', *NETWORK/g) || []).length === 2);
+pass('the only writes beside the grants api are the two network connect calls (no second grant writer)');
+console.log('UX-215 ' + ok + ' total');
