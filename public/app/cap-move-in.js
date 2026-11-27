@@ -158,8 +158,7 @@ function miDecisions() {
 
 /* ── the view (BK.views.movein) ── */
 function miView(body) {
-  /* CON-163: a finished run's result is shown once, at the end of its own run; opening Move in again starts a new file, never the last result */
-  if (!MIV.f || MIV.out) miFresh();
+  if (!MIV.f || MIV.out) miFresh(); /* CON-163: a finished run's result is shown once; opening Move in again starts a new file */
   miKnowShop();
   body.innerHTML =
     '<div data-testid="mi-steps"><div id="mi_rail"></div><div id="mi_sub" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px"></div>' +
@@ -402,10 +401,8 @@ function miFile(input) {
   if (!file) return;
   var form = MIV.f;
   form.name = file.name;
-  MIV.out = null; /* CON-163: a new file never sits under the last run's result */
-  form.csv = null;
-  form.xlsx = null;
-  MIV.pre = null;
+  form.csv = form.xlsx = null;
+  MIV.pre = MIV.out = null; /* CON-163: a new file never sits under the last run's result */
   MIV.dec = {};
   MIV.plan = null;
   miDropRead();
