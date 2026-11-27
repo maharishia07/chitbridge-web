@@ -90,6 +90,18 @@ var CB_PARTY_EP = {
   /* ⭐ T3-P1-MONEY: written by BOTH CB CRM (the follow-up sheet) and CB Finance › Cheques (Remind me = a follow-up due on the cheque's date) — one name, one place */
   crmFollowAdd: { m: 'POST', p: '/api/crm/followups', ok: 'y' } // { party_id, what, due_at, source: manual|dues|interaction, assignee_user_id? } → 201 { followup }
 };
+/** CRM-261: GET /api/crm/parties answers 500 a page ({ total, page, limit, next }); a screen that holds the whole list follows `next` until it is null, so no list is ever silently cut. `api` is the page's own caller; `query` narrows (view, q). The first page's other keys (walk_ins, alerts, may) are kept. */
+async function crmPartiesAll(api, query) {
+  var first = await api('crmParties', query ? { query: query } : undefined);
+  var page = first,
+    parties = ((first && first.parties) || []).slice(),
+    guard = 0;
+  while (page && page.next && guard++ < 100) {
+    page = await api('crmParties', { query: Object.assign({}, query || {}, { page: page.next }) });
+    parties = parties.concat((page && page.parties) || []);
+  }
+  return Array.isArray(first) ? first : Object.assign({}, first, { parties: parties });
+}
 
 /* ── the shop's policy flags (b130) — the workshop's Settings › Policy AND CB CRM's Shop window (showcase_template, T3-P2-CRM) read and write them; MOVED from app.html's EP ── */
 /* ── the shop's OWN particulars — what the workshop's Profile · Country setup AND CB Settings (settings.html, SET1 2026-10-13) read and write.

@@ -172,8 +172,11 @@
     if (context && context.role === 'auditor') return tab === 'bank' || tab === 'lock' || tab === 'gstclose'; /* the auditor's other reads are the network's own books view; here only what needs the books page, read only: the Bank, the Month lock and the tax return (F-73: GET /returns is on the grant's read list, peGstView shows a reader the return and never the Close card) */
     return TABS.indexOf(tab) >= 0 || (tab === 'bank' && !!context && context.role === 'adviser');
   }
-  function mayCall(path) {
-    return !context || context.role === 'owner' || path.indexOf('/api/books') === 0;
+  /** CON-165: a firm seat reads the client's party list and one record (exactly these two GETs, never the prefix /api/crm); the server decides, this only keeps the other CRM tabs from sending the header to routes that are closed */
+  var PARTY_READS = [/^\/api\/crm\/parties\/?(\?.*)?$/, /^\/api\/crm\/parties\/(:id|[0-9a-f-]{36})\/?(\?.*)?$/i];
+  function mayCall(path, method) {
+    if (!context || context.role === 'owner' || path.indexOf('/api/books') === 0) return true;
+    return (!method || String(method).toUpperCase() === 'GET') && PARTY_READS.some(function (test) { return test.test(path); });
   }
   /** no live grant for the store the address names: one sentence where the page is, the way back, nothing read */
   function refuseInPlace(unread) {
@@ -217,7 +220,7 @@
   }
   /** a call outside /api/books* is refused here, before it is sent, while the page acts for a store */
   function guard(endpoint) {
-    if (!mayCall(endpoint.p)) throw new Error(words('This screen shows one client books only. Nothing was sent.'));
+    if (!mayCall(endpoint.p, endpoint.m)) throw new Error(words('This screen shows one client books only. Nothing was sent.'));
     return endpoint;
   }
   function firstTab() {

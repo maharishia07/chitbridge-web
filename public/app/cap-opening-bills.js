@@ -55,7 +55,7 @@ function obBillsHtml(row, i, total) {
 async function obEnsureParties() {
   if (OPENING.parties) return;
   try {
-    var reply = await api('crmParties');
+    var reply = await crmPartiesAll(api);
     OPENING.parties = (reply && reply.parties) || [];
   } catch (failure) {
     if (typeof cbQuiet === 'function') cbQuiet('opening:parties', failure);
