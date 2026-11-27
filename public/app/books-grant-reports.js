@@ -100,20 +100,26 @@
     grantKit.viewState.yeRead = !!after; /* JET: which days the Day book was read for, so a change of the Year end filter knows whether to read again */
     if (after) return after;
     if (!grantKit.viewState.day) return periodQuery(report, period);
-    return dayQuery(report, grantKit.viewState.day);
+    return dayQuery(report, grantKit.viewState.day, period);
   }
   /** no day typed: the read is for the period (as at its end for tb, bs and dues; from – to for the p&l and the day book) */
   function periodQuery(report, period) {
     if (!period || !period.from || !report.day) return {};
     if (report.day === 'asOf') return { asOf: period.to }; /* tb, bs, dues: as at the end of the period */
-    if (report.day === 'on') return { on: period.to }; /* the return: the period that holds the end of the period asked */
+    if (report.day === 'on') return { on: period.kind === 'year' ? period.to : dayHeld(period.to) }; /* the return: the period that holds the end of the period asked */
     return { from: period.from, to: period.to }; /* p&l, day book: for the period */
   }
-  /** a day typed: that one day, in the shape the read takes */
-  function dayQuery(report, day) {
+  /** FW2-01: the return reads the period that holds the day it is asked, and the server ignores a day still to come (AT-03: a year's end still to come is no pick, so a year keeps the server's own default); a quarter or month that has begun but not ended (the quarter we are in) is asked at its last day that has happened */
+  function dayHeld(end) {
+    var today = new Date().toISOString().slice(0, 10);
+    return end > today ? today : end;
+  }
+  /** a day typed: that one day, in the shape the read takes. FW2-02: on the P&L (a range) a day typed inside the period in force ends the period there: Oct – 15 Nov, never the year to date beside a control that says the quarter */
+  function dayQuery(report, day, period) {
     if (report.day === 'both') return { from: day, to: day };
     var query = {};
     query[report.day] = day;
+    if (report.day === 'to' && period && period.from && period.from <= day && day <= period.to) query.from = period.from;
     return query;
   }
   /** when and by whom an entry was posted (the server's recorded_at, shown in the shop day) */
