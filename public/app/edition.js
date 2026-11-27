@@ -102,14 +102,14 @@
   /** UX-221: what this seat may open, as the api's /me said it (seat: { owner, money, lead, entries }, the api's lib/seat-abilities), kept on this device so the NEXT first paint is already right. null while unknown, which hides nothing */
   var SEAT_KEY = 'cb_seat';
   function seatNow() {
-    try { return JSON.parse(root.localStorage.getItem(SEAT_KEY) || 'null'); } catch (_) { return null; }
+    try { return JSON.parse(root.localStorage.getItem(SEAT_KEY) || 'null'); } catch (failure) { if (typeof root.cbQuiet === 'function') root.cbQuiet('edition: no remembered seat, the first paint shows everything', failure); return null; }
   }
   /** the answer /me just gave (avatar.js hands it over): kept; when it changes what was drawn, the page is drawn once more (a person we had no answer for yet, unless the answer is "everything") */
   function seatNote(seat) {
     if (!seat || typeof seat !== 'object') return;
     var was = JSON.stringify(seatNow()), now = JSON.stringify(seat);
     if (was === now) return;
-    try { root.localStorage.setItem(SEAT_KEY, now); } catch (_) { return; }
+    try { root.localStorage.setItem(SEAT_KEY, now); } catch (failure) { if (typeof root.cbQuiet === 'function') root.cbQuiet('edition: seat not remembered, the next paint asks again', failure); return; }
     if (was !== 'null' || seat.owner !== true || seat.money !== true || seat.entries) root.setTimeout(function () { if (root.CBAvatar && root.CBAvatar.redraw) root.CBAvatar.redraw(); else root.location.reload(); }, 0);
   }
   /** is this entry the one the seat works from first (the Till for Counter staff) */
