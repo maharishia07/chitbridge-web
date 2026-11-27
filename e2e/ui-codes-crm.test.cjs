@@ -4,7 +4,7 @@
  * ui-codes-crm.test.cjs - the CRM page wears ITS identity codes (UX-137 stamp 6, screens CRM001, CRM004, CRM005, CRM006, CRM008, CRM010, MKT003).
  *
  * OWNS      the proof that crm.html and the seven scripts only it loads (cap-crm, cap-crm-record, -privacy, -calls, -leads, -groups, cap-marketing)
- *           carry the 84 data-cbsid (CRM001-B07 retired by ASSIGN-W3 L6, the CBAssign chip is the control; CRM006-B07 retired by 2664a890, CRM UX l16: the Next band is the one place for Add phone or e-mail) codes of their own screens, that a named control wears ITS code (a swap of two codes fails), that no code is
+ *           carry the 86 data-cbsid (CRM001-B07 retired by ASSIGN-W3 L6, the CBAssign chip is the control; CRM006-B07 retired by 2664a890, CRM UX l16: the Next band is the one place for Add phone or e-mail) codes of their own screens, that a named control wears ITS code (a swap of two codes fails), that no code is
  *           written on two element definitions, and that each code is a live row in the register. A builder tag drawn for many callers
  *           (crmViewOnlyBtn, btn, off, seg, mktPageBtn, crmConsentBtn, the preset chips) is ONE element definition and ONE code.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-crm.test.cjs   (CRM_ID_MUTATE=swap or remove must fail it)
@@ -17,7 +17,7 @@ const mutate = process.env.CRM_ID_MUTATE || '';
 const PUB = path.join(__dirname, '..', 'public');
 const SET = {
   'crm.html': 'CRM001-B01 CRM001-B02',
-  'app/cap-crm.js': 'CRM001-B03 CRM001-B04 CRM001-B05 CRM001-B06 CRM001-I01 CRM001-B08 CRM001-B09 CRM001-B10 CRM001-B11 CRM001-I02 CRM001-I03 CRM001-I04 CRM001-B12 CRM001-S01 CRM001-B13',
+  'app/cap-crm.js': 'CRM001-B03 CRM001-B04 CRM001-B05 CRM001-B06 CRM001-I01 CRM001-I05 CRM001-I06 CRM001-B08 CRM001-B09 CRM001-B10 CRM001-B11 CRM001-I02 CRM001-I03 CRM001-I04 CRM001-B12 CRM001-S01 CRM001-B13',
   'app/cap-crm-record.js': 'CRM006-B01 CRM006-B02 CRM006-B03 CRM006-B04 CRM006-B08 CRM006-B05 CRM006-B06 CRM006-B09 CRM006-B10 CRM006-B11 CRM006-B12 CRM006-B13 CRM006-B14 CRM006-B15 CRM006-B16 CRM006-B17 CRM006-B18 CRM006-C01',
   'app/cap-crm-record-log.js': 'CRM006-B20 CRM006-T01 CRM006-I01 CRM006-I02 CRM006-I03 CRM006-B21',
   'app/cap-crm-timeline.js': 'CRM006-B19',
@@ -63,7 +63,7 @@ for (const f of Object.keys(SET)) {
 }
 const dup = Object.keys(all).filter((c) => all[c] > 1);
 check(dup.length === 0, 'no code is written on two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 84, 'the page has 84 coded element definitions: ' + Object.keys(all).length);
+check(Object.keys(all).length === 86, 'the page has 86 coded element definitions: ' + Object.keys(all).length);
 
 for (const [f, marker, code] of NEAR) {
   const lines = src[f].split('\n'), at = lines.findIndex((l) => l.indexOf('data-cbsid="' + code + '"') >= 0);
