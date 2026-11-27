@@ -100,6 +100,7 @@
       function (failure) {
         panel.why = failure.status === 403 || failure.status === 503 ? failure.message : null;
         if (!panel.why) throw failure;
+        panel.given = []; panel.parents = []; panel.looks = []; /* a refused read leaves no list behind: the empty state below says it was refused, never "nobody" (UX-218) */
       }
     );
   }
@@ -208,7 +209,9 @@
       search: function (g) {
         return [nameOf(g.grantee_entity), g.purpose].join(' ');
       },
-      empty: { title: words('Nobody can see your books'), body: words('Give access to your network parent when an audit needs it.') }
+      empty: panel.why
+        ? { title: words('Only the owner sees this'), body: panel.why }
+        : { title: words('Nobody can see your books'), body: words('Give access to your network parent when an audit needs it.') }
     });
   }
   /** who looked at these books, when and at what, newest first */
@@ -233,7 +236,9 @@
       search: function (look) {
         return [nameOf(look.grantee_entity), whatWords(look.route_pattern), look.outcome].join(' ');
       },
-      empty: { title: words('Nobody has looked yet'), body: words('Each look at your books will be listed here.') }
+      empty: panel.why
+        ? { title: words('Only the owner sees this'), body: panel.why }
+        : { title: words('Nobody has looked yet'), body: words('Each look at your books will be listed here.') }
     });
   }
 
