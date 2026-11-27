@@ -276,7 +276,7 @@
     /* W4-06: a column no row has anything in is not drawn (never 149 blank cells): Year end only when some client has a year to close or a blocker; Held by only when some client is held (the tick bar still assigns) */
     var rows = (practiceKit.practiceState.data && practiceKit.practiceState.data.clients) || [];
     if (!rows.some(function (r) { return r.year_end || r.stage_blocker; })) cols = cols.filter(function (key) { return key !== 'yend'; });
-    if (practiceKit.auditSeat(practiceKit.practiceState.data)) cols = cols.filter(function (key) { return key !== 'bas' && key !== 'unlocked'; }); /* UX-225: a read-only seat does not file a return or lock a month: no Due / Months-not-locked column (the tiles are left out likewise, books-practice-band.js) */
+    if (practiceKit.auditSeat(practiceKit.practiceState.data)) cols = cols.filter(function (key) { return key !== 'bas' && key !== 'unlocked'; }); /* UX-225: a read-only seat does not file a return or lock a month: no Due / Months-not-locked column (the tiles are left out likewise in the band module) */
     if (mixedRoles(rows)) cols.splice(1, 0, 'role'); /* UX-225: the Role column only when the firm holds clients in more than one role; one role is said once in the heading */
     if (holdersOn() && rows.some(function (r) { return Array.isArray(r.holders) && r.holders.length; })) cols.splice(1, 0, 'held'); /* ASSIGN-1 · A1: the holder column appears when the server sent holders (it always does now) */
     return cols.concat(flagsOn() ? ['saved'] : []);
