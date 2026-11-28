@@ -364,7 +364,7 @@
   /** a fresh open: ONE read of the client's periods (the year under review), then the door, so the auditor lands on that year and not on the current one; a failed read still opens the door */
   function landOnDaybook() {
     var door = function () { openDoor('daybook', '', true); };
-    choose().then(door, door);
+    choose().then(function () { if (grantKit.viewState.choices && grantKit.viewState.o.onRead) grantKit.viewState.o.onRead(); door(); }, door); /* the periods read answered 200: the seat the person chose may now be remembered (the Day book read that used to say so is the owner screen's now) */
   }
   function mount(host, options) {
     var fresh = !viewKnown(options.view);

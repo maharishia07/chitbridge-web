@@ -118,10 +118,10 @@ W.run('marks', async (w) => {
     const a = await noScroll(); await shot('00b-phone-labels'); await page.setViewportSize(WIDE); await page.waitForTimeout(300);
     return { ok: words.length === 3 && words.every((x) => /Not checked/.test(x) && /Query/.test(x)) && a.y && a.x, saw: words.join(' // ') + ' · scroll ' + a.y + '/' + a.x };
   });
-  await w.step('A0', 'the auditor · the Day book opens non-empty on its own, on the whole financial year (a9483f9b): no day typed, the period shown, the date in words, the kind in words', async () => {
+  await w.step('A0', 'the auditor · the Day book opens non-empty on its own, on the whole financial year (a9483f9b): no day typed, the period shown, the date in words, the kind in words (the owner screen words the period "1 Apr – 31 Mar 2027" and the day "03 Nov")', async () => {
     const first = (S.daybookQueries[0] || ''), day = '', period = await page.locator('body').innerText(), row = await txt(D.ROWS);
     await shot('00-auditor-daybook-opens-on-its-own');
-    return { ok: first.includes('from=2026-04-01') && first.includes('to=2027-03-31') && day === '' && period.includes('1 Apr 2026 – 31 Mar 2027') && row.includes('Sales') && row.includes('3 Nov 2026') && !row.includes('2026-11') && (await txt(T('mk-count'))).includes('of 3'), saw: first + ' · day "' + day + '" · ' + period + ' · ' + row.slice(0, 80) };
+    return { ok: first.includes('from=2026-04-01') && first.includes('to=2027-03-31') && day === '' && period.includes('1 Apr – 31 Mar 2027') && row.includes('Sales') && /0?3 Nov/.test(row) && !row.includes('2026-11') && (await txt(T('mk-count'))).includes('of 3'), saw: first + ' · day "' + day + '" · ' + period + ' · ' + row.slice(0, 80) };
   });
   await w.step('A2', 'the auditor · ONE press on a row\'s Check: one write (checked), the chip says Checked, the bar says 1 of 3', async () => {
     await page.click(chip(0) + ' button[data-mk="check"]'); await page.waitForSelector(chip(0) + ' [data-class="clear"]', { timeout: 8000 });

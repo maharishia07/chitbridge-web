@@ -24,7 +24,7 @@ function open(role, search, view, parts, periods) {
   const context = vm.createContext(root);
   (parts || PARTS).forEach((f) => vm.runInContext(typeof f === 'string' && f.startsWith('public/') ? read(f) : f.src, context, { filename: f.name || f }));
   const host = { innerHTML: '', querySelectorAll: () => [], isConnected: true };
-  const handle = root.CBBooksGrantView.mount(host, { member: { id: 's1', name: 'Acme Pty', role }, view, call: () => Promise.resolve({}), mountList() {}, stores: [] });
+  const handle = root.CBBooksGrantView.mount(host, { onRead() { root.__onRead = (root.__onRead || 0) + 1; }, member: { id: 's1', name: 'Acme Pty', role }, view, call: () => Promise.resolve({}), mountList() {}, stores: [] });
   return { assigned, replaced, reads, root, handle, host };
 }
 (async () => {
@@ -38,6 +38,11 @@ function open(role, search, view, parts, periods) {
     const r = await landed('auditor', '', '', undefined, { under_review: { fy: '2024-25', from: '2024-07-01', to: '2025-06-30' }, years: [{ fy: '2024-25', from: '2024-07-01', to: '2025-06-30', entries: 5 }] });
     assert.deepStrictEqual(r.reads, ['readPeriods']);
     assert.strictEqual(r.assigned[0], '/accounts.html?acting=s1&role=auditor&view=dues&fy=2024-25&from=2024-07-01&to=2025-06-30#/daybook');
+  });
+  await ok('the seat the person chose is remembered (onRead) once the periods read answered, because no Day book read of this view says so any more; a failed read does not', async () => {
+    const good = await landed('auditor', '', '', undefined, { under_review: { fy: '2024-25', from: '2024-07-01', to: '2025-06-30' }, years: [{ fy: '2024-25', from: '2024-07-01', to: '2025-06-30', entries: 5 }] });
+    assert.strictEqual(good.root.__onRead, 1);
+    const bad = await landed('auditor', '', '', undefined, 'fail'); assert.ok(!bad.root.__onRead);
   });
   await ok('a failed periods read still opens the door (no period carried)', async () => {
     const r = await landed('auditor', '', '', undefined, 'fail');
