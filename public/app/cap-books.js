@@ -2964,7 +2964,7 @@ function bkAttachToEntry(entry) {
 }
 /**
  * CMP066 (cap-flag.js): the owner's own private bookmarks and notes on this business's entries. The call carries the token and NOTHING else: never X-Books-For, so a flag is kept in the caller's own organisation.
- * Only on the business's OWN books (not while acting for a client: the firm's seats are the grant view's); the subject is this business's own id.
+ * Only on the business's OWN books here (bkFlagsIngest); while acting for a client the P&L's Explain uses this same call (bkExplainControl): token only, so the note stays in the firm's own organisation.
  */
 function bkFlagCall(method, path, body) {
   return fetch(CFG.API_BASE + path, { method: method, cache: 'no-store', headers: Object.assign(CBBooksActing.tokenHeader(), { 'Content-Type': 'application/json' }), body: body ? JSON.stringify(body) : undefined }).then(function (r) {
@@ -4743,7 +4743,7 @@ function bkPlGroups(lines, currency, compare, from, to) {
       };
       return (
         bkStRow('bk-grp', esc(head.label), []).replace('</tr>', '<td colspan="' + (compare ? 5 : 2) + '"></td></tr>') +
-        accts.map(function (x) { return bkStRow(compare && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + bkDrillLink(x.code, x.name, 'pl', from, to, 'pl', tx('P&L')) + '</span>', figs(x)); }).join('') +
+        accts.map(function (x) { return bkStRow(compare && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + bkDrillLink(x.code, x.name, 'pl', from, to, 'pl', tx('P&L')) + (compare && x.change_over && bkExplainOn() ? '<span class="bk-ex" data-pl-ex="' + esc(bkExplainId(x.code, to)) + '" data-pl-exl="' + esc(String(x.name || x.code).replace(/[<>]/g, '').slice(0, 56) + ' · ' + String(to).slice(0, 10)) + '"></span>' : '') + '</span>', figs(x)); }).join('') +
         bkStRow('bk-sub' + (compare && head.change_over ? ' bk-over' : ''), esc(tx('Total') + ' ' + head.label), figs(head))
       );
     })
@@ -4826,6 +4826,39 @@ function bkPlSectionTotal(reply, comparison, currency, kind, label) {
     over: compared[kind + '_change_over']
   });
 }
+/**
+ * ONEP-2 PR 3: the auditor's and adviser's "Explain" on a changed P&L line (NET005-P06, kept from the firm's old painter): my own note on the account line for this period
+ * (cap-flag.js kind 'account'; the id is '<code>@<period end day>'). ONLY in a firm seat (CBBooksActing.current() is not the owner); the owner's own seat paints none and makes no flags call.
+ * The write is bkFlagCall's: token only, NO X-Books-For, so the note is kept in the firm's OWN organisation, never the client's. The server decides who may (a refusal hides the chip).
+ */
+function bkExplainOn() {
+  var seat = typeof CBBooksActing !== 'undefined' && CBBooksActing.current ? CBBooksActing.current() : null;
+  return !!seat && seat.role !== 'owner' && typeof CBFlag !== 'undefined' && !!seat.store && !!seat.store.id;
+}
+function bkExplainId(code, to) {
+  return String(code || '').toLowerCase() + '@' + String(to || '').slice(0, 10);
+}
+/** one 'account' control per client, separate from the owner's BK.fl (cap-flag keeps one live control per kind); dropped when the seat changes or leaves */
+function bkExplainControl() {
+  var id = CBBooksActing.current().store.id;
+  if (BK.fa && BK.faFor === id) return BK.fa;
+  if (BK.fa) BK.fa.destroy();
+  BK.faFor = id;
+  BK.fa = CBFlag.use({ call: bkFlagCall, kind: 'account', entity: function () { var c = CBBooksActing.current(); return c ? c.store.id : null; } });
+  if (!BK.faClear && CBBooksActing.onClear) BK.faClear = CBBooksActing.onClear(function () { if (BK.fa) BK.fa.destroy(); BK.fa = null; BK.faFor = null; });
+  return BK.fa;
+}
+/** after the P&L is drawn: ONE read of my explanations of the changed lines, then a chip in each placeholder; a stale paint (the period changed meanwhile) is left alone, a failed or refused read draws none */
+function bkExplainPaint(body) {
+  var slots = [].slice.call(body.querySelectorAll ? body.querySelectorAll('[data-pl-ex]') : []);
+  if (!slots.length || !bkExplainOn()) return;
+  var fa = bkExplainControl(), seat = CBBooksActing.current().store.id;
+  fa.load(slots.map(function (n) { return n.getAttribute('data-pl-ex'); })).then(function () {
+    var now = CBBooksActing.current();
+    if (BK.fa !== fa || !now || now.store.id !== seat || fa.off()) return;
+    slots.forEach(function (n) { if (n.parentNode) n.innerHTML = '<span data-cbsid="NET005-P06">' + fa.chip(n.getAttribute('data-pl-ex'), n.getAttribute('data-pl-exl')) + '</span>'; });
+  });
+}
 /** the P&L's first line: Profit or Loss, its share of income and, beside last year, what it was */
 function bkPlLeadHTML(reply, cmp, c) {
   var profit = Number(reply.profit_minor);
@@ -4881,6 +4914,7 @@ async function bkPL(body) {
       bkPlGroups(by.expense, currency, comparison, reply.from, reply.to) +
       bkPlSectionTotal(reply, comparison, currency, 'expense', tx('Total expenses')) +
       '</tbody></table></div>' + (comparison ? bkOverNote(reply.over_rule, currency) : '');
+    if (comparison) bkExplainPaint(body);
   } catch (e) {
     body.innerHTML = bkRefused(e, 'Profit and loss');
   }

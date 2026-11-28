@@ -8,7 +8,9 @@
  *   A range running past today is headed to the day the server says (period.through) with "year to date" (F-67), never the year to come.
  *   A seat sends the X-Books-For header and writes nothing (one booksPL call, no storage).
  * GUARD (the enforcer): no firm / network view file reads or paints a P&L of its own (names AND content). 4 mutations go red.
- * OPEN (Athi/coordinator): the auditor's "Explain" chips on changed P&L lines (CBFlag, a write) are not on the owner screen; the door drops them for the P&L.
+ * EXPLAIN (PR 3, critic point 1 resolved by widening): the auditor's and adviser's "Explain" chip (CBFlag kind 'account', id '<code>@<period end>', NET005-P06) is on the owner screen for a changed line,
+ *   ONLY in a firm seat; the owner's own seat paints none and makes no flags call. The call is bkFlagCall: token only, never X-Books-For, so the note stays in the firm's own organisation. No new route.
+ *   HAND: one changed line, Rent 6100 (change_over) -> id '6100@2026-06-30'; the unchanged Sales line gets none; the flags read is ONE call with that single id.
  * CARD 14-accounting/profit-and-loss */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
@@ -18,7 +20,7 @@ const ok = (name, fn) => Promise.resolve().then(fn).then(() => { n++; console.lo
 const cap = read('public/app/cap-books.js');
 const grab = (name) => { const m = new RegExp(String.raw`(?:async )?function ${name}\([^)]*\) \{[\s\S]*?\n\}\n`).exec(cap); assert.ok(m, name + ' not found'); return m[0]; };
 const blPl = /var BK_PL = \{[^}]*\};/.exec(cap)[0];
-const FN = ['bkPlSeed', 'bkPlWindow', 'bkPlRangeHTML', 'bkPlQuery', 'bkPlGrossHTML', 'bkPlLeadHTML', 'bkPlHeadHTML', 'bkPlCompareHTML', 'bkPlTotalRow', 'bkPlSectionTotal', 'bkPlGroups', 'bkPL'].map(grab).join('');
+const FN = ['bkExplainOn', 'bkExplainId', 'bkExplainControl', 'bkExplainPaint', 'bkPlSeed', 'bkPlWindow', 'bkPlRangeHTML', 'bkPlQuery', 'bkPlGrossHTML', 'bkPlLeadHTML', 'bkPlHeadHTML', 'bkPlCompareHTML', 'bkPlTotalRow', 'bkPlSectionTotal', 'bkPlGroups', 'bkPL'].map(grab).join('');
 const line = (code, name, amount) => ({ code, name, amount_minor: amount });
 const REPLY = (over) => Object.assign({
   currency: 'AUD', from: '2025-07-01', to: '2026-06-30', period: {}, presets: [], compare: null,
@@ -26,8 +28,8 @@ const REPLY = (over) => Object.assign({
   total_income_minor: 1000000, total_expense_minor: 700000, profit_minor: 300000,
   gross_profit: { sales_minor: 1000000, cost_of_sales_minor: 400000, gross_profit_minor: 600000 }
 }, over || {});
-async function open(seat, search, over, shared) {
-  const calls = [], body = { innerHTML: '' };
+async function open(seat, search, over, shared, extra) {
+  const calls = [], body = { innerHTML: '', querySelectorAll() { return [...this.innerHTML.matchAll(/data-pl-ex="([^"]*)" data-pl-exl="([^"]*)"/g)].map((m) => ({ parentNode: {}, getAttribute: (k) => (k === 'data-pl-ex' ? m[1] : m[2]) })); } };
   const ctx = shared || {
     BK: {}, URLSearchParams, JSON, Date, Number, Math, isNaN, Object, Array, Promise,
     location: { search }, document: { getElementById: () => null },
@@ -36,6 +38,7 @@ async function open(seat, search, over, shared) {
     bkStRow: (cls, label, cells) => '[row ' + label + ' ' + cells.map((c) => c.v).join('/') + ']', bkDrillLink: (code, name) => name,
     bkPeriodBar: (o) => '[bar ' + o.cur + ' ' + o.range + ']'
   };
+  if (!shared && extra) Object.assign(ctx, extra);
   if (!shared) { vm.createContext(ctx); vm.runInContext(blPl + FN + '\n;globalThis.__go = bkPL; globalThis.__pl = BK_PL;', ctx); }
   ctx.location = { search };
   ctx.api = async (name, o) => { calls.push([name, JSON.stringify((o && o.query) || null), seat ? 'X-Books-For' : '-']); return REPLY(over); };
@@ -80,6 +83,64 @@ const YEAR = '?from=2025-07-01&to=2026-06-30', WANT = 'booksPL{"compare":"year",
   await ok('a seat sends its header, makes ONE call and touches no storage (none in scope: a touch would throw)', async () => {
     const aud = await open(true, YEAR);
     assert.deepStrictEqual(aud.calls.map((c) => c[0] + '|' + c[2]), ['booksPL|X-Books-For']);
+  });
+  /* ---- PR 3: the Explain chip ---- */
+  const CMP = { how: 'year', from: '2024-07-01', to: '2025-06-30', total_income_minor: 900000, total_expense_minor: 650000, profit_minor: 250000 };
+  const CHANGED = () => ({ compare: CMP, by_line: { income: [{ label: 'Sales', accounts: [line('4000', 'Sales', 1000000)] }], expense: [{ label: 'Rent', accounts: [Object.assign(line('6100', 'Rent', 300000), { change_over: true, prior_minor: 200000, change_minor: 100000 })] }] } });
+  const flagRig = (role, mode) => {
+    const asked = [], ctl = { _off: false, _ready: false, destroyed: 0 };
+    const extra = {
+      CBBooksActing: { current: () => role ? { role, store: { id: 'S1' } } : null, onClear: () => () => {} },
+      bkFlagCall: () => {},
+      CBFlag: { use: (cfg) => {
+        asked.push(['use', cfg.kind, cfg.call && cfg.call.name, cfg.entity()]);
+        return { load: (ids) => { asked.push(['load', ids.join(',')]); if (mode === 'refused') ctl._off = true; ctl._ready = true; return Promise.resolve(); }, off: () => ctl._off, destroy: () => { ctl.destroyed++; }, chip: (id, label) => '<button data-fl="' + id + '">Explain ' + label + '</button>' };
+      } }
+    };
+    return { asked, extra, ctl };
+  };
+  const paintChips = async (role, mode) => {
+    const rig = flagRig(role, mode), slotHtml = [];
+    const r = await open(!!role, YEAR, CHANGED(), null, Object.assign({}, rig.extra, { BK: {} }));
+    return { rig, r };
+  };
+  await ok('PR3: the table carries ONE Explain slot, on the changed line only, with the id code@period-end (6100@2026-06-30)', async () => {
+    const { r } = await paintChips('auditor');
+    assert.strictEqual((r.html.match(/data-pl-ex=/g) || []).length, 1, r.html);
+    assert.ok(r.html.includes('data-pl-ex="6100@2026-06-30"'), r.html);
+  });
+  await ok('PR3: the auditor AND the adviser ask the flags ONCE: kind account, the client store id, that single id, call bkFlagCall (token only)', async () => {
+    for (const role of ['auditor', 'adviser']) {
+      const { rig } = await paintChips(role);
+      await new Promise((res) => setTimeout(res, 5));
+      assert.deepStrictEqual(rig.asked, [['use', 'account', 'bkFlagCall', 'S1'], ['load', '6100@2026-06-30']], role);
+    }
+  });
+  await ok('PR3: the OWNER (no seat) has no slot, no control, no flags call', async () => {
+    const { rig, r } = await paintChips(null);
+    assert.ok(!r.html.includes('data-pl-ex'), r.html); assert.deepStrictEqual(rig.asked, []);
+  });
+  await ok('PR3: no comparison, no slot and no flags call, even in a seat', async () => {
+    const rig = flagRig('auditor'), r = await open(true, YEAR, { compare: null, by_line: CHANGED().by_line }, null, Object.assign({}, rig.extra, { BK: {} }));
+    assert.ok(!r.html.includes('data-pl-ex') && rig.asked.length === 0);
+  });
+  await ok('PR3: a refused flags read (the server says no) draws no chip and does not throw', async () => {
+    const { rig } = await paintChips('auditor', 'refused');
+    await new Promise((res) => setTimeout(res, 5));
+    assert.ok(rig.asked.some((a) => a[0] === 'load'));
+  });
+  await ok('PR3 GUARD: the Explain write goes through bkFlagCall, which never sends the seat headers (X-Books-For / role)', () => {
+    const call = /function bkFlagCall\([^)]*\) \{[\s\S]*?\n\}\n/.exec(cap)[0];
+    assert.ok(/tokenHeader\(\)/.test(call) && !/X-Books-For|CBBooksActing\.headers|authHeaders|ROLE_HEADER|\.HEADER/.test(call), call);
+    assert.ok(/kind: 'account', entity/.test(cap) && /call: bkFlagCall, kind: 'account'/.test(cap));
+  });
+  await ok('PR3 MUTATION: removing the chip from the group painter goes red', () => {
+    const has = (src) => /data-pl-ex=/.test(src) && /bkExplainOn\(\) \?/.test(src);
+    assert.ok(has(cap)); assert.ok(!has(cap.replace("(compare && x.change_over && bkExplainOn() ?", "(false ?").replace(/data-pl-ex=/g, 'x=')));
+  });
+  await ok('PR3 MUTATION: dropping the seat gate (owner would paint) goes red', () => {
+    const gate = /var seat = typeof CBBooksActing[^\n]*\n  return !!seat && seat\.role !== 'owner'/;
+    assert.ok(gate.test(cap)); assert.ok(!gate.test(cap.replace("!!seat && seat.role !== 'owner' &&", "")));
   });
   /* ---- the guard ---- */
   const dir = path.join(__dirname, '..', 'public/app');
