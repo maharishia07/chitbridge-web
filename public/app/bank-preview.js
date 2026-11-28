@@ -86,7 +86,7 @@
     var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers, { confirmed: !!preview.ticks[ref], tax_invoice: preview.invoice[ref], fee_tax: preview.feeTax[ref], interest_minor: preview.interest[ref] }),
       asked = preview.resolved[ref],
       entry = opts.engine.entry;
-    var proposal = opts.engine.recon.suggest(line, suggestOpts);
+    var proposal = withBillPick_(opts.engine.recon.suggest(line, suggestOpts), preview.billPick[ref]);
     delete preview.taught[ref];
     if (!asked || !entry || !entry.resolve) return holdProposal_(proposal, opts);
     var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, kind: asked.kind, account: asked.account, tax_kind: asked.tax_kind };
@@ -97,7 +97,11 @@
     }
     delete preview.resolveRefusal[ref];
     if (resolved.taught) preview.taught[ref] = resolved.taught;
-    return holdProposal_(resolved, opts);
+    return holdProposal_(withBillPick_(resolved, preview.billPick[ref]), opts);
+  }
+  /** BB-P1-3: the bill the owner said yes to ("same amount as an open bill, use it?") is the bill this payment settles */
+  function withBillPick_(proposal, pick) {
+    return pick && proposal && proposal.event && proposal.event.type === 'payment_made' ? Object.assign({}, proposal, { against: [pick] }) : proposal;
   }
   /** the statement as the engine's project() reads it: its currency is what the FILE or the person said (B5-05), its balances and the rows the reader skipped */
   function statementOf_(opts, parsed) {
@@ -151,6 +155,7 @@
     var type = proposal && proposal.event && proposal.event.type;
     if (!type || proposal.needs) return proposal;
     if (cannotPostHere_(proposal, type, opts)) return Object.assign({}, proposal, { needs: 'not_here' });
+    if (type === 'payment_made' && !(proposal.against && proposal.against.length)) return Object.assign({}, proposal, { needs: 'which_account' }); /* BB-P1-3: a party alone settles no bill, so it is not ready until the owner says which account the money was for (a payment against an open bill stays ready) */
     if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return Object.assign({}, proposal, { needs: 'tax_kind' });
     return proposal;
   }
@@ -199,11 +204,13 @@
   }
   /** the line as the adapter takes it: the item with what the owner ticked, typed and picked for it */
   function itemForPost_(preview, item) {
-    return Object.assign({}, item, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] });
+    var billed = preview.billPick[item.key] ? { against: [preview.billPick[item.key]] } : {}; /* BB-P1-3: the open bill the owner said yes to */
+    return Object.assign({}, item, billed, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] });
   }
   /** the adapter's reply as the preview keeps it */
   function resultOf_(reply) {
-    return reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
+    if (reply && reply.ok) return { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null };
+    return Object.assign({ ok: false, why: (reply && reply.why) || 'Not added.' }, reply && reply.needs ? { needs: reply.needs, bill: reply.bill || null } : {}); /* needs: the api's own question (which_account | which_bill), not a failure to report */
   }
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
@@ -295,7 +302,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, billPick: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -317,9 +324,15 @@
     projectAgain(opts, preview);
     return { ok: true };
   }
+  /** BB-P1-3: the party a money-out line already has stays with the account the owner picks for it (the entry then keeps both); a transfer or other "what is this" answer drops it */
+  function partyKept_(item, key, given) {
+    var party = item.party;
+    if (!party || given.kind || !(item.line && item.line.debit_minor > 0) || party.kind === 'customer') return {};
+    return { party: party.status === 'existing' ? party : { status: 'new', name: party.name, kind: party.kind, id: 'new:' + key } };
+  }
   /** the answers the owner gave for a line, as resolve() takes them: the party (new or existing), or an account from the chart (+ the tax kind on money out); or the words for what is missing */
   function answersOf(item, key, given) {
-    if (given && (given.kind || given.account)) return { answers: { kind: given.kind || undefined, account: given.account || undefined, tax_kind: given.tax_kind || undefined } }; /* kind = an id of CBBankEntry.whatIsThis (transfer, card_settlement, tax_payment ...) */
+    if (given && (given.kind || given.account)) return { answers: Object.assign({ kind: given.kind || undefined, account: given.account || undefined, tax_kind: given.tax_kind || undefined }, partyKept_(item, key, given)) }; /* kind = an id of CBBankEntry.whatIsThis (transfer, card_settlement, tax_payment ...) */
     if (given) return { why: 'Pick an account from the list first.' };
     if (!item.party) return { why: 'Say who this is first.' };
     var party = item.party.status === 'existing' ? item.party : { status: 'new', name: item.party.name, kind: item.party.kind, id: 'new:' + key };
@@ -336,6 +349,7 @@
     })[0];
     var read = item ? answersOf(item, key, given) : { why: 'This line is not on the statement.' };
     delete preview.resolveRefusal[key];
+    if (preview.results[key] && preview.results[key].needs) delete preview.results[key]; /* the api asked a question of this line (nothing was posted): the new answer lets it be tried again */
     if (read.answers) {
       preview.resolved[key] = read.answers;
       projectAgain(opts, preview);
@@ -424,7 +438,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, moved: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, billPick: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), monthMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
@@ -444,6 +458,17 @@
       },
       resolveLine: function (key, given) {
         return resolveLine(opts, preview, key, given);
+      },
+      /** BB-P1-3: the api said one open bill of this party is for exactly this amount; the owner says yes (the line settles THAT bill, posted on the next Add, never silently) or no (the line asks which account) */
+      useBill: function (key, yes) {
+        var asked = preview.results[key];
+        if (!asked || asked.needs !== 'which_bill' || !asked.bill) return { ok: false, why: 'This line is not asking about a bill.' };
+        if (yes) {
+          preview.billPick[key] = { against_ref: asked.bill.ref, amount_minor: asked.bill.open_minor };
+          delete preview.results[key];
+          projectAgain(opts, preview);
+        } else preview.results[key] = { ok: false, why: 'Which account is this for?', needs: 'which_account', bill: null };
+        return { ok: true };
       },
       answer: function (name, value) {
         preview.answers[name] = value;

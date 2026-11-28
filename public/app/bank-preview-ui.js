@@ -8,7 +8,7 @@
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  * CONTROLS  BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B07 use this party · BKS017-B08 use this account (and use it for the similar lines, same words same direction, on press) · BKS017-B09 yes, this is right
  *           BKS017-B10/B11 tax invoice held / not held · BKS017-B12 same payment · BKS017-B13 it is new · BKS017-B15 use this tax · BKS017-B18 add a line the sheet cannot finish as its own entry · BKS017-B19 what this line is (one step) · BKS017-S10 which account that answer names · BKS017-I02 new party name · BKS017-S04 new party kind
- *           BKS017-S11 which loan a repayment pays · BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
+ *           BKS017-B33 yes, settle the bill the api found · BKS017-B34 no, pick an account · BKS017-S11 which loan a repayment pays · BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
  * ⭐ Written for pages with no inline script (the demo's CSP): everything is data-act on a button, one delegated listener on the host.
  */
 (function (root) {
@@ -147,6 +147,8 @@
       meant: function (key, target) { return cfg.controller().editParty(key, { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') }); },
       resolve: function (key) { return cfg.controller().resolveLine(key); },
       useacct: useAccount,
+      billuse: function (key) { return cfg.controller().useBill(key, true); },
+      billno: function (key) { return cfg.controller().useBill(key, false); },
       similar: function (key) { return useSimilar(cfg, offers, key); },
       taxuse: useTax,
       interest: function (key) { return useInterest(cfg, chosenFor, key); },
