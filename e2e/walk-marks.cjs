@@ -101,8 +101,10 @@ W.run('marks', async (w) => {
   await w.step('L1', 'the auditor lands on the Day book: Open books shows it with no extra press', async () => {
     await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
     await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
-    const on = await page.getAttribute(T('bv-tab-daybook'), 'aria-pressed'), tb = await page.getAttribute(T('bv-tab-tb'), 'aria-pressed');
-    return { ok: on === 'true' && tb === 'false', saw: 'Day book pressed ' + on + ' · trial balance pressed ' + tb };
+    /* ONEP-2 (web #814-#819): the trial balance is no tab of this view any more but a DOOR (bv-tb-open) to the owner's screen, so it has no aria-pressed at all.
+       Same fact asserted: the Day book is the pressed screen and the trial balance is not shown (its door is unpressed and nothing left network.html for accounts.html). */
+    const on = await page.getAttribute(T('bv-tab-daybook'), 'aria-pressed'), tb = await page.getAttribute(T('bv-tb-open'), 'aria-pressed'), stayed = page.url().indexOf('/network.html') >= 0;
+    return { ok: on === 'true' && tb === null && stayed, saw: 'Day book pressed ' + on + ' · trial balance door pressed ' + tb + ' (a door has none) · still on ' + page.url().replace(base, '') };
   });
   await openDaybook();
   await w.step('A1', 'the auditor · Day book: a chip on each entry and "Checked 0 of 3 entries this period"', async () => {

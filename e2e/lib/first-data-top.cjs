@@ -12,6 +12,8 @@ const fs = require('fs'), path = require('path');
 const TARGET = { wide: 0.20, narrow: 0.30 };
 const SLACK_PX = 2;
 const VIEWS = ['tb', 'pl', 'bs', 'daybook', 'dues', 'periods'];
+/* ONEP-2 (web #814-#819): the trial balance, P&L and balance sheet are DOORS of the firm view (bv-tb-open ...; "_tb" ... on the phone select): a press leaves the page for the owner's screen, so they are not views of THIS page and are not measured here (a walk measures them on the owner's screen) */
+const DOORS = ['tb', 'pl', 'bs'];
 function overrides() { try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'first-data-ceilings.json'), 'utf8')).ceilings || {}; } catch (_) { return {}; } }
 /** one measurement of the open view, in the page: the first visible data row (or the empty state) and the sideways overflow */
 const measure = () => document && (() => {
@@ -29,6 +31,7 @@ async function firstDataTop(page, o) {
     await page.setViewportSize(vp); await page.waitForTimeout(300);
     const narrow = vp.width < 500;
     for (const view of VIEWS) {
+      if (DOORS.includes(view)) continue;
       const pick = narrow && (await has(T('bv-tab-select'))); /* a phone holds the six screens as ONE library select (header line); a laptop as buttons */
       if (!pick && !(await has(T('bv-tab-' + view)))) continue;
       if (pick) await page.selectOption(T('bv-tab-select'), view); else await page.click(T('bv-tab-' + view));
