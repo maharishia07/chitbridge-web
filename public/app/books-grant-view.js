@@ -361,13 +361,18 @@
   function openedState(host, options, fresh) {
     return { host: host, o: options, report: fresh ? homeOf(options) : options.view, day: '', answer: null, why: null, period: options.period || null, range: null, choices: undefined };
   }
+  /** a fresh open: ONE read of the client's periods (the year under review), then the door, so the auditor lands on that year and not on the current one; a failed read still opens the door */
+  function landOnDaybook() {
+    var door = function () { openDoor('daybook', '', true); };
+    choose().then(door, door);
+  }
   function mount(host, options) {
     var fresh = !viewKnown(options.view);
     grantKit.viewState = openedState(host, options, fresh);
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
     stopForgetting = root.CBBooksActing.onClear(forget);
-    if (fresh) openDoor('daybook', '', true); /* a client opens on the owner's Day book: the door. The way back carries view=<the first read>, so it is never opened twice */
+    if (fresh) landOnDaybook(); /* a client opens on the owner's Day book: the door. The way back carries view=<the first read>, so it is never opened twice */
     else Promise.resolve(reload()).then(focusHeading, focusHeading);
     return {
       /** Back or Forward to another screen of this client's books */

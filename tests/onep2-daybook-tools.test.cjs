@@ -123,6 +123,22 @@ const ids = (w, key, v) => ENTRIES.filter((e) => w.root.__jet().filter((f) => f.
     const own = guardOf('owner'); assert.ok(own('/api/marks', 'POST') && own('/api/chits', 'GET'));
     assert.ok(guardOf(null)('/api/marks', 'POST'));
   });
+  await ok('GUARD: a role that is neither owner, auditor nor adviser (a staff seat) is refused /api/marks and its thread while acting', () => {
+    const g = guardOf('staff'); assert.ok(!g('/api/marks', 'GET') && !g('/api/marks/:id/messages', 'POST'));
+  });
+  await ok('BOOK ORDER: a sort choice for a firm seat, oldest first by date then entry number (the default stays the owner newest first)', () => {
+    const w = world('auditor', ''); vm.runInContext(grab(cap, 'bkDvDateOrder') + ';globalThis.__order = bkDvDateOrder;', w.root);
+    assert.strictEqual(ENTRIES.slice().sort(w.root.__order).map((e) => e.entry_no).join(), 'J-4,J-1,J-2,J-3,J-5,J-6');
+    assert.ok(/key: 'book', label: tx\('Book order \(oldest first\)'\), cmp: bkDvDateOrder/.test(cap) && /bkAudit\(\) \? \[\{ key: 'book'/.test(cap));
+  });
+  await ok('PERIOD DROPDOWN: a firm seat reads GET /periods?marks=1 once and draws each year and month with checked n of m; a pick reads that window', () => {
+    assert.ok(/api\('booksPeriods', \{ query: \{ marks: 1 \} \}\)/.test(cap) && /CBPeriodPick\.control\(choices, bkAuditPeriodOf\(choices, book\.window\), bkPeriodPicked\)/.test(cap));
+    assert.ok(/bkAuditPeriods\(book\);[\s\S]{0,4}BK\.mk\.bar\(/.test(cap) && /if \(BK\.dv && bkAudit\(\)\) bkAuditPeriods\(BK\.dv\)/.test(cap)); /* and again when a mark changes */
+    assert.ok(/period-pick\.js/.test(read('public/accounts.html')));
+  });
+  await ok('BELL WORDS: opened in a firm seat whether or not marking is on (the painter did), forgotten from the address either way', () => {
+    assert.ok(/function bkAskedOpen\(\) \{[\s\S]{0,4}if \(BK\.dvAsked \|\| typeof CBBooksAuditTools === 'undefined' \|\| !CBBooksAuditTools\.firmSeat\(\)\) return;/.test(cap) && /if \(asked\.mark && BK\.mk\) BK\.mk\.load/.test(cap));
+  });
   /* ---- the guard on the source ---- */
   const tools = read('public/app/books-audit-tools.js'), acting = read('public/app/books-acting.js');
   await ok('GUARD: the one seat test is firmSeat (auditor | adviser) and every tool mounts behind bkAudit / bkSinceOn', () => {

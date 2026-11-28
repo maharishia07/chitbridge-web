@@ -18,17 +18,17 @@ of file each thing is; this says what already does the job.
 | 147 | `answer` | `availability.js` | from March; then nearest. |
 | 144 | `item` | `bank-band.js` |  |
 | 131 | `money` | `bill-privacy.js` |  |
-| 122 | `list` | `cap-flag.js` |  |
+| 121 | `list` | `cap-flag.js` |  |
 | 116 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
 | 112 | `entry` | `books-store.js` |  |
 | 112 | `store` | `move-in-proof.js` | store(conn, entity, rec) — |
 | 106 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 102 | `next` | `dayopen.js` | the next thing to do — |
-| 101 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 101 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
+| 100 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 94 | `refusal` | `availability.js` | and is not judged here (stamp keeps its own rule for those). |
 | 90 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
-| 90 | `again` | `signin-ui.js` |  |
+| 89 | `again` | `signin-ui.js` |  |
 | 89 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 89 | `pack` | `books-store-packs.js` |  |
 | 88 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
@@ -52,10 +52,10 @@ of file each thing is; this says what already does the job.
 | 72 | `host` | `chit-sheet.js` |  |
 | 70 | `shape` | `books-practice.js` | a client's practice row: |
 | 70 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
-| 69 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 69 | `open` | `bank-statement-file.js` | The event is written in the same request unless the request is read only (an auditor: |
-| 68 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 68 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
+| 67 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
+| 67 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 67 | `holds` | `assign-register.js` | ONE statement; the switch rides in it: |
 | 67 | `view` | `books-payables.js` | group: |
 | 67 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
@@ -101,7 +101,7 @@ of file each thing is; this says what already does the job.
 | 45 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 45 | `mine` | `crm.js` | `opt.removedOk`: |
 | 44 | `load` | `books-grant-view.js` |  |
-| 42 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
+| 43 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 42 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 42 | `changes` | `books-store.js` |  |
 | 42 | `counter` | `repeat-supply.js` | the customer COUNTERS: |
@@ -118,10 +118,10 @@ of file each thing is; this says what already does the job.
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
 | 39 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
 | 38 | `ensureCap` | `app.html` |  |
-| 38 | `note` | `device-id.js` | note(where, problem) — |
 | 38 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
-| 37 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
+| 37 | `note` | `device-id.js` | note(where, problem) — |
 | 37 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
+| 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 36 | `names` | `shortcuts.js` |  |
 | 35 | `bkMoney` | `cap-books.js` |  |
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |
@@ -151,7 +151,6 @@ of file each thing is; this says what already does the job.
 | 30 | `post` | `books-manual.js` | POST /events — |
 | 30 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 30 | `move` | `rail.js` | Order = the order the server refused in: |
-| 29 | `step` | `cart.js` |  |
 | 29 | `head` | `list-ctl.js` |  |
 | 29 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 29 | `setting` | `books-store.js` | FROM books_setting s LEFT JOIN identities i ON i.identity_id = s.entity_id WHERE s.entity_id = $1`; |
@@ -161,11 +160,11 @@ of file each thing is; this says what already does the job.
 | 29 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 29 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
 | 28 | `card` | `cap-shop.js` |  |
+| 28 | `step` | `cart.js` |  |
 | 28 | `cblog` | `core.js` | const __cblog = []; |
 | 28 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 28 | `chart` | `fx-rates.js` |  |
 | 27 | `figures` | `bank-demo.js` |  |
-| 27 | `check` | `network-app.js` |  |
 | 27 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 27 | `refusalOf` | `bill-number-taken.js` | the refusal thrown as data: |
 | 27 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
@@ -173,6 +172,7 @@ of file each thing is; this says what already does the job.
 | 26 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 26 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 26 | `more` | `lab-kit.js` | idKey: |
+| 26 | `check` | `network-app.js` |  |
 | 26 | `label` | `screen-id.js` |  |
 | 26 | `textOf` | `bank-statement-file.js` | the file's text: |
 | 26 | `payment` | `books-store.js` |  |

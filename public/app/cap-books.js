@@ -2754,6 +2754,10 @@ function bkDvNeeds() {
   };
 }
 /** the Day book's sorts: as recorded · date · entry · kind · party · amount (· evidence when it is on) */
+/** posting date, then entry number, oldest first (the book's own order, as Xero's journal report and MYOB's general journal read) */
+function bkDvDateOrder(a, b) {
+  return String(a.posting_date).localeCompare(String(b.posting_date)) || String(a.entry_no).localeCompare(String(b.entry_no), undefined, { numeric: true });
+}
 function bkDvSorts() {
   var by = bkSortBy;
   return [
@@ -2764,15 +2768,7 @@ function bkDvSorts() {
         return 0;
       }
     },
-    {
-      key: 'date',
-      label: tx('Date'),
-      cmp: function (a, b) {
-        return (
-          String(a.posting_date).localeCompare(String(b.posting_date)) || String(a.entry_no).localeCompare(String(b.entry_no), undefined, { numeric: true })
-        );
-      }
-    },
+    { key: 'date', label: tx('Date'), cmp: bkDvDateOrder },
     {
       key: 'no',
       label: tx('Entry'),
@@ -2795,7 +2791,7 @@ function bkDvSorts() {
       })
     },
     { key: 'amount', label: tx('Amount'), cmp: by(bkDvTotal, true) }
-  ].concat(BK.ev ? [{ key: 'evidence', label: tx('Evidence'), cmp: by(bkDvEvRank, true) }] : [], bkAudit() ? [{ key: 'risk', label: tx('Risk'), cmp: by(bkJetRiskFirst, true) }] : []);
+  ].concat(bkAudit() ? [{ key: 'book', label: tx('Book order (oldest first)'), cmp: bkDvDateOrder }] : [], BK.ev ? [{ key: 'evidence', label: tx('Evidence'), cmp: by(bkDvEvRank, true) }] : [], bkAudit() ? [{ key: 'risk', label: tx('Risk'), cmp: by(bkJetRiskFirst, true) }] : []);
 }
 /** Risk sorts most risks first (a press on the header; the page opens in the owner's order) */
 function bkJetRiskFirst(e) {
@@ -2941,6 +2937,7 @@ function bkMarkControl() {
     BK.mk.onChange(function () {
       if (BK.dv && BK.dv.api) BK.dv.api.refresh();
       if (BK.lt && BK.lt.api) BK.lt.api.refresh();
+      if (BK.dv && bkAudit()) bkAuditPeriods(BK.dv);
       if (BK.dvBar) BK.dvBar.refresh().then(function () { if (BK.dvQ) bkQueriesPaint(); }); /* the bar's count, and All queries when it is open */
     });
   }
@@ -3026,7 +3023,7 @@ async function bkDaybook(body) {
     /* 5-YEAR GROWTH (l16-scale): one page at a time, newest first */
     var rr = await Promise.all([api('booksDaybook', { query: bkDvReadQuery(since, q) }), bkChequesLoad(), bkHealthLoad()]);
     var r = rr[0];
-    BK.dv = { r: r, range: q, period: bkJetPeriod(period), since: since, seen: since ? { to: r.seen_to, total: r.total, since: r.since } : null, todo: bkTodoCounts(BK.duesRaw || null, rr[1], rr[2]) };
+    BK.dv = { r: r, range: q, window: period, period: bkJetPeriod(period), since: since, seen: since ? { to: r.seen_to, total: r.total, since: r.since } : null, todo: bkTodoCounts(BK.duesRaw || null, rr[1], rr[2]) };
     api('booksDues').then(
       function (dues) {
         bkDuesStore(dues); /* the same read names each entry's party (bkPartyLabel) */
@@ -3191,18 +3188,19 @@ function bkAuditPaint() {
   if (!el || !book) return;
   if (!bkAudit()) { el.innerHTML = ''; return; }
   var tools = CBBooksAuditTools;
-  el.innerHTML = '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><div id="bk_marks" data-testid="db-marks"></div><div id="bk_since" data-testid="db-since">' + tools.sinceBar({ on: book.since, seen: book.seen, shown: (book.r.entries || []).length }) + '</div></div>';
+  el.innerHTML = '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><div id="bk_marks" data-testid="db-marks"></div><div id="bk_period_pick" data-testid="db-period-pick"></div><div id="bk_since" data-testid="db-since">' + tools.sinceBar({ on: book.since, seen: book.seen, shown: (book.r.entries || []).length }) + '</div></div>';
   tools.wireSince({ on: book.since, toggle: bkSinceSet, markChecked: bkSinceMarkChecked });
   if (note) note.innerHTML = book.since ? '' : tools.riskNote();
   BK.dvQ = false;
+  bkAuditPeriods(book);
   BK.mk.bar(document.getElementById('bk_marks'), { onFilter: function (on) { BK.dvQ = on; if (on) bkQueriesPaint(); else bkQueriesBack(); } }).then(function (handle) { BK.dvBar = handle; });
 }
 /** the bell's words (&mark= a Query, &note= my note, &nl= its label) arrive in the address of a firm seat: read once, forgotten from the address, and the thread or the note opens */
 function bkAskedOpen() {
-  if (BK.dvAsked || !bkAudit()) return;
+  if (BK.dvAsked || typeof CBBooksAuditTools === 'undefined' || !CBBooksAuditTools.firmSeat()) return; /* the painter opened them whenever the seat was a firm one, marking on or not */
   BK.dvAsked = true;
   var asked = bkAskedTake();
-  if (asked.mark) BK.mk.load([asked.mark]).then(function () { BK.mk.sheet(asked.mark, { title: asked.label || undefined }); });
+  if (asked.mark && BK.mk) BK.mk.load([asked.mark]).then(function () { BK.mk.sheet(asked.mark, { title: asked.label || undefined }); });
   if (asked.note) bkAskedNote(asked.note, asked.label);
 }
 /** the bell's four words, read and forgotten from the address (replace, never a new history entry) */
@@ -3219,6 +3217,27 @@ function bkAskedNote(note, label) {
   if (note === String(seat.store.id)) control = CBFlag.use({ call: bkFlagCall, kind: 'client', entity: function () { return seat.store.id; } });
   if (!control || control.off()) return;
   control.load([note]).then(function () { control.sheet(note, { label: note === String(seat.store.id) ? seat.store.name : label || undefined }); });
+}
+/** the period dropdown a firm reads with: each year and month with its entries, state and "checked n of m" (the server's GET /periods?marks=1, read again when a mark changes) */
+function bkAuditPeriods(book) {
+  var slot = document.getElementById('bk_period_pick');
+  if (!slot || typeof CBPeriodPick === 'undefined') return;
+  api('booksPeriods', { query: { marks: 1 } }).then(
+    function (choices) {
+      if (BK.dv === book) slot.innerHTML = CBPeriodPick.control(choices, bkAuditPeriodOf(choices, book.window), bkPeriodPicked);
+    },
+    function (failure) { bkQuiet('daybook-periods', failure); }
+  );
+}
+/** the window as the dropdown names it: a whole financial year is that year, anything else a range */
+function bkAuditPeriodOf(choices, window) {
+  var year = ((choices && choices.years) || []).filter(function (y) { return String(y.from).slice(0, 10) === window.from && String(y.to).slice(0, 10) === window.to; })[0];
+  return year ? { kind: 'year', fy: year.fy, from: year.from, to: year.to } : { kind: 'custom', from: window.from, to: window.to };
+}
+/** a year or month chosen in the dropdown: the Day book reads that window */
+function bkPeriodPicked(picked) {
+  BK.dbp = bkDbPeriod('custom', { from: picked.from, to: picked.to });
+  bkTab('daybook', true);
 }
 /** All queries: every open query with its age, across periods, in place of the list (the mark control's own rows) */
 function bkQueriesPaint() {

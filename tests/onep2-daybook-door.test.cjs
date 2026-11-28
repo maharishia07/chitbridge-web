@@ -11,14 +11,14 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8').repla
 let n = 0;
 const ok = (name, fn) => Promise.resolve().then(fn).then(() => { n++; console.log('  ok   ' + name); });
 const PARTS = ['public/app/books-audit-tools.js', 'public/app/books-grant-reports.js', 'public/app/books-grant-cells.js', 'public/app/books-grant-marks.js', 'public/app/books-grant-list.js', 'public/app/books-grant-view.js'];
-function open(role, search, view, parts) {
+function open(role, search, view, parts, periods) {
   const assigned = [], reads = [], replaced = [];
   const root = {
     tx: (s) => s, esc: String, shopDay: (d) => 'D' + d, URLSearchParams, Promise, Date, JSON, Math, Object, Array, String, Number, RegExp, Error, setTimeout,
     document: { getElementById: () => null, addEventListener() {} }, history: {}, location: { search, pathname: '/network.html', hash: '', assign: (u) => assigned.push(u), replace: (u) => { assigned.push(u); replaced.push(u); } },
-    CBPeriodPick: { toAddress: () => '', same: () => true, filled: (p) => p }, CBShell: {},
+    CBPeriodPick: { toAddress: (p) => (p && p.fy ? '&fy=' + p.fy : ''), same: () => true, filled: (p) => p }, CBShell: {},
     CBBooksActing: { enter() {}, onClear: () => () => {}, current: () => ({ store: { id: 's1', name: 'Acme Pty' } }), headers: () => ({}), setCurrency() {}, css() {}, banner: () => '', crumbs: () => '', periodSlot: () => '', figure: String, auditAddressOf: (store, tab, carry, r) => '/accounts.html?acting=' + store.id + '&role=' + r + (carry || '') + '#/' + tab },
-    CBBooksGrantApi: { run: (call, key) => { reads.push(key); return Promise.resolve({ periods: [], entries: [] }); } }
+    CBBooksGrantApi: { run: (call, key) => { reads.push(key); return periods === 'fail' ? Promise.reject(new Error('no')) : Promise.resolve(periods || { periods: [], entries: [] }); } }
   };
   root.window = root; root.globalThis = root;
   const context = vm.createContext(root);
@@ -28,30 +28,40 @@ function open(role, search, view, parts) {
   return { assigned, replaced, reads, root, handle, host };
 }
 (async () => {
-  await ok('LANDING: a fresh open goes straight to the owner Day book, auditor and adviser; view=dues rides back so Back never bounces', () => {
-    assert.deepStrictEqual(open('auditor', '', '').assigned, ['/accounts.html?acting=s1&role=auditor&view=dues#/daybook']);
-    assert.deepStrictEqual(open('adviser', '', '').assigned, ['/accounts.html?acting=s1&role=adviser&view=dues#/daybook']);
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
+  const landed = async (...args) => { const r = open(...args); await settle(); return r; };
+  await ok('LANDING: a fresh open goes straight to the owner Day book, auditor and adviser; view=dues rides back so Back never bounces', async () => {
+    assert.deepStrictEqual((await landed('auditor', '', '')).assigned, ['/accounts.html?acting=s1&role=auditor&view=dues#/daybook']);
+    assert.deepStrictEqual((await landed('adviser', '', '')).assigned, ['/accounts.html?acting=s1&role=adviser&view=dues#/daybook']);
   });
-  await ok('BACK: the landing REPLACES the history entry (location.replace), a Months row pushes one (assign)', () => {
-    assert.strictEqual(open('auditor', '', '').replaced.length, 1);
-    const r = open('auditor', '', 'periods'); r.root.CBBooksGrantKit.openMonth('2026-07-01', '2026-07-31'); assert.strictEqual(r.replaced.length, 0);
+  await ok('LANDING PERIOD: ONE GET /periods read first, so the door carries the year under review (fy and its own dates), not the current year', async () => {
+    const r = await landed('auditor', '', '', undefined, { under_review: { fy: '2024-25', from: '2024-07-01', to: '2025-06-30' }, years: [{ fy: '2024-25', from: '2024-07-01', to: '2025-06-30', entries: 5 }] });
+    assert.deepStrictEqual(r.reads, ['readPeriods']);
+    assert.strictEqual(r.assigned[0], '/accounts.html?acting=s1&role=auditor&view=dues&fy=2024-25&from=2024-07-01&to=2025-06-30#/daybook');
   });
-  await ok('an old address (view=daybook) is no known read: it lands on the door too; a return with view=dues opens no door and reads the dues', () => {
-    assert.strictEqual(open('auditor', '', 'daybook').assigned.length, 1);
-    const back = open('auditor', '', 'dues');
-    assert.deepStrictEqual(back.assigned, []);
+  await ok('a failed periods read still opens the door (no period carried)', async () => {
+    const r = await landed('auditor', '', '', undefined, 'fail');
+    assert.deepStrictEqual(r.assigned, ['/accounts.html?acting=s1&role=auditor&view=dues#/daybook']);
   });
-  await ok('the bell words (mark, note, label) ride to the door once; a bad word never leaves', () => {
-    const r = open('auditor', '?open=s1&mark=e2&nl=J-2&note=e5', '');
+  await ok('BACK: the landing REPLACES the history entry (location.replace), a Months row pushes one (assign)', async () => {
+    assert.strictEqual((await landed('auditor', '', '')).replaced.length, 1);
+    const r = await landed('auditor', '', 'periods'); r.root.CBBooksGrantKit.openMonth('2026-07-01', '2026-07-31'); assert.strictEqual(r.replaced.length, 0);
+  });
+  await ok('an old address (view=daybook) is no known read: it lands on the door too; a return with view=dues opens no door and reads the dues', async () => {
+    assert.strictEqual((await landed('auditor', '', 'daybook')).assigned.length, 1);
+    assert.deepStrictEqual((await landed('auditor', '', 'dues')).assigned, []);
+  });
+  await ok('the bell words (mark, note, label) ride to the door once; a bad word never leaves', async () => {
+    const r = await landed('auditor', '?open=s1&mark=e2&nl=J-2&note=e5', '');
     assert.ok(/&mark=e2/.test(r.assigned[0]) && /&note=e5/.test(r.assigned[0]) && /&nl=J-2/.test(r.assigned[0]), r.assigned[0]);
   });
-  await ok('a Months row opens the door on THAT month (from and to), not the year', () => {
-    const r = open('auditor', '', 'periods');
+  await ok('a Months row opens the door on THAT month (from and to), not the year', async () => {
+    const r = await landed('auditor', '', 'periods');
     r.root.CBBooksGrantKit.openMonth('2026-07-01', '2026-07-31');
     assert.ok(/&from=2026-07-01&to=2026-07-31#\/daybook$/.test(r.assigned[0]) && !/fy=/.test(r.assigned[0]), r.assigned[0]);
   });
-  await ok('the firm view reads dues, months and the tax return; the Day book is a tab that is a door', () => {
-    const r = open('auditor', '', 'dues');
+  await ok('the firm view reads dues, months and the tax return; the Day book is a tab that is a door', async () => {
+    const r = await landed('auditor', '', 'dues');
     assert.strictEqual(r.root.CBBooksGrantKit.REPORTS.map((x) => x.k).join(), 'dues,periods,bas');
   });
   /* ---- the guard ---- */
@@ -81,9 +91,9 @@ function open(role, search, view, parts) {
     assert.ok(offenders(mutate('books-grant-view.js', (s) => s + "\n var q = { since: 'mine' };")).length > 0);
     assert.ok(offenders(mutate('books-grant-list.js', (s) => s + '\n root.CBBooksGrantFilters.filtersFor()')).length > 0);
   });
-  await ok('MUTATION 4: dropping the landing door (fresh open reads the view again) is caught', () => {
-    const src = real['books-grant-view.js'].replace("if (fresh) openDoor('daybook', '', true);", 'if (false) openDoor(1);');
-    const r = open('auditor', '', '', PARTS.map((f) => f.endsWith('view.js') ? { src, name: f } : f));
+  await ok('MUTATION 4: dropping the landing door (fresh open reads the view again) is caught', async () => {
+    const src = real['books-grant-view.js'].replace("if (fresh) landOnDaybook();", 'if (false) landOnDaybook();');
+    const r = open('auditor', '', '', PARTS.map((f) => f.endsWith('view.js') ? { src, name: f } : f)); await settle();
     assert.deepStrictEqual(r.assigned, []);
   });
   await ok('MUTATION 5: wirePainted joined to the markup (the bug #819 left) is caught by the statement-shape guard', () => {
