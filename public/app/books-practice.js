@@ -520,16 +520,16 @@
   /** how many clients the firm has: the server's total (a number at least the rows in hand), else the rows */
   function clientCount(data) { var rows = data.clients.length, total = data && data.total; return typeof total === 'number' && isFinite(total) && total >= rows ? total : rows; }
   function emptyFirm(answer) { return !!answer && !!answer.clients && !answer.clients.length && (meSays === true || (meSays === undefined && hintRaw() === '1')); }
+  /** ⭐ one read path, roles restrict: a staff seat (CBBooksGrantApi.readsClients: the api's own seat answer) holds no client and the api refuses it this read, so it is not asked: the shop Home, no refused call. false = this beat asks nothing (that seat; or /me has not answered yet: wait a beat, the hold ceiling still releases Home) */
+  function beatAsks(tokenNow) {
+    var asks = root.CBBooksGrantApi && root.CBBooksGrantApi.readsClients ? root.CBBooksGrantApi.readsClients() : true;
+    if (asks === false && practiceKit.practiceState.token !== tokenNow) { practiceKit.practiceState.token = tokenNow; practiceKit.practiceState.data = null; hint(false); settle(); }
+    return asks === true;
+  }
   function tick() {
     var tokenNow = token();
     if (!tokenNow) return;
-    /* ⭐ one read path, roles restrict: a staff seat (CBBooksGrantApi.readsClients) holds no client and the api refuses it this read, so it is not asked: the shop Home, no refused call. null = /me has not answered: wait a beat (the hold ceiling still releases Home). */
-    var asks = root.CBBooksGrantApi && root.CBBooksGrantApi.readsClients ? root.CBBooksGrantApi.readsClients() : true;
-    if (asks === null) return;
-    if (asks === false) {
-      if (practiceKit.practiceState.token !== tokenNow) { practiceKit.practiceState.token = tokenNow; practiceKit.practiceState.data = null; hint(false); settle(); }
-      return;
-    }
+    if (!beatAsks(tokenNow)) return; /* one read path, roles restrict (below) */
     if (practiceKit.practiceState.token !== tokenNow) {
       practiceKit.practiceState.token = tokenNow;
       practiceKit.practiceState.data = null;

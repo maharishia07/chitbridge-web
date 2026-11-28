@@ -80,7 +80,7 @@ const firmCalls = (p) => p.calls.filter((c) => /^\/api\/books-grants/.test(c.p))
   check((await held(staff)).length === 0, 'network.html: heldSplit asks nothing for the staff seat (no GET /api/books-grants)');
   check((await held(owner)).length === 1, 'network.html: heldSplit still asks for the owner');
   const fin = app('cap-finance.js'), emp = app('cap-employees.js');
-  const finGate = fin.indexOf('CBAvatar.seatKnown'), finRead = fin.indexOf('await finDuesRead()');
+  const finGate = fin.indexOf('await finSeatGate()'), finRead = fin.indexOf("await api('booksDues'");
   check(finGate > 0 && finGate < finRead, 'finance.html: the seat answer comes before dues?finance=1 (no refused call, the worded state instead)');
   const empGate = emp.indexOf('CBAvatar.seatKnown'), empRead = emp.indexOf('CBAssign.holds()');
   check(empGate > 0 && empGate < empRead, 'employees.html: the seat answer comes before chits/holds (no refused call, no column)');
