@@ -20,6 +20,6 @@ const auditor = menuFor('auditor');
 assert(auditor.includes('gstclose'), 'the auditor can open the tax return tab');
 assert(auditor.includes('bank') && auditor.includes('lock'), 'the auditor keeps Bank and Month lock');
 ['yearclose', 'assets', 'todo', 'daybook'].forEach((tab) => assert(!auditor.includes(tab), 'the auditor is not given ' + tab));
-assert(menuFor('adviser').includes('gstclose') === false, 'the adviser menu is unchanged (no tax close tab)');
+assert(menuFor('adviser').includes('gstclose'), 'ONEP-1: the adviser reads the return on the owner screen too (the close form stays with the owner)');
 assert.strictEqual(menuFor('owner').length, 7, 'the owner is never cut');
 console.log('ok aud-f73-auditor-tax-return');

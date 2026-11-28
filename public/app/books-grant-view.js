@@ -195,27 +195,34 @@
   function phone() {
     return typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 700px)').matches;
   }
-  /** RW3-16: the return tab is named by the CLIENT's own pack. network.html loads no pack registry, so the word comes from the server: GET /periods answers `return_name` (BAS · VAT return) from the audited shop's pack, read before the first paint; Tax return only where it names none */
-  function labelOf(r) {
-    var own = r.k === 'bas' && grantKit.viewState.choices && grantKit.viewState.choices.return_name;
-    return own || r.label;
+  /** ONEP-1: the client's tax return is the OWNER's screen (accounts.html, tab gstclose), opened in this seat: this view fetches no return of its own. The word is the client's pack's (GET /periods return_name), the neutral Tax return when it names none */
+  function returnWord() {
+    return (grantKit.viewState.choices && grantKit.viewState.choices.return_name) || 'Tax return';
+  }
+  function returnButton() {
+    return !grantKit.viewState.why ? '<button data-cbsid="NET005-B12" type="button" class="act quiet" id="bv_return" data-testid="bv-return-open">' + esc(words(returnWord())) + '</button>' : '';
+  }
+  function openReturn() {
+    var report = grantKit.viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (grantKit.viewState.period ? root.CBPeriodPick.toAddress(grantKit.viewState.period) : ''); /* the screen and the period ride to the owner's return and back */
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'gstclose', carry, isAdviser() ? 'adviser' : 'auditor'));
   }
   function tabs() {
     if (phone()) return '';
     var all = grantKit.REPORTS.map(function (r) {
-      return { k: r.k, label: labelOf(r) };
+      return { k: r.k, label: r.label };
     });
     if (isAdviser()) all.push({ k: grantKit.ACTIONS, label: 'Actions' });
     return all.map(function (r) {
       return (
         '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (grantKit.viewState.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (grantKit.viewState.report === r.k) + '">' + esc(words(r.label)) + '</button>'
       );
-    }).join('') + prepareButton() + bankButton();
+    }).join('') + returnButton() + prepareButton() + bankButton();
   }
   /** the phone's screen pick: the library Select (ui-select.js, as period-pick.js uses) with the same screens as the buttons, and the Bank / Prepare ways as its last lines; the address follows the pick (onView) */
   function tabSelect() {
     if (!phone() || grantKit.viewState.why || !root.ui || typeof root.ui.select !== 'function') return '';
-    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(labelOf(r)) }; });
+    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(r.label) }; });
+    options.push({ value: '_return', label: words(returnWord()) });
     if (isAdviser()) options.push({ value: grantKit.ACTIONS, label: words('Actions') }, { value: '_prepare', label: words('Prepare a journal') });
     else options.push({ value: '_bank', label: words('Bank') });
     return '<span class="bv-tabsel" data-testid="bv-tabsel">' + root.ui.select({
@@ -223,6 +230,7 @@
       onChange: function (value) {
         if (value === '_prepare') return openPrepare();
         if (value === '_bank') return openBank();
+        if (value === '_return') return openReturn();
         grantKit.viewState.report = value;
         tell();
         reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
@@ -258,7 +266,7 @@
   function screenName() {
     if (onActions()) return words('Queues');
     var r = grantKit.REPORTS.filter(function (x) { return x.k === grantKit.viewState.report; })[0];
-    return r ? words(labelOf(r)) : '';
+    return r ? words(r.label) : '';
   }
   /** l16 R4-2b: a screen of the client's books is a history entry: the page is told (onView) so Back and Forward can restore it */
   function tell() {
@@ -305,6 +313,7 @@
     fillPeriodSlot(report);
     if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
     if ($('bv_bank')) $('bv_bank').onclick = openBank;
+    if ($('bv_return')) $('bv_return').onclick = openReturn;
     wireTabButtons();
     grantKit.wireBankTbLine();
     grantKit.wireSince();

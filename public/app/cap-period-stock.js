@@ -129,6 +129,7 @@ function peAssetAsk(body, paidBox) {
 /** ACC-410: the owner's VAT period and Emirate are kept as the shop's setup answers (PUT country-setup particulars, the one home: asked.period · asked.region), so the return reads them for the owner, the adviser and the auditor alike.
  *  `stagger` is the pack's stagger key ('monthly' maps to the key that is monthly); '' leaves it unchanged. → the reloaded return, or null when the save was refused (not the owner) */
 async function peSetupKeep(returnAnswer, stagger, emirate) {
+  if (!peOwner()) return null; /* ONEP-1: a seat reading the owner's return never writes the shop's setup (a firm's device picks are not the client's answers) */
   const table = (returnAnswer && returnAnswer.staggers) || {},
     key = Object.keys(table).find((item) => item === String(stagger) || (stagger === 'monthly' && table[item].monthly)),
     particulars = {};
