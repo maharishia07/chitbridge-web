@@ -3024,10 +3024,9 @@ async function bkDaybook(body) {
     /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
     /* the Day book does NOT wait for /dues (growth5y: it reads every party's balance and was the slow one): the list paints from its own read; the names and the overdue count arrive after */
     /* 5-YEAR GROWTH (l16-scale): one page at a time, newest first */
-    var readQuery = bkDvReadQuery(since, q);
-    var rr = await Promise.all([api('booksDaybook', { query: readQuery }), bkChequesLoad(), bkHealthLoad()]);
+    var rr = await Promise.all([api('booksDaybook', { query: bkDvReadQuery(since, q) }), bkChequesLoad(), bkHealthLoad()]);
     var r = rr[0];
-    BK.dv = { r: r, range: q, period: period, since: since, seen: since ? { to: r.seen_to, total: r.total, since: r.since } : null, todo: bkTodoCounts(BK.duesRaw || null, rr[1], rr[2]) };
+    BK.dv = { r: r, range: q, period: bkJetPeriod(period), since: since, seen: since ? { to: r.seen_to, total: r.total, since: r.since } : null, todo: bkTodoCounts(BK.duesRaw || null, rr[1], rr[2]) };
     api('booksDues').then(
       function (dues) {
         bkDuesStore(dues); /* the same read names each entry's party (bkPartyLabel) */
@@ -3105,9 +3104,15 @@ function bkDbSeed() {
 /** JET (ASA 560) Year end "Dated after it" is a different read: the days after the period (period.to + 1 day for a year), through the same route and pager */
 function bkJetRange(period) {
   var chosen = typeof CBBooksAuditTools !== 'undefined' && CBBooksAuditTools.firmSeat() ? bkJetChosen() : {};
-  var after = chosen.ye === 'dated' ? CBBooksGrantFilters.afterRange(period) : null;
+  var after = chosen.ye === 'dated' ? CBBooksGrantFilters.afterRange(bkJetPeriod(period)) : null;
   BK.dvYeRead = !!after;
   return after || period;
+}
+/** the period the JET rules judge against: a window that opens at the financial year's start is that whole year (its end is fixed, not today), else the window itself */
+function bkJetPeriod(window) {
+  if (!window || window.from !== bkFyFrom()) return window;
+  var start = new Date(window.from + 'T00:00:00Z');
+  return { from: window.from, to: new Date(Date.UTC(start.getUTCFullYear() + 1, start.getUTCMonth(), start.getUTCDate() - 1)).toISOString().slice(0, 10) };
 }
 var BK_JET_KEYS = ['mark', 'risk', 'rec', 'time', 'round', 'narr', 'ye', 'madeby'];
 /** the filter choices of this page: the address on the first read, then what the person chose; the address word dbf_by is the Made by filter (the owner's own Person filter keeps its key) */

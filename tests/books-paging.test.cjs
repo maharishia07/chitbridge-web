@@ -49,7 +49,8 @@ console.log('  ok  the pager says how many of how many, and which way');
 /* the source: every Day book read is a page (or one entry by id), every Ledger read a page, and the span prefetch is gone */
 const daybookReads = src.match(/api\('booksDaybook', \{ query: [^)]*\)/g) || [];
 assert(daybookReads.length >= 3, 'the Day book reads are present');
-daybookReads.forEach((read) => assert(/limit: BK_PAGE|entries: id/.test(read), 'a Day book read that is neither a page nor one entry: ' + read));
+daybookReads.forEach((read) => assert(/limit: BK_PAGE|entries: id|bkDvReadQuery\(/.test(read), 'a Day book read that is neither a page nor one entry: ' + read));
+assert(/function bkDvReadQuery[\s\S]*?limit: CBBooksAuditTools\.SINCE_LIMIT[\s\S]*?limit: BK_PAGE/.test(src), 'the one Day book read function carries a limit in both shapes (the since read and the page)');
 assert(/api\('booksLedger', \{ params: \{ account: sel\.code \}, query: Object\.assign\(\{ limit: BK_PAGE/.test(src), 'a Ledger read is a page');
 assert(!/ds\[0\] \|\| bkRange\('lg'\)\.from/.test(src), 'the whole-span Day book read behind a ledger line is gone');
 console.log('  ok  no whole-range read is left in the Day book or the Ledgers');
