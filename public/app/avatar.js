@@ -540,8 +540,12 @@
      own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
   var SHOP_COUNTRY = null,
     SHOP_LEDGER_ON; /* l16 firmhome: /me's ledger_on (true | false); null = /me answered without it; undefined = /me not answered yet. Home asks GET /books/health only when it is not true/false */
+  /** UX-221: what this seat may open is told to edition.js, which keeps it */
+  function noteSeat(entity) {
+    if (root.CBEdition) root.CBEdition.seatNote(entity && entity.seat);
+  }
   function announceShop(entity) {
-    if (root.CBEdition) root.CBEdition.seatNote(entity && entity.seat); /* UX-221: what this seat may open (edition.js keeps it) */
+    noteSeat(entity);
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
     SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
     try {
@@ -1178,11 +1182,15 @@
     return out;
   }
 
+  /** the word for a session's role: Owner, the one outside name for staff (CBRoles), Customer, else the role as given */
+  function roleLabelOf(r) {
+    return r === 'entity' ? 'Owner' : r === 'actor' ? (root.CBRoles ? root.CBRoles.name('staff') : 'Staff') : r === 'customer' ? 'Customer' : r || '';
+  }
   /** A saved session (cb_sess) or the app's SESSION → the `person` the menu wants. Owner = the shop's own session (routes/books.js isOwner). */
   function personOf(s) {
     if (!s || typeof s !== 'object') return null;
     var r = s.role,
-      label = r === 'entity' ? 'Owner' : r === 'actor' ? (root.CBRoles ? root.CBRoles.name('staff') : 'Staff') : r === 'customer' ? 'Customer' : r || '';
+      label = roleLabelOf(r);
     var entity = entityWord(s.entity);
     return { name: s.name || '', role: label + (entity ? ' · ' + entity : ''), entity: entity, owner: r === 'entity', token: s.token || '' };
   }

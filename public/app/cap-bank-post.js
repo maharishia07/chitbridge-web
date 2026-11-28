@@ -215,23 +215,44 @@
     var reply = await deps.api('booksLoanEmi', { params: { ref: item.loanRef }, body: loanEmiBody(item, deps.modeOf) });
     return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
   }
+  /** the answer of a posted line: ok, whether the api saw it before, and the entry it made (the same three reads for every door that replies with an entry) */
+  function postedOf(reply) {
+    return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
+  }
+  /** the line's question when POST /events asked "which bill?" (nothing posted); any other failure is thrown again unchanged */
+  function eventQuestion(failure) {
+    var asked = needsOf(failure);
+    if (!asked || asked.needs !== 'which_bill' || !asked.bill) throw failure;
+    return { ok: false, why: 'Same amount as an open bill. Use it?', needs: 'which_bill', bill: asked.bill, via: 'event' };
+  }
   /** one entry through POST /events; the api (BB-P1-3) asks, with nothing posted, when this supplier has ONE open bill of exactly this amount: the answer is the line's question, never a failure */
   async function postEntry(deps, item, partyId) {
     var reply;
     try {
       reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
     } catch (failure) {
-      var asked = needsOf(failure);
-      if (!asked || asked.needs !== 'which_bill' || !asked.bill) throw failure;
-      return { ok: false, why: 'Same amount as an open bill. Use it?', needs: 'which_bill', bill: asked.bill, via: 'event' };
+      return eventQuestion(failure);
     }
-    return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
+    return postedOf(reply);
+  }
+  /** which question the api's 422 names, from the error code or the body's own key (never the sentence): 'which_bill', 'which_account' or null */
+  function needsNameOf(failure, data) {
+    var code = failure && failure.code;
+    if (code === 'NEEDS_WHICH_BILL' || data.needs === 'which_bill') return 'which_bill';
+    if (code === 'NEEDS_WHICH_ACCOUNT' || data.needs === 'which_account') return 'which_account';
+    return null;
   }
   /** the question the api's 422 asks of a bank line (BB-P1-3): { needs: 'which_account' } or { needs: 'which_bill', bill: { ref, open_minor } }, read from the code and the body's own keys, never the sentence; null for any other refusal */
   function needsOf(failure) {
     var data = (failure && failure.data) || {};
-    var needs = (failure && failure.code === 'NEEDS_WHICH_BILL') || data.needs === 'which_bill' ? 'which_bill' : (failure && failure.code === 'NEEDS_WHICH_ACCOUNT') || data.needs === 'which_account' ? 'which_account' : null;
+    var needs = needsNameOf(failure, data);
     return needs ? { needs: needs, bill: needs === 'which_bill' && data.bill ? data.bill : null } : null;
+  }
+  /** the line's question when POST /payments asked "which bill?" or "which account?" (nothing posted); any other failure is thrown again unchanged */
+  function paymentQuestion(failure) {
+    var asked = needsOf(failure);
+    if (!asked || (asked.needs === 'which_bill' && !asked.bill)) throw failure;
+    return Object.assign({ ok: false, why: asked.needs === 'which_bill' ? 'Same amount as an open bill. Use it?' : 'Which account is this for?' }, asked);
   }
   /** one receipt or payment through POST /payments, the door Dues records through; a bank line the api cannot place asks its question (nothing posted) and is never marked added */
   async function postPayment(deps, item, partyId) {
@@ -239,9 +260,7 @@
     try {
       reply = await deps.api('booksPayRecord', { body: paymentBodyOf(item, partyId, deps.modeOf) });
     } catch (failure) {
-      var asked = needsOf(failure);
-      if (!asked || (asked.needs === 'which_bill' && !asked.bill)) throw failure;
-      return Object.assign({ ok: false, why: asked.needs === 'which_bill' ? 'Same amount as an open bill. Use it?' : 'Which account is this for?' }, asked);
+      return paymentQuestion(failure);
     }
     return { ok: true, duplicate: !!(reply && reply.payment && reply.payment.duplicate), entry_no: (reply && reply.posted && reply.posted.entry_no) || null, posting_date: (reply && reply.posted && reply.posted.posting_date) || null };
   }

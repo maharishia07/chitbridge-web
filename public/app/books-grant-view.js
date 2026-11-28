@@ -223,18 +223,21 @@
     else options.push({ value: '_bank', label: words('Bank') });
     return '<span class="bv-tabsel" data-testid="bv-tabsel">' + root.ui.select({
       mount: 'NET005-U02', label: 'Books', bare: true, id: 'bv_tabsel', testid: 'bv-tab-select', value: grantKit.viewState.report, options: options,
-      onChange: function (value) {
-        if (value === '_prepare') return openPrepare();
-        if (value === '_bank') return openBank();
-        if (value === '_return') return openReturn();
-        if (value === '_tb') return openDoor('tb');
-        if (value === '_pl') return openDoor('pl');
-        if (value === '_bs') return openDoor('bs');
-        grantKit.viewState.report = value;
-        tell();
-        reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
-      }
+      onChange: onTabPick
     }) + '</span>';
+  }
+  /** the way a Select line other than a report opens: Prepare, Bank, the return, or one of the owner's three statements; null for a report */
+  function doorOfPick(value) {
+    var doors = { _prepare: openPrepare, _bank: openBank, _return: openReturn, _tb: function () { return openDoor('tb'); }, _pl: function () { return openDoor('pl'); }, _bs: function () { return openDoor('bs'); } };
+    return Object.prototype.hasOwnProperty.call(doors, value) ? doors[value] : null;
+  }
+  /** the phone Select was changed: a door opens its screen, a report becomes the read, reloads, and the Select keeps focus */
+  function onTabPick(value) {
+    var door = doorOfPick(value);
+    if (door) return door();
+    grantKit.viewState.report = value;
+    tell();
+    reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
   }
   /** W15-71: the auditor's way to the client's Bank (home, kept statements, a month's lines, who matched, the sign-off) and Month lock: the books page in the auditor's seat, read only */
   /** ONEP-2: the trial balance is the OWNER's screen (accounts.html, tab tb) opened in this seat: this view reads no trial balance of its own. The period rides in the address (E10 carry) */
@@ -317,16 +320,16 @@
     wireBand();
     if (grantKit.viewState.why && $('bv_why')) drawWhy($('bv_why'));
     fillPeriodSlot(report);
-    if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
-    if ($('bv_bank')) $('bv_bank').onclick = openBank;
-    if ($('bv_return')) $('bv_return').onclick = openReturn;
-    if ($('bv_tb')) $('bv_tb').onclick = function () { openDoor('tb'); };
-    if ($('bv_pl')) $('bv_pl').onclick = function () { openDoor('pl'); };
-    if ($('bv_bs')) $('bv_bs').onclick = function () { openDoor('bs'); };
+    wireDoorButtons();
     wireTabButtons();
     grantKit.wireSince();
     if (onActions()) grantKit.mountQueues();
     else if (!grantKit.viewState.why) { paintList(report); grantKit.paintMarkBar(report); }
+  }
+  /** the buttons that open another screen (Prepare, Bank, the return, the three statements) are wired when they are drawn */
+  function wireDoorButtons() {
+    var wires = { bv_prepare: openPrepare, bv_bank: openBank, bv_return: openReturn, bv_tb: function () { openDoor('tb'); }, bv_pl: function () { openDoor('pl'); }, bv_bs: function () { openDoor('bs'); } };
+    Object.keys(wires).forEach(function (id) { if ($(id)) $(id).onclick = wires[id]; });
   }
   /** a tab press opens that read and gives the tab focus */
   function wireTabButtons() {

@@ -154,10 +154,15 @@
   function holdProposal_(proposal, opts) {
     var type = proposal && proposal.event && proposal.event.type;
     if (!type || proposal.needs) return proposal;
-    if (cannotPostHere_(proposal, type, opts)) return Object.assign({}, proposal, { needs: 'not_here' });
-    if (type === 'payment_made' && !(proposal.against && proposal.against.length)) return Object.assign({}, proposal, { needs: 'which_account' }); /* BB-P1-3: a party alone settles no bill, so it is not ready until the owner says which account the money was for (a payment against an open bill stays ready) */
-    if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return Object.assign({}, proposal, { needs: 'tax_kind' });
-    return proposal;
+    var held = heldNeedOf_(proposal, type, opts);
+    return held ? Object.assign({}, proposal, { needs: held }) : proposal;
+  }
+  /** the one `needs` code a proposal that is not yet ready gets, in the order the rules ask: not_here, which_account, tax_kind; null when nothing holds it */
+  function heldNeedOf_(proposal, type, opts) {
+    if (cannotPostHere_(proposal, type, opts)) return 'not_here';
+    if (type === 'payment_made' && !(proposal.against && proposal.against.length)) return 'which_account'; /* BB-P1-3: a party alone settles no bill, so it is not ready until the owner says which account the money was for (a payment against an open bill stays ready) */
+    if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return 'tax_kind';
+    return null;
   }
   /** the host cannot post this proposal: its kind is not on the host's list (a taxed receipt is posted since l16-bankmatch-fix: POST /events other_income carries output_tax_minor) */
   function cannotPostHere_(proposal, type, opts) {
@@ -210,7 +215,11 @@
   /** the adapter's reply as the preview keeps it */
   function resultOf_(reply) {
     if (reply && reply.ok) return { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null };
-    return Object.assign({ ok: false, why: (reply && reply.why) || 'Not added.' }, reply && reply.needs ? { needs: reply.needs, bill: reply.bill || null, via: reply.via || null } : {}); /* needs: the api's own question (which_account | which_bill), not a failure to report */
+    return Object.assign({ ok: false, why: (reply && reply.why) || 'Not added.' }, askedOf_(reply));
+  }
+  /** the api's own question carried by a refused reply (which_account | which_bill), not a failure to report; nothing when the reply asks none */
+  function askedOf_(reply) {
+    return reply && reply.needs ? { needs: reply.needs, bill: reply.bill || null, via: reply.via || null } : {};
   }
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
@@ -447,8 +456,7 @@
         return reachOf(preview);
       },
       confirmText: function () {
-        var reach = reachOf(preview);
-        return reach ? confirmWords(reach, opts.amountText) : null;
+        return confirmTextOf_(opts, preview);
       },
       postReady: function (onLine) {
         return postReady(opts, preview, onLine);
@@ -461,35 +469,65 @@
       },
       /** BB-P1-3: the api said one open bill of this party is for exactly this amount; the owner says yes (the line settles THAT bill, posted on the next Add, never silently) or no (the line asks which account) */
       useBill: function (key, yes) {
-        var asked = preview.results[key];
-        if (!asked || asked.needs !== 'which_bill' || !asked.bill) return { ok: false, why: 'This line is not asking about a bill.' };
-        if (yes) {
-          preview.billPick[key] = { against_ref: asked.bill.ref, amount_minor: asked.bill.open_minor };
-          if (asked.via === 'event' && preview.resolved[key]) preview.resolved[key] = { party: preview.resolved[key].party }; /* the line was an expense with this supplier: it is now the payment of that bill, the party alone */
-          delete preview.results[key];
-          projectAgain(opts, preview);
-        } else if (asked.via === 'event') {
-          preview.notBill[key] = true; /* "no, it is a new expense": the next Add sends not_this_bill and the api posts it, noting it */
-          delete preview.results[key];
-        } else preview.results[key] = { ok: false, why: 'Which account is this for?', needs: 'which_account', bill: null };
-        return { ok: true };
+        return useBill(opts, preview, key, yes);
       },
       answer: function (name, value) {
-        preview.answers[name] = value;
-        if (preview.parsed) projectAgain(opts, preview);
+        answerOne_(opts, preview, name, value);
       },
       /** answer ONE line only: its key (or '' for every line); what is ready, the press and its words then reach that line alone */
       only: function (key) {
-        if (key !== undefined) preview.only = key || '';
-        return preview.only || '';
+        return onlyLine_(preview, key);
       },
       readyCount: function () {
         return readyItems(preview).length;
       },
       view: function () {
-        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, taught: preview.taught, refusal: preview.refusal, check: preview.check || null };
+        return viewOf_(preview);
       }
     });
+  }
+  /** the words of the confirm popup for what a press would reach; null when it reaches nothing */
+  function confirmTextOf_(opts, preview) {
+    var reach = reachOf(preview);
+    return reach ? confirmWords(reach, opts.amountText) : null;
+  }
+  /** keep one answer to a question the sheet asks, and work the lines out again when a statement is loaded */
+  function answerOne_(opts, preview, name, value) {
+    preview.answers[name] = value;
+    if (preview.parsed) projectAgain(opts, preview);
+  }
+  /** the line the owner is answering alone ('' = every line); a given key sets it */
+  function onlyLine_(preview, key) {
+    if (key !== undefined) preview.only = key || '';
+    return preview.only || '';
+  }
+  /** what the sheet draws from the preview: the statement, its projection, the lines, their results and what was taught */
+  function viewOf_(preview) {
+    return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, taught: preview.taught, refusal: preview.refusal, check: preview.check || null };
+  }
+  /** the owner said yes: the line settles THAT bill (the party alone when it was an expense with this supplier) and is worked out again */
+  function billYes_(opts, preview, key, asked) {
+    preview.billPick[key] = { against_ref: asked.bill.ref, amount_minor: asked.bill.open_minor };
+    if (asked.via === 'event' && preview.resolved[key]) preview.resolved[key] = { party: preview.resolved[key].party }; /* the line was an expense with this supplier: it is now the payment of that bill, the party alone */
+    delete preview.results[key];
+    projectAgain(opts, preview);
+  }
+  /** the owner said no: an expense is posted as a new one (not_this_bill, noted by the api); a payment asks which account instead */
+  function billNo_(preview, key, asked) {
+    if (asked.via !== 'event') {
+      preview.results[key] = { ok: false, why: 'Which account is this for?', needs: 'which_account', bill: null };
+      return;
+    }
+    preview.notBill[key] = true; /* "no, it is a new expense": the next Add sends not_this_bill and the api posts it, noting it */
+    delete preview.results[key];
+  }
+  /** BB-P1-3: the answer to the api's "one open bill of this party is for exactly this amount": yes settles THAT bill on the next Add, no is a new expense or asks which account (never silent) */
+  function useBill(opts, preview, key, yes) {
+    var asked = preview.results[key];
+    if (!asked || asked.needs !== 'which_bill' || !asked.bill) return { ok: false, why: 'This line is not asking about a bill.' };
+    if (yes) billYes_(opts, preview, key, asked);
+    else billNo_(preview, key, asked);
+    return { ok: true };
   }
   /**
    * l16-bank-rules (R69): what the PACK's words say a line is, in ONE sentence the owner's sheet and the demo both print: an own-account transfer, tax paid to the tax office, card takings paid in.
