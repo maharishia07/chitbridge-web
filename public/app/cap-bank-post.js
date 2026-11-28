@@ -43,7 +43,14 @@
     }
   }
   /** the keys of each entry kind POST /events reads beside the common ones (books-contract EVENT_BODY is CLOSED: a key it does not list is refused, so nothing else is sent) */
-  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to', 'fee'], tax_payment: [], drawings: ['paid_from'] };
+  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to', 'fee'], tax_payment: [], drawings: ['paid_from'], bank_expense_supplier: ['class', 'paid_from', 'supplier'] };
+  /** BB-P1-3: a bank line paid to a named supplier is ONE entry, the expense and its payment (engines posting.js bank_expense_supplier): the party and the tax split are both kept; the supplier nets to nil */
+  var SUPPLIER_EXPENSE = 'bank_expense_supplier';
+  /** the kind POST /events gets for this line: an expense the owner gave a supplier is a supplier expense (never a customer, never without the party's id); every other kind is itself */
+  function kindOf(event, item, partyId) {
+    if (event.type === SUPPLIER_EXPENSE) return SUPPLIER_EXPENSE;
+    return event.type === 'expense' && partyId && !(item.party && item.party.kind === 'customer') ? SUPPLIER_EXPENSE : event.type;
+  }
   /** money in from / out to a named party goes through the ONE payments door (POST /payments, what Dues records through), never POST /events: direction in | out */
   var PAYMENT_DIRECTION = { payment_received: 'in', payment_made: 'out' };
   /** the engine proposes these for a line with no payee (whatIsThis), but no api door takes them yet (BKS-ACC-4): refused in words here, never posted wrong */
@@ -54,7 +61,7 @@
   function taxKeysOf(event, item) {
     var taxRecord = item.tax;
     if (!taxRecord || !(taxRecord.tax_minor > 0)) return {};
-    if (event.type === 'expense') {
+    if (event.type === 'expense' || event.type === SUPPLIER_EXPENSE) {
       /* the person's word that they hold the tax invoice (the server needs it at the pack's threshold; 'none' sends no tax at all) */
       return taxRecord.invoice_answer === 'held' ? { input_tax_minor: taxRecord.tax_minor, tax_invoice: 'held' } : { input_tax_minor: taxRecord.tax_minor };
     }
@@ -68,11 +75,15 @@
    */
   function bodyOf(item, partyId, modeOf) {
     var event = item.event || {},
-      body = { kind: event.type, date: event.date, amount: event.amount, narration: event.narration, client_ref: item.ref };
+      body = { kind: kindOf(event, item, partyId || namedPartyId(event)), date: event.date, amount: event.amount, narration: event.narration, client_ref: item.ref };
     (KIND_KEYS[event.type] || []).forEach(function (key) {
       if (event[key] != null) body[key] = event[key];
     });
     Object.assign(body, taxKeysOf(event, item));
+    if (body.kind === SUPPLIER_EXPENSE) {
+      body.supplier = partyId || namedPartyId(event); /* the party's id, made first when new */
+      if (item.notThisBill) body.not_this_bill = true; /* the owner said it is a new expense, not the open bill the api found */
+    }
     if (event.type === 'tax_payment') Object.assign(body, { paid_from: 'bank' }); /* the whole figure, the statement account's mode (modeOf below); the api puts it on the pack's one tax head */
     if (item.moveTo) body.if_locked = 'next_open'; /* W15-85: the person chose to post this locked month's line in the next open month; the api adds the "<Month> locked" note (W15-85a, one wording) */
     return modeOf ? modeOf(body) : body;
@@ -100,6 +111,7 @@
   function paymentBodyOf(item, partyId, modeOf) {
     var line = item.line || {}, event = item.event || {};
     var body = { party_id: partyId, direction: PAYMENT_DIRECTION[event.type], amount_minor: lineFigure(line), mode: statementMode(modeOf, event), received_at: event.date || line.date, reference: item.ref, allocate: 'none', client_ref: item.ref };
+    if (body.direction === 'out') body.bank_line = true; /* BB-P1-3: the api refuses a money-out bank line with no bill and no account (422 NEEDS_WHICH_*) instead of leaving it on account; money in is unchanged */
     if (item.against && item.against.length) {
       body.allocations = item.against.map(function (one) { return { against_ref: one.against_ref, amount_minor: one.amount_minor }; }); /* the engine found the open document this line IS: the receipt settles it, nothing is worked out here */
       delete body.allocate;
@@ -142,7 +154,7 @@
     /** a plain entry for a party the books know (or none): the lines POST /events/batch takes; a new party, a payment and a loan instalment keep their own doors, one at a time */
     post.batchable = function (item) {
       var type = item.event && item.event.type;
-      return !ownerRefusal(deps.who) && !refusalOf(type) && type !== 'loan_repaid' && !PAYMENT_DIRECTION[type] && !(item.party && item.party.status === 'new');
+      return !ownerRefusal(deps.who) && !refusalOf(type) && type !== 'loan_repaid' && !PAYMENT_DIRECTION[type] && !(item.party && item.party.status === 'new') && bodyOf(item, item.party && item.party.id, null).kind !== SUPPLIER_EXPENSE; /* a supplier expense keeps its own door, one entry at a time */
     };
     /** the plain-entry lines in ONE call: a reply per line in order (same shape as post), or null when the call cannot be used so the caller posts them one by one (an owner-approval shop answers 409; every line has its client_ref, so a repeat posts nothing twice) */
     post.many = async function (items) {
@@ -203,17 +215,37 @@
     var reply = await deps.api('booksLoanEmi', { params: { ref: item.loanRef }, body: loanEmiBody(item, deps.modeOf) });
     return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
   }
-  /** one entry through POST /events */
+  /** one entry through POST /events; the api (BB-P1-3) asks, with nothing posted, when this supplier has ONE open bill of exactly this amount: the answer is the line's question, never a failure */
   async function postEntry(deps, item, partyId) {
-    var reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
+    var reply;
+    try {
+      reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
+    } catch (failure) {
+      var asked = needsOf(failure);
+      if (!asked || asked.needs !== 'which_bill' || !asked.bill) throw failure;
+      return { ok: false, why: 'Same amount as an open bill. Use it?', needs: 'which_bill', bill: asked.bill, via: 'event' };
+    }
     return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
   }
-  /** one receipt or payment through POST /payments, the door Dues records through */
+  /** the question the api's 422 asks of a bank line (BB-P1-3): { needs: 'which_account' } or { needs: 'which_bill', bill: { ref, open_minor } }, read from the code and the body's own keys, never the sentence; null for any other refusal */
+  function needsOf(failure) {
+    var data = (failure && failure.data) || {};
+    var needs = (failure && failure.code === 'NEEDS_WHICH_BILL') || data.needs === 'which_bill' ? 'which_bill' : (failure && failure.code === 'NEEDS_WHICH_ACCOUNT') || data.needs === 'which_account' ? 'which_account' : null;
+    return needs ? { needs: needs, bill: needs === 'which_bill' && data.bill ? data.bill : null } : null;
+  }
+  /** one receipt or payment through POST /payments, the door Dues records through; a bank line the api cannot place asks its question (nothing posted) and is never marked added */
   async function postPayment(deps, item, partyId) {
-    var reply = await deps.api('booksPayRecord', { body: paymentBodyOf(item, partyId, deps.modeOf) });
+    var reply;
+    try {
+      reply = await deps.api('booksPayRecord', { body: paymentBodyOf(item, partyId, deps.modeOf) });
+    } catch (failure) {
+      var asked = needsOf(failure);
+      if (!asked || (asked.needs === 'which_bill' && !asked.bill)) throw failure;
+      return Object.assign({ ok: false, why: asked.needs === 'which_bill' ? 'Same amount as an open bill. Use it?' : 'Which account is this for?' }, asked);
+    }
     return { ok: true, duplicate: !!(reply && reply.payment && reply.payment.duplicate), entry_no: (reply && reply.posted && reply.posted.entry_no) || null, posting_date: (reply && reply.posted && reply.posted.posting_date) || null };
   }
 
-  root.CBBankPost = { POSTABLE: POSTABLE, adapter: adapter, ownerRefusal: ownerRefusal, idOfParty: idOfParty, makeParty: makeParty, bodyOf: bodyOf, paymentBodyOf: paymentBodyOf };
+  root.CBBankPost = { POSTABLE: POSTABLE, adapter: adapter, ownerRefusal: ownerRefusal, idOfParty: idOfParty, makeParty: makeParty, bodyOf: bodyOf, paymentBodyOf: paymentBodyOf, needsOf: needsOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankPost;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

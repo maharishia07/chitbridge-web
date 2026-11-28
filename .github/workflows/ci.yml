@@ -411,6 +411,7 @@ jobs:
           node e2e/ui-codes-labs.test.cjs
           node e2e/bank-preview.test.cjs
           node e2e/bank-add-batch.test.cjs
+          node e2e/bank-party-post.test.cjs
           node e2e/bank-rules-1129.test.cjs
           node e2e/bank-ui-answers.test.cjs
           node e2e/web02-fixes.test.cjs
