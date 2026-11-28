@@ -55,6 +55,10 @@ function open(role, search, view, parts, periods) {
     const r = await landed('auditor', '?open=s1&mark=e2&nl=J-2&note=e5', '');
     assert.ok(/&mark=e2/.test(r.assigned[0]) && /&note=e5/.test(r.assigned[0]) && /&nl=J-2/.test(r.assigned[0]), r.assigned[0]);
   });
+  await ok('since=mine and the filter words (dbf_risk) ride to the door, so a Home link "N since I checked" still opens the changed list', async () => {
+    const r = await landed('auditor', '?open=s1&view=daybook&since=mine&dbf_risk=any', '');
+    assert.ok(/&since=mine/.test(r.assigned[0]) && /&dbf_risk=any/.test(r.assigned[0]), r.assigned[0]);
+  });
   await ok('a Months row opens the door on THAT month (from and to), not the year', async () => {
     const r = await landed('auditor', '', 'periods');
     r.root.CBBooksGrantKit.openMonth('2026-07-01', '2026-07-31');

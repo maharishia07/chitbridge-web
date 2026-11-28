@@ -147,7 +147,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   console.log('   owner trial balance: ' + JSON.stringify(tb));
   ok(JSON.stringify(tb['1500']) === JSON.stringify([1329865, 0]), 'EXPECTED.md: bank 13,298.65 Dr (' + JSON.stringify(tb['1500']) + ')');
   ok(JSON.stringify(tb['1300']) === JSON.stringify([66000, 0]) && JSON.stringify(tb['2100']) === JSON.stringify([0, 55000]), 'EXPECTED.md: receivables 660.00, payables 550.00 (' + JSON.stringify([tb['1300'], tb['2100']]) + ')');
-  /* 6 the grant view's Day book: ONE painter, the Party · ref cell carries a second line "posted by ..." only for an entry the firm posted; both lines at 390 */
+  /* 6 the Day book (the owner's screen, reached by the door): the entry carries a second line "posted by ..." only for an entry the firm posted; both lines at 390 */
   fs.rmSync(path.join(OUT, 'token.json'), { force: true });
   const firm2 = await L.signIn(process.env.FIRM_HANDLE || 'bayside-books-au');
   for (const vp of [{ width: 1366, height: 768, tag: '1366' }, { width: 390, height: 844, tag: '390' }]) {
@@ -156,15 +156,15 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
     const row = g.locator('tr, li, [data-testid]', { hasText: /Bondi Electrical/ }).filter({ has: g.locator('button, a', { hasText: /Open book/ }) }).last();
     await row.locator('button, a', { hasText: /Open book/ }).first().click();
     await g.waitForTimeout(3500);
-    await g.locator('#bv_tab_daybook').click();
-    await g.waitForTimeout(1500);
-    await g.locator('#bv_day').fill('2026-10-29');
-    await g.locator('#bv_day').dispatchEvent('change');
-    await g.waitForTimeout(4000);
-    const cells = await g.locator('[data-testid="bv-posted-by"]').evaluateAll((els) => els.map((e) => e.innerText.replace(/\s+/g, ' ')));
-    const vis = await g.locator('[data-testid="bv-posted-by"]').first().isVisible().catch(() => false);
+    await g.waitForURL(/accounts\.html/, { timeout: 30000 }); /* ONEP-2 PR7b: Open book lands on the OWNER's Day book (the door) */
+    const here = new URL(g.url()); here.searchParams.set('from', '2026-10-29'); here.searchParams.set('to', '2026-10-29'); /* the one day the walk reads: the door carries from= and to= */
+    await g.goto(here.toString());
+    await g.waitForSelector('[data-testid^="db-entry-"]', { timeout: 30000 });
+    await g.waitForTimeout(2000);
+    const cells = await g.locator('[data-testid="db-posted-by"]').evaluateAll((els) => els.map((e) => e.innerText.replace(/\s+/g, ' ')));
+    const vis = await g.locator('[data-testid="db-posted-by"]').first().isVisible().catch(() => false);
     console.log('   Day book ' + vp.tag + ' posted-by lines: ' + JSON.stringify(cells) + ' visible ' + vis);
-    ok(cells.length >= 1 && cells[0].replace(/\s+/g, ' ').trim() === 'posted by Bayside Bookkeeping - demo' && vis, 'Day book ' + vp.tag + ': the Party · ref cell shows "posted by Bayside Bookkeeping - demo" as a second line');
+    ok(cells.length >= 1 && /^posted by Bayside Bookkeeping - demo$/i.test(cells[0].replace(/\s+/g, ' ').trim()) && vis, 'Day book ' + vp.tag + ': the Party · ref cell shows "posted by Bayside Bookkeeping - demo" as a second line');
     await g.screenshot({ path: path.join(OUT, 'ab-11-daybook-posted-by-' + vp.tag + '.png') });
     await c2.close();
   }

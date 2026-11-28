@@ -125,7 +125,7 @@ W.run('books-adviser', async (w) => {
   const has = (sel) => page.locator(sel).count().then((n) => n > 0);
   const noScroll = () => page.evaluate(() => ({ y: document.documentElement.scrollHeight <= window.innerHeight + 1, x: document.documentElement.scrollWidth <= window.innerWidth + 1 }));
   const openNetwork = async () => { await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-store-' + S1), { timeout: 20000 }); await page.waitForTimeout(300); };
-  const openStore = async (id) => { await page.click(T('nw-books-' + id)); await page.waitForSelector(T('ba-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 }); await page.waitForTimeout(300); };
+  const openStore = async (id) => { await page.goto(base + '/network.html?open=' + id + '&view=dues'); await page.waitForSelector(T('ba-band'), { timeout: 20000 }); /* ONEP-2 PR7b: a fresh Open books lands on the owner's Day book; the firm's workspace (the queues) is the grant view, opened by its address on a read it still has */ await page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 }); await page.waitForTimeout(300); };
   const queue = async (k) => { await page.click(T('ba-q-' + k)); await page.waitForTimeout(450); };
   /** repaint the queue in view first (a row picked before stays picked), then pick the row: its buttons show */
   const pickRow = async (id) => { await page.click('[data-queue][aria-pressed="true"]'); await page.waitForTimeout(450); await page.click(T('ba-row-' + id)); await page.waitForTimeout(150); };
@@ -137,19 +137,19 @@ W.run('books-adviser', async (w) => {
   await page.setViewportSize(WIDE);
   await openNetwork();
   await w.step('F1', 'the firm · "Open books" on an adviser grant → the banner says "Acting for Store One, INR"; every read sent the store and the adviser role', async () => {
-    await openStore(S1); await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(200);
+    await openStore(S1); await page.click(T('bv-tab-dues')); await page.waitForSelector(T('bv-list'), { timeout: 10000 }); await page.waitForTimeout(200);
     const band = await txt(T('ba-band')), reads = S.calls.filter((c) => c.h && c.h['x-books-for'] === S1);
     return { ok: /Acting for Store One, INR/.test(band) && !(await has(T('bv-band'))), saw: band };
   });
   await w.step('F2', 'the firm · the banner stays on the Day book and on the Actions tab, and does not scroll away', async () => {
-    await page.click(T('bv-tab-daybook')); await page.waitForTimeout(400); const a = await txt(T('ba-band'));
+    await page.click(T('bv-tab-dues')); await page.waitForTimeout(400); const a = await txt(T('ba-band'));
     await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-tabs'), { timeout: 10000 }); await page.waitForTimeout(300);
     const b = await txt(T('ba-band')), top = await page.$eval(T('ba-band'), (e) => e.getBoundingClientRect().top);
     return { ok: /Store One/.test(a) && /Store One, INR/.test(b) && top < 200, saw: a + ' | ' + b + ' | top ' + Math.round(top) };
   });
   /* W19 / rule 4: the SAME first-data guard as the auditor's (e2e/lib/first-data-top.cjs), for the accountant seat: every client view by 20% / 30% of the screen, from y = 0 */
   await w.step('W19', 'the firm · w19-first-data-top: every books view at 1366x768 and 390x844 starts its data by 20% / 30% of the viewport from y = 0', async () => {
-    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    await page.click(T('bv-tab-dues')); await page.waitForSelector(T('bv-list'), { timeout: 10000 });
     const r = await require('./lib/first-data-top.cjs').firstDataTop(page, { T, has, WIDE, NARROW, seat: 'accountant' });
     await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-tabs'), { timeout: 10000 }); await page.waitForTimeout(300); /* back where F3 expects to be */
     return r;

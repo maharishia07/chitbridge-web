@@ -6,7 +6,8 @@
  */
 'use strict';
 const W = require('./lib/walk.cjs');
-const C = require('./lib/contract.cjs');   /* every /api/books answer the stand-in serves is held to the api's own examples */
+const C = require('./lib/contract.cjs');
+const D = require('./lib/door.cjs');   /* every /api/books answer the stand-in serves is held to the api's own examples */
 const T = (id) => '[data-testid="' + id + '"]';
 const WIDE = { width: 1366, height: 768 }, NARROW = { width: 390, height: 844 };
 const MEMBER = 'a0000000-0000-4000-8000-000000000001', OTHER = 'a0000000-0000-4000-8000-000000000002', BRAND = 'b0000000-0000-4000-8000-000000000009';
@@ -25,6 +26,7 @@ W.run('audrc4', async (w) => {
   await ctx.route(base + '/api/**', async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
     S.calls.push({ m, p, q: u.search, h });
+    const door = D.stubs(p, (st, body) => J(r, st, body)); if (door) return door; /* entities/me for the owner page */
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: OTHER, name: 'Store Two', city: 'Delhi', km: 9, purpose: 'Snacks' }] });
     if (p === '/api/books-grants/consent') return J(r, 200, { headline: 'Let your network parent read your books', can_read: ['your trial balance', 'your profit and loss'], cannot: ['change or add anything'], costs: u.searchParams.get('can_see_costs') === 'false' ? 'It will not see your costs and margins.' : 'It will see your costs and margins.', rights: 'You can end this at any time.' });
@@ -47,12 +49,12 @@ W.run('audrc4', async (w) => {
   await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
   const shot = (name) => page.screenshot({ path: 'C:/dev/shots/audrc4/' + name + '.png' }).catch(() => {});
   const noSide = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
-  const open = async () => { await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-store-' + MEMBER), { timeout: 20000 }); await page.focus(T('nw-books-' + MEMBER)); await page.keyboard.press('Enter'); await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.click(T('bv-tab-daybook')).catch(() => {}); await page.waitForFunction((sel) => { const n = document.querySelector(sel); return n && /JV-/.test(n.textContent); }, T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(400); };
+  const open = () => D.openDaybook(page, base, MEMBER, { grid: true }); /* ONEP-2 PR7b: Open books lands on the owner's Day book (the door) */
   for (const [vp, tag] of [[WIDE, '1366'], [NARROW, '390']]) for (const scheme of ['light', 'dark']) {
     await page.setViewportSize(vp); await page.emulateMedia({ colorScheme: scheme }); await open();
     await w.step('R4-' + tag + scheme[0], 'Day book ' + tag + ' ' + scheme + ': rows in book order JV-0001, 0002, 0010, 0009; Risk in view; no sideways scroll', async () => {
-      const rows = await page.$$eval('[data-testid^="bv-row-"]', (els) => els.map((e) => ({ t: e.textContent.replace(/\s+/g, ' '), r: e.getBoundingClientRect() })));
-      const order = rows.map((x) => (/JV-[0-9]{4}/.exec(x.t) || [''])[0]);
+      await D.sortBy(page, 'book'); /* the owner opens newest first; Book order (oldest first, date then number) is the sort choice a firm seat has */
+      const order = await D.entryNos(page);
       const risk = await page.$$eval('[data-testid="bv-risk"]', (els) => els.map((e) => { const b = e.getBoundingClientRect(); return { x: b.x, w: b.width, label: e.getAttribute('aria-label') }; }));
       await shot('daybook-' + tag + '-' + scheme);
       const inView = risk.length > 0 && risk.every((b) => b.x >= 0 && b.x + b.w <= vp.width);

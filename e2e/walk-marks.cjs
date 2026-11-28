@@ -12,6 +12,7 @@
 'use strict';
 const path = require('path');
 const W = require('./lib/walk.cjs');
+const D = require('./lib/door.cjs');
 const C = require('./lib/contract.cjs');
 const T = (id) => '[data-testid="' + id + '"]';
 const WIDE = { width: 1366, height: 768 }, NARROW = { width: 390, height: 844 };
@@ -42,6 +43,7 @@ W.run('marks', async (w) => {
   await ctx.route(base + '/api/**', async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
     S.calls.push({ m, p, q: u.search, h });
+    const door = D.stubs(p, (st, body) => J(r, st, body)); if (door) return door; /* entities/me for the owner page */
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }] });
     if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: [], received: [{ grant_id: GRANT, grantor_entity: MEMBER, grantee_entity: BRAND, state: 'live', preset: 'auditor', expires_at: DAY(200) }].concat(S.both ? [{ grant_id: 'c0000000-0000-4000-8000-000000000002', grantor_entity: MEMBER, grantee_entity: BRAND, state: 'live', preset: 'adviser', expires_at: DAY(200) }] : []) });
@@ -92,17 +94,17 @@ W.run('marks', async (w) => {
   const sets = () => S.sets.filter((x) => auditor(x.h));
   const openDaybook = async () => {
     await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
-    await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('bv-band'), { timeout: 10000 });
-    await page.click(T('bv-tab-daybook')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForSelector(T('mk-bar'), { timeout: 10000 });
+    await page.click(T('nw-books-' + MEMBER)); await page.waitForURL(/accounts\.html/, { timeout: 20000 }); /* ONEP-2 PR7b: Open books lands on the OWNER's Day book (the door) */
+    await page.waitForSelector(D.ROWS, { timeout: 20000 }); await page.waitForSelector(T('mk-bar'), { timeout: 15000 });
   };
 
   /* ═══ the auditor ═══ */
   await page.setViewportSize(WIDE);
   await w.step('L1', 'the auditor lands on the Day book: Open books shows it with no extra press', async () => {
     await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
-    await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
-    const on = await page.getAttribute(T('bv-tab-daybook'), 'aria-pressed'), tb = await page.getAttribute(T('bv-tab-tb'), 'aria-pressed');
-    return { ok: on === 'true' && tb === 'false', saw: 'Day book pressed ' + on + ' · trial balance pressed ' + tb };
+    await page.click(T('nw-books-' + MEMBER)); await page.waitForURL(/accounts\.html/, { timeout: 20000 }); await page.waitForSelector(D.ROWS, { timeout: 20000 });
+    const url = page.url(), rows = await page.locator(D.ROWS).count();
+    return { ok: /acting=/.test(url) && /role=auditor/.test(url) && /#\/daybook/.test(url) && rows === 3, saw: url + ' · rows ' + rows }; /* the Day book is the landing: the owner's screen in the auditor's seat */
   });
   await openDaybook();
   await w.step('A1', 'the auditor · Day book: a chip on each entry and "Checked 0 of 3 entries this period"', async () => {
@@ -117,7 +119,7 @@ W.run('marks', async (w) => {
     return { ok: words.length === 3 && words.every((x) => /Not checked/.test(x) && /Query/.test(x)) && a.y && a.x, saw: words.join(' // ') + ' · scroll ' + a.y + '/' + a.x };
   });
   await w.step('A0', 'the auditor · the Day book opens non-empty on its own, on the whole financial year (a9483f9b): no day typed, the period shown, the date in words, the kind in words', async () => {
-    const first = (S.daybookQueries[0] || ''), day = await page.inputValue(T('bv-day')), period = await page.locator('body').innerText(), row = await txt(T('bv-row-0'));
+    const first = (S.daybookQueries[0] || ''), day = '', period = await page.locator('body').innerText(), row = await txt(D.ROWS);
     await shot('00-auditor-daybook-opens-on-its-own');
     return { ok: first.includes('from=2026-04-01') && first.includes('to=2027-03-31') && day === '' && period.includes('1 Apr 2026 – 31 Mar 2027') && row.includes('Sales') && row.includes('3 Nov 2026') && !row.includes('2026-11') && (await txt(T('mk-count'))).includes('of 3'), saw: first + ' · day "' + day + '" · ' + period + ' · ' + row.slice(0, 80) };
   });
@@ -151,7 +153,7 @@ W.run('marks', async (w) => {
   await w.step('A5', 'the auditor · All queries: the open list with its age and the question; pressed again it returns to the day book', async () => {
     await page.click(T('mk-filter')); await page.waitForSelector(T('mk-queries'), { timeout: 5000 });
     const list = await txt(T('mk-queries')); await shot('05-auditor-all-queries');
-    await page.click(T('mk-filter')); await page.waitForSelector(T('bv-row-0'), { timeout: 5000 });
+    await page.click(T('mk-filter')); await page.waitForSelector(D.ROWS, { timeout: 5000 });
     return { ok: /JV-0002/.test(list) && /Why was rent posted/.test(list) && /3 days/.test(list), saw: list };
   });
 
@@ -278,7 +280,7 @@ W.run('marks', async (w) => {
     return { ok: inSheet && back, saw: 'focus in the sheet ' + inSheet + ' · back on the chip ' + back };
   });
   await w.step('M1', 'Months: the tab says Months, each month shows its state, the sales as the server sent them, and no month that is not over yet (W4-13, 71a8367e1: the Months tab lists months over; November is still running) and none that has not begun', async () => {
-    await page.setViewportSize(WIDE); await openDaybook(); await page.click(T('bv-tab-periods')); await page.waitForFunction(() => /October 2026/.test((document.querySelector('[data-testid="bv-list"]') || {}).innerText || ''), null, { timeout: 8000 }).catch(() => {});
+    await page.setViewportSize(WIDE); await page.goto(base + '/network.html?open=' + MEMBER + '&view=periods'); await page.waitForSelector(T('bv-tab-periods'), { timeout: 20000 }); await page.waitForFunction(() => /October 2026/.test((document.querySelector('[data-testid="bv-list"]') || {}).innerText || ''), null, { timeout: 8000 }).catch(() => {});
     const list = await txt(T('bv-list')); await shot('13-closed-months');
     const tab = await txt(T('bv-tab-periods'));
     return { ok: tab === 'Months' && /Open/.test(list) && list.includes('October 2026') && !list.includes('November 2026') && !list.includes('2099') && !list.includes('January') && list.includes('3,702'), saw: list.slice(0, 160) };
@@ -288,13 +290,13 @@ W.run('marks', async (w) => {
     await page.evaluate(() => Object.keys(localStorage).filter((k) => k.indexOf('cb_seat:') === 0).forEach((k) => localStorage.removeItem(k)));   /* the earlier steps opened this client with its one seat, which the page remembers (29714ef3); S1 is the FIRST time two seats exist */
     await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('nw-seat-title'), { timeout: 8000 });
     const asked = await page.locator(T('bv-band')).count(); await shot('14-seat-choice');
-    await page.click(T('nw-seat-auditor')); await page.waitForSelector(T('bv-band'), { timeout: 8000 });
-    const band = await txt(T('bv-band')), prepare = await page.locator(T('bv-prepare')).count();
+    await page.click(T('nw-seat-auditor')); await page.waitForURL(/accounts\.html/, { timeout: 20000 }); await page.waitForSelector(D.ROWS, { timeout: 20000 });
+    const band = await page.locator('body').innerText(), prepare = await page.getByText('Prepare a journal').count(); /* the owner screen in the auditor's seat: read only, no Prepare */
     return { ok: asked === 0 && /read only/.test(band) && prepare === 0, saw: 'books before choice ' + asked + ' · ' + band.slice(0, 50) + ' · prepare ' + prepare };
   });
   await w.step('S2', 'the seat is remembered per client: the next Open books goes straight in, no second question', async () => {
     await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
-    await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('bv-band'), { timeout: 8000 });
+    await page.click(T('nw-books-' + MEMBER)); await page.waitForURL(/accounts\.html/, { timeout: 20000 });
     const asked = await page.locator(T('nw-seat-title')).count();
     return { ok: asked === 0, saw: 'seat questions ' + asked };
   });

@@ -12,6 +12,7 @@
 'use strict';
 const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');
+const D = require('./lib/door.cjs');
 const T = (id) => '[data-testid="' + id + '"]';
 const WIDE = { width: 1366, height: 768 }, NARROW = { width: 390, height: 844 };
 const MEMBER = 'a0000000-0000-4000-8000-000000000001', OTHER = 'a0000000-0000-4000-8000-000000000002', BRAND = 'b0000000-0000-4000-8000-000000000009';
@@ -37,6 +38,7 @@ const run = async (w) => {
   const handler = async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
     S.calls.push({ m, p, q: u.search, h });
+    const door = D.stubs(p, (st, body) => J(r, st, body)); if (door) return door; /* entities/me for the owner page */
     if (p === '/api/flags/query') { const b = JSON.parse(q.postData() || '{}'), flags = {}; S.flags.filter((f) => f.subject_kind === b.subject_kind && (b.ids || []).indexOf(f.subject_id) >= 0).forEach((f) => { (flags[f.subject_id] = flags[f.subject_id] || []).push(f); }); return J(r, 200, { subject_kind: b.subject_kind, subject_entity: b.subject_entity, flags }); }
     if (p === '/api/flags' && m === 'POST') { const b = JSON.parse(q.postData() || '{}'); S.posts.push(b); const made = (b.items || []).map((item, n) => flagOf(b, item, S.flags.length + n)); S.flags = S.flags.concat(made); return J(r, 200, { created: made.length, already: 0, flags: made }); }
     if (p.indexOf('/api/flags') === 0) return J(r, 404, { error: 'We could not find that.' });
@@ -80,10 +82,10 @@ const run = async (w) => {
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const has = (sel) => page.locator(sel).count().then((n) => n > 0);
   const noScroll = () => page.evaluate(() => ({ y: document.documentElement.scrollHeight <= window.innerHeight + 1, x: document.documentElement.scrollWidth <= window.innerWidth + 1 }));
-  const openBooks = async (pg, loc) => { await pg.goto(base + '/network.html'); await pg.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 }); await pg.evaluate((l) => window.CBLocale.setLocale(l), loc); /* the region the person chose: CBLocale's own setter, after the page's boot */ await pg.click(T('nw-books-' + MEMBER)); await pg.waitForSelector(T('bv-band'), { timeout: 10000 }); await pg.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await pg.waitForTimeout(500); };
-  const riskCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => { const n = r.querySelector('[data-testid="bv-risk"]'); return n ? Number(n.textContent) : 0; }));
+  const openBooks = async (pg, loc) => { await pg.goto(base + '/network.html'); await pg.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 }); await pg.evaluate((l) => window.CBLocale.setLocale(l), loc); /* the region the person chose: CBLocale's own setter, after the page's boot */ await pg.click(T('nw-books-' + MEMBER)); await pg.waitForURL(/accounts\.html/, { timeout: 20000 }); await pg.waitForSelector(D.ROWS, { timeout: 20000 }); await pg.click(T('view-grid-daybook')).catch(() => {}); await pg.waitForTimeout(500); }; /* ONEP-2 PR7b: Open books lands on the owner's Day book (the door); the grid view has the column heads */
+  const riskCol = (pg) => pg.$$eval('[data-testid^="db-entry-"]', (rows) => rows.map((r) => { const n = r.querySelector('[data-testid="bv-risk"]'); return n ? Number(n.textContent) : 0; }));
   const keyed = (o, keys) => keys.map((n) => n + '=' + o[n]).join(',');
-  const entryCol = (pg) => pg.$$eval('[data-testid^="bv-row-"]', (rows) => rows.map((r) => (r.textContent.match(/JV-[A-Z]\d\d/) || [''])[0]));
+  const entryCol = (pg) => pg.$$eval('[data-testid^="db-entry-"]', (rows) => rows.map((r) => (r.textContent.match(/JV-[A-Z]\d\d/) || [''])[0]));
   const byKey = async (pg) => { const k = await entryCol(pg), c = await riskCol(pg), o = {}; k.forEach((n, i) => { o[n] = c[i]; }); return o; }; /* the rows are sorted by risk now: compare by entry number, never by position */
 
   await page.setViewportSize(WIDE);
@@ -99,7 +101,7 @@ const run = async (w) => {
     return { ok: /over 7 days late/.test(note) && /8 pm to 7 am/.test(note) && /multiple of 100/.test(note) && /weekend/.test(note), saw: note.slice(0, 160) };
   });
   await w.step('R3', 'Any risk keeps 7 rows (E1..E7), not the six clean ones', async () => {
-    await page.click(T('cbl-filters-books-grant-daybook')); await page.selectOption(T('listctl-filter-risk'), 'any'); await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+    await page.click(T('cbl-filters-daybook')); await page.selectOption(T('listctl-filter-risk'), 'any'); await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     const names = await entryCol(page);
     return { ok: names.slice().sort().join(',') === 'JV-E01,JV-E02,JV-E03,JV-E04,JV-E05,JV-E06,JV-E07', saw: names.join(',') };
   });

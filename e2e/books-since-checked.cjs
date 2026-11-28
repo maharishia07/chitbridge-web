@@ -2,7 +2,7 @@
 // @type: system
 /**
  * e2e/books-since-checked.cjs - AUDITOR RANK 10 in a REAL browser against the REAL api and a REAL Postgres: "changed since my last check".
- * Controls under test: the toggle (bv-since, NET005-B08) and Mark as checked (bv-mark-checked, NET005-B09) on the client's Day book (public/app/books-grant-view.js),
+ * Controls under test: the toggle (bv-since, NET005-B08) and Mark as checked (bv-mark-checked, NET005-B09) on the client's Day book (the owner's screen in a firm seat: public/app/cap-books.js bkDaybook + books-audit-tools.js; the firm view's landing door carries since=mine),
  * and the Home link "N since I checked" / "N since access began" (practice-changed-<client>, HOM001-B05) on the practice list (public/app/books-practice.js).
  *
  * OWNS      the story, hand-computed: firm P has two auditor seats, A and B (access commenter, whole entity). Client M is a switched-on AU shop that grants P an auditor view.

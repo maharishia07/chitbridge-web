@@ -340,12 +340,12 @@
     head.focus();
   }
   var pendingAsked = askedWords(); /* read when this script loads: the bell's words ride to the owner's Day book, which opens them once */
-  /** the bell's words (a Query to open: &mark= with &mday=, a note: &note= with &nl=) as address words */
+  /** the words the owner's Day book reads from its address (a Query to open: &mark= with &mday=, a note: &note= with &nl=, &since=mine, &dbf_*) */
   function askedWords() {
     var out = '';
     try {
       var query = new root.URLSearchParams(root.location.search);
-      ['note', 'mark', 'mday', 'nl'].forEach(function (name) { if (query.get(name)) out += '&' + name + '=' + encodeURIComponent(query.get(name)); });
+      query.forEach(function (value, name) { if (/^(note|mark|mday|nl|since)$|^dbf_/.test(name) && value) out += '&' + name + '=' + encodeURIComponent(value); }); /* the bell's words, "changed since my last check" and the Day book's filter words all ride to the owner screen */
     } catch (failure) {
       if (root.cbQuiet) root.cbQuiet('books-grant:note-address', failure);
     }
