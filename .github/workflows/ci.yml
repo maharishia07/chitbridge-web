@@ -228,6 +228,7 @@ jobs:
           node e2e/network-guard.cjs
           node e2e/acc-176-books-grant-ui.test.cjs
           node e2e/acc-176b-adviser-ui.test.cjs
+          node e2e/cashier-home-no-refused-call.test.cjs
           node e2e/offer-nudge-gap.cjs
           node e2e/offers-combined.test.cjs
           node e2e/offers-kinds.test.cjs
