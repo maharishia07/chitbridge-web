@@ -119,13 +119,8 @@ W.run('books-grant', async (w) => {
   /* W19 (Athi 16 Nov, "be more space cautious in each page"): on a client's books the STATIC header (crumb, name, read only tag, period slot, tabs) takes at most 15% of the viewport height and the DYNAMIC part (totals, filters, the list's own bar and head) at most another 5%, so the first data row starts at 20% or less under the app header; a list under ten rows has no search box. GUARD NAME: w19-first-data-top */
   /* W19 (Athi 16 Nov): the first data row of every client view by 20% (1366x768) / 30% (390x844) of the screen, measured from y = 0: ONE guard for both seats, e2e/lib/first-data-top.cjs (the accountant seat calls it from walk-books-adviser.cjs). The three statements are doors now and are not views of this page: the lib skips them. */
   await w.step('W19', 'the auditor · w19-first-data-top: every books view at 1366x768 and 390x844 starts its data by 20% / 30% of the viewport from y = 0 (a view above it is held at its measured ceiling, which only falls)', () => require('./lib/first-data-top.cjs').firstDataTop(page, { T, has, WIDE, NARROW, seat: 'auditor' }));
-  /* the three statements' first data row on the OWNER's screen in the seat, measured (not yet held to a ceiling: the layout of those screens is the owner screens' own and is not the firm view's to hold) */
-  for (const k of ['tb', 'pl', 'bs']) {
-    await page.setViewportSize(WIDE); await openBooks();
-    await doorPress(k, k === 'tb' ? T('tb-balanced') : T(k + '-table'));
-    const m = await page.evaluate(() => { const tr = Array.from(document.querySelectorAll('table.bktab tbody tr, table.bk-st tbody tr')).filter((e) => e.offsetParent !== null && e.getBoundingClientRect().height > 0)[0]; return { top: tr ? Math.round(tr.getBoundingClientRect().top) : null, H: innerHeight }; });
-    w.note('W19-' + k, 'the auditor · the ' + k + ' on the owner\'s screen in the seat: first data row at 1366x768', 'first row at ' + m.top + 'px of ' + m.H + ' = ' + (m.top == null ? 'none' : Math.round(100 * m.top / m.H) + '%'));
-  }
+  /* the three statements are doors: their first data row is held to the SAME ceilings (20% / 30%, the held ceilings only fall) on the OWNER's screen the door opens in the seat */
+  await w.step('W19o', 'the auditor · w19-first-data-top on the owner\'s trial balance, P&L and balance sheet the doors open: first data row by 20% / 30% of the viewport from y = 0', () => require('./lib/first-data-top.cjs').ownerFirstDataTop(page, { T, WIDE, NARROW, seat: 'auditor', openFirm: openBooks }));
   await page.setViewportSize(WIDE); await openBooks();
   await w.step('D1', 'the auditor drill · Day book entry → its Cash line → the ledger: opening, the line with its running balance, the period total and the closing', async () => {
     await page.click(T('bv-tab-daybook')); await page.waitForFunction((sel) => { const n = document.querySelector(sel); return n && /JV-/.test(n.textContent); }, T('bv-row-0'), { timeout: 10000 });
