@@ -49,6 +49,12 @@ ok(accountant.includes('accounts') && !accountant.includes('employees'), 'an acc
 const viewer = shown({ owner: false, money: false, lead: null, entries: null });
 ok(!viewer.includes('accounts') && !viewer.includes('shop') && viewer.includes('crm'), 'a view-only seat loses the money and owner tiles and keeps the rest');
 
+/* UX-226 A5: the Bookkeeper seat (the api says sells:false) keeps the books and is not shown the Till, nor a link into it; every other seat keeps it */
+const bookkeeper = { owner: false, money: true, sells: false, lead: null, entries: null };
+ok(!shown(bookkeeper).includes('till') && shown(bookkeeper).includes('accounts'), 'Bookkeeper: the Till is not drawn, the books are');
+ok(windowWith(bookkeeper).edition.hidesHref('/till.html', manifest) === true, 'Bookkeeper: a link into the till is hidden');
+ok(shown(counter).includes('till') && shown(open).includes('till') && shown({ owner: false, money: true, sells: true, lead: null, entries: null }).includes('till'), 'Counter staff, the owner and a seat that sells keep the Till');
+
 /* the real ordering and folding of the Sell row, one laptop and one phone */
 const home2 = 'public/app/home2.js';
 const code = sliceFrom(home2, "  /** a card's state rank", "  /** a card's first fact") + sliceFrom(home2, '  function lead(card)', '  /** the cards (boxes and short cards)') + sliceFrom(home2, '  /** hide what does not fit', '  /** the fold line');
