@@ -48,7 +48,7 @@ const practice = () => ({ own_trade: false, clients: NAMES.map(client), band: { 
     await p.setViewportSize({ width: 390, height: 844 });
     let rowSel;
     if (page === 'home') { await p.goto(base + '/'); rowSel = '[data-testid^="practice-row-"]'; }
-    else { await p.goto(base + '/network.html?open=' + CLIENT + '&view=daybook'); await p.waitForTimeout(2500); const seat = p.locator('[data-testid="nw-seat-auditor"]'); if (await seat.count()) await seat.click(); rowSel = '[data-testid^="bv-row-"]'; }
+    else { await p.goto(base + '/accounts.html?acting=' + CLIENT + '&role=auditor#/daybook'); rowSel = '[data-testid^="db-entry-"]'; } /* ONEP-2 PR7b: the Day book is the owner's screen in the auditor's seat (the door) */
     await p.waitForSelector(rowSel, { timeout: 20000 }).catch(() => {});
     await p.waitForTimeout(600);
     const m = await p.evaluate((s) => { const h = window.innerHeight, rows = [].slice.call(document.querySelectorAll(s)); const box = (x) => x.getBoundingClientRect(); return { n: rows.length, h: rows.length ? Math.round(box(rows[0]).height) : 0, partial: rows.filter((x) => box(x).top < h && box(x).bottom > 0).length }; }, rowSel);
