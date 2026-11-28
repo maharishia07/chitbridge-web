@@ -4557,9 +4557,20 @@ function bkTbTotalRowHTML(reply, currency, comparison) {
       '</b></td>' + (comparison ? '<td></td><td></td><td></td>' : '') + '</tr>'
   );
 }
+/** ONEP-2: the day the trial balance opens at when the address carries one (to=YYYY-MM-DD, the firm's door and the Bank way back): read ONCE per page, a bad or empty value is no pick (today stays). Owner and seat call this same function */
+function bkTbSeedDay() {
+  if (BK.tbSeeded) return '';
+  BK.tbSeeded = true;
+  var day = new URLSearchParams(location.search || '').get('to') || '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !isNaN(Date.parse(day)) ? day : '';
+}
+/** the day the trial balance is read at: the day pressed, else the one typed, else the address's (once), else today */
+function bkTbDay() {
+  return BK.tbDay || (document.getElementById('tb_asof') || {}).value || bkTbSeedDay() || bkToday();
+}
 /* the Trial balance tab: every account's debit and credit as of one date */
 async function bkTB(body) {
-  var asOf = BK.tbDay || (document.getElementById('tb_asof') || {}).value || bkToday();
+  var asOf = bkTbDay();
   BK.tbDay = '';
   try {
     var reply = await api('booksTB', { query: { asOf: asOf } });
