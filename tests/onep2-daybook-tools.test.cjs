@@ -102,6 +102,12 @@ const ids = (w, key, v) => ENTRIES.filter((e) => w.root.__jet().filter((f) => f.
     assert.strictEqual(w.root.BK.dv.period.to, '2026-06-30');
     assert.ok(/After period end/.test(w.root.__risk(E('x', 'X', '2026-06-20', '2026-07-02T10:00:00Z', 123)).join('|')));
   });
+  await ok('JET: the FIRST MONTH of the year (window 2025-07-01 to 2025-07-31) is judged as itself: a recording on 2025-08-05 is After period end; a whole-year window is not cut', async () => {
+    const w = world('auditor', ''); w.root.bkRange = () => ({ from: '2025-07-01', to: '2025-07-31' }); await w.root.__go(w.body);
+    assert.strictEqual(w.root.BK.dv.period.to, '2025-07-31');
+    assert.ok(/After period end/.test(w.root.__risk(E('x', 'X', '2025-07-20', '2025-08-05T10:00:00Z', 123)).join('|')));
+    const y = world('auditor', ''); y.root.bkRange = () => ({ from: '2025-07-01', to: '2026-06-30' }); await y.root.__go(y.body); assert.strictEqual(y.root.BK.dv.period.to, '2026-06-30');
+  });
   await ok('the door carries the window: from= and to= seed the Day book once; a bad pair is no pick', async () => {
     const w = world('auditor', '?from=2026-07-01&to=2026-07-31'); await w.root.__go(w.body);
     assert.strictEqual(w.root.BK.dbp.preset, 'custom'); assert.strictEqual(w.root.BK.dbp.to, '2026-07-31');
