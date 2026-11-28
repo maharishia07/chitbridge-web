@@ -105,8 +105,8 @@
     return '/accounts.html?acting=' + encodeURIComponent(store.id) + (doing ? '&prepare=' + doing : '') + '#/daybook';
   }
   /** W15-71: the auditor's way to the client's Bank (and Month lock) on the books page: the same page, the auditor's seat, read only */
-  function auditAddressOf(store, tab, carry) {
-    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=auditor' + (carry || '') + '#/' + (tab || 'bank');
+  function auditAddressOf(store, tab, carry, role) {
+    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=' + (role === 'adviser' ? 'adviser' : 'auditor') + (carry || '') + '#/' + (tab || 'bank');
   }
   /** E10: the screen and the period the firm was reading ride the address to Bank and back (&view= and &fy= or &from=&to=), so the way back returns to the same year, not the year under review */
   function carriedOf(search) {
@@ -169,7 +169,7 @@
   var TABS = ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'dues', 'lock'];
   /** the Bank tab opens for an acting ADVISER (reads and posts through /api/books/bank/*, /events and /payments) and for an AUDITOR (reads only: bank/log and the kept statements; W15-71, every write control is left out) */
   function tabOpen(tab) {
-    if (context && context.role === 'auditor') return tab === 'bank' || tab === 'lock' || tab === 'gstclose'; /* the auditor's other reads are the network's own books view; here only what needs the books page, read only: the Bank, the Month lock and the tax return (F-73: GET /returns is on the grant's read list, peGstView shows a reader the return and never the Close card) */
+    if (context && context.role === 'auditor') return tab === 'bank' || tab === 'lock' || tab === 'gstclose' || tab === 'tb'; /* the auditor's other reads are the network's own books view; here only what needs the books page, read only: the Bank, the Month lock and the tax return (F-73: GET /returns is on the grant's read list, peGstView shows a reader the return and never the Close card) */
     return TABS.indexOf(tab) >= 0 || (tab === 'bank' && !!context && context.role === 'adviser');
   }
   /** CON-165: a firm seat reads the client's party list and one record (exactly these GETs: the CRM list and record and the two relationships picker lists, never the prefix /api/crm); the server decides, this only keeps the other CRM tabs from sending the header to routes that are closed */
