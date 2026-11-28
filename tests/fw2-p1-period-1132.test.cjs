@@ -19,11 +19,7 @@ const q2 = { kind: 'custom', fy: null, from: '2026-10-01', to: '2026-12-31' };
 const q1 = { kind: 'custom', fy: null, from: '2026-07-01', to: '2026-09-30' };
 const year = { kind: 'year', fy: '2026-27', from: '2026-07-01', to: '2027-06-30' };
 const ask = (k, period, day) => { kit.viewState.period = period; kit.viewState.day = day || ''; const q = kit.queryOf(by(k)), out = {}; Object.keys(q).sort().forEach((n) => { out[n] = q[n]; }); return out; };
-assert.strictEqual(JSON.stringify(ask('pl', q2)), JSON.stringify({ from: '2026-10-01', to: '2026-12-31' }), 'the P&L for the quarter picked');
-assert.strictEqual(JSON.stringify(ask('pl', q2, '2026-11-15')), JSON.stringify({ from: '2026-10-01', to: '2026-11-15' }), 'FW2-02: a day inside the quarter ends the range there (Oct - 15 Nov)');
-assert.strictEqual(JSON.stringify(ask('pl', q1, '2026-11-15')), JSON.stringify({ to: '2026-11-15' }), 'a day outside the period is the day alone, as before');
-assert.strictEqual(JSON.stringify(ask('pl', null, '2026-11-15')), JSON.stringify({ to: '2026-11-15' }), 'no period: as before');
-assert.strictEqual(JSON.stringify(ask('tb', q2, '2026-11-15')), JSON.stringify({ asOf: '2026-11-15' }), 'the trial balance is as at the day: unchanged');
+assert.strictEqual(JSON.stringify(ask('dues', q2, '2026-11-15')), JSON.stringify({ asOf: '2026-11-15', control: '1' }), 'who owes whom is as at the day: unchanged');
 console.log('fw2-p1-period-1132: ok');
 
 /* FW2-03 (web half): the Day book's Attach receipt goes through the books door with the acting headers (X-Books-For), so an adviser's file lands in the CLIENT's books; the old POST /api/attachments carried the token alone and looked in the firm's own books */

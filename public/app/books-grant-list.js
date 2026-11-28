@@ -191,8 +191,7 @@
   }
   /** the Mark column is drawn only when the server says marking is on */
   function shownCols(report) {
-    var last = ['pl', 'bs'].indexOf(report.k) >= 0 && !grantKit.compareDrawn(report) ? grantKit.CMP_COLS : [];
-    var cols = report.cols.filter(function (column) { return (column[2] !== 'mark' || grantKit.markable(report)) && (column[2] !== 'flag' || grantKit.flagsOn()) && (column[2] !== 'explain' || grantKit.explainOn()) && last.indexOf(column[0]) < 0; });
+    var cols = report.cols.filter(function (column) { return (column[2] !== 'mark' || grantKit.markable(report)) && (column[2] !== 'flag' || grantKit.flagsOn()) && (column[2] !== 'explain' || grantKit.explainOn()); });
     return report.k === 'daybook' && grantKit.viewState.since ? cols.concat([['recorded_text', 'Posted']]) : cols; /* rank 10: the changed list says when and by whom each entry was posted */
   }
   var HTML_KINDS = ['mark', 'flag', 'evidence', 'risk', 'explain']; /* the columns whose cell is html */
@@ -209,7 +208,7 @@
   /** which columns stay on a narrow screen: the first, the name, the party and the amounts (1), the rest go first (2) Last year and % go first on a narrow screen: the amount and its change stay */
   function columnPriority(column, index) {
     if (index === 0 || column[0] === 'name' || column[0] === 'party_ref' || column[2] === 'risk') return 1;
-    return column[2] === grantKit.MONEY && grantKit.CMP_COLS.indexOf(column[0]) < 0 ? 1 : 2;
+    return column[2] === grantKit.MONEY ? 1 : 2;
   }
   /** a column's width: its own in the Day book, else by what it holds */
   function columnWidth(column) {

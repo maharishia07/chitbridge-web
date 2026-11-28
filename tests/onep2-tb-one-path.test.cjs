@@ -26,7 +26,7 @@ async function open(seat, search, state) {
     api: async (name, o) => { calls.push([name, JSON.stringify((o && o.query) || null), seat ? 'X-Books-For' : '-']); return FIX; }
   };
   vm.createContext(ctx);
-  vm.runInContext(grab('bkTbSeedDay') + grab('bkTbDay') + grab('bkTB') + '\n;globalThis.__go = bkTB;', ctx);
+  vm.runInContext(grab('bkCarriedDay') + grab('bkTbSeedDay') + grab('bkTbDay') + grab('bkTB') + '\n;globalThis.__go = bkTB;', ctx);
   await ctx.__go(body);
   return { calls, html: body.innerHTML };
 }
@@ -64,8 +64,8 @@ const q = (r) => r.calls.filter((c) => c[0] === 'booksTB').map((c) => c[0] + c[1
   await ok('GUARD: no firm / network view file reads or paints a trial balance of its own (' + VIEW.length + ' files)', () => assert.deepStrictEqual(offenders(real), []));
   await ok('GUARD: the door opens tab tb in the seat; the auditor and the adviser may open it', () => {
     const view = real['books-grant-view.js'], acting = read('public/app/books-acting.js');
-    assert.ok(/auditAddressOf\(.*'tb'/.test(view) && /id="bv_tb"/.test(view) && /value: '_tb'/.test(view));
-    assert.ok(/tab === 'gstclose' \|\| tab === 'tb'/.test(acting));
+    assert.ok(/auditAddressOf\(/.test(view) && /door: 'tb', id: 'bv_tb'/.test(view) && /value: '_tb'/.test(view));
+    assert.ok(/AUDITOR_TABS = \[[^\]]*'gstclose', 'tb'/.test(acting));
   });
   const mutate = (file, fn) => Object.assign({}, real, { [file]: fn(real[file]) });
   await ok('MUTATION 1: re-adding the tb report entry goes red', () => assert.ok(offenders(mutate('books-grant-reports.js', (s) => s.replace('  ];', "    { k: 'tb', label: 'Trial balance' }\n  ];"))).length > 0));
