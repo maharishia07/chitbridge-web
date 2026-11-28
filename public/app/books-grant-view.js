@@ -403,7 +403,14 @@
     var mine = grantKit.viewState;
     return load().then(function () { if (alive() && grantKit.viewState === mine) paint(); }, function () {
       if (grantKit.viewState.o.onEnded) grantKit.viewState.o.onEnded();
-    });
+    }).catch(function (failure) { paintFailed(mine, failure); });
+  }
+  /** FAIL LOUD (1138, the blank client): a screen that threw while painting says so in words, in the page, with Try again and the way back, and logs why; it never leaves the pane empty. Only the client still open is told */
+  function paintFailed(mine, failure) {
+    if (typeof root.cblog === 'function') root.cblog('error', 'books-grant: the client screen could not be painted: ' + ((failure && (failure.stack || failure.message)) || failure));
+    var host = mine && mine.host;
+    if (!host || !root.CBShell || typeof root.CBShell.readFailed !== 'function' || grantKit.viewState !== mine) return;
+    root.CBShell.readFailed(host, { what: words('These books'), status: 0, retry: reload, back: [{ href: '/network.html', label: words('Back to My network') }] });
   }
   var stopForgetting = null;
   /** the answer and the day of the store that was open are forgotten when the store changes */
@@ -476,7 +483,7 @@
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
     stopForgetting = root.CBBooksActing.onClear(forget);
-    Promise.resolve(reload()).then(focusHeading, focusHeading).then(function () { openAskedNote(asked); });
+    reload().then(focusHeading, focusHeading).then(function () { openAskedNote(asked); });
     return {
       /** Back or Forward to another screen of this client's books */
       setView: function (report, period) {

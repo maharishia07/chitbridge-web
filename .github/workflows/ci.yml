@@ -459,6 +459,7 @@ jobs:
           # the 17 Nov size-ceiling splits (behaviour-neutral): each part file holds what it owns, loaded the way the page loads it; books-parts also proves the moved functions are main's text unchanged
           node tests/rail-parts.test.cjs
           node tests/books-grant-parts.test.cjs
+          node tests/books-grant-fail-loud.test.cjs
           node tests/books-practice-parts.test.cjs
           node tests/cap-mark-sheet.test.cjs
           node tests/aud-f73-auditor-tax-return.test.cjs
