@@ -6,7 +6,7 @@
     "tax-slab": "1.110.1",
     "tax": "1.110.1",
     "pricing": "1.99.0",
-    "offers": "1.110.0",
+    "offers": "1.110.11",
     "variant": "1.99.0",
     "search": "1.4.0",
     "govcontext": "1.42.0",
@@ -199,7 +199,7 @@
   "sha256": {
     "money": "0137a6afb47b46ceca304c687a3d3fc20fd60652719d02887abd9f2128219d39",
     "pricing": "b62ddd59cb029b216873d34e5f8ca88771fd8fc9bb2042818156c72c19f84e2b",
-    "offers": "3c9c7abf73fad724af56eaacad33446b6bebb9618138bf7436b8172b474fb793",
+    "offers": "c2a1e25f0f008057d1ef5e23fa36a54a2ba001325cf51a9c2e5177a80af68a1d",
     "variant": "eaa0189fde550e0df27a89ff47b0342e4a3edce77cbc1c87bfe4e7f7af61ca77",
     "search": "3e6b74d84e1fa082d5aa7d676f53421b263beafd8c455dfe9719f7d25cd841fa",
     "govcontext": "d6eaa7aab22daeb73b006f25996a23d74ca571bb1260d61dfd56669f21e59a82",
