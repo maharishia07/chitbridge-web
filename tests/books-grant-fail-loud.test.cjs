@@ -14,7 +14,7 @@ let n = 0, bad = 0;
 const ok = async (name, fn) => { n++; try { await fn(); console.log('  ok  ', name); } catch (e) { bad++; console.log('  FAIL', name, '\n      ', e.message); } };
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
-function world(markupThere, role, view) {
+function world(markupThere, role, view, acting) {
   const logs = [], host = { innerHTML: '', isConnected: true, querySelectorAll: () => [], querySelector: () => null, addEventListener() {}, setAttribute() {}, appendChild() {} };
   const el = () => new Proxy(function () {}, { get: (t, k) => (k === 'value' ? '' : k === 'style' ? {} : k === 'querySelectorAll' ? () => [] : k === 'querySelector' ? () => null : k === 'addEventListener' ? () => {} : el()), set: () => true, apply: () => el() });
   const root = {
@@ -23,7 +23,7 @@ function world(markupThere, role, view) {
     location: { search: '', pathname: '/network.html', hash: '' }, history: {}, matchMedia: undefined,
     cblog: (lvl, msg) => logs.push(lvl + ' ' + msg),
     CBShell: { readFailed: (h, o) => { h.innerHTML = '<div data-testid="read-failed">' + o.what + ' could not be read</div>'; return h; } },
-    CBBooksActing: { setCurrency() {}, enter() {}, onClear: () => () => {}, current: () => ({ currency: 'AUD', store: { id: 's1', name: 'Shop' } }), leave() {}, css() {}, crumbs: () => '', periodSlot: () => '', banner: () => '<div id="ba_band"></div>', wireBanner() {}, figure: (m) => String(m), headers: () => ({}), postedByWords: () => '' },
+    CBBooksActing: Object.assign({ setCurrency() {}, enter() {}, onClear: () => () => {}, current: () => ({ currency: 'AUD', store: { id: 's1', name: 'Shop' } }), leave() {}, css() {}, crumbs: () => '', periodSlot: () => '', banner: () => '<div id="ba_band"></div>', wireBanner() {}, figure: (m) => String(m), headers: () => ({}), postedByWords: () => '' }, acting || {}),
     CBPeriodPick: { control: () => '', same: () => true, filled: (p) => p, toAddress: () => '' },
     Promise, Date, JSON, Math, Object, Array, String, Number, RegExp, Error, URLSearchParams, setTimeout, Proxy,
   };
@@ -32,7 +32,7 @@ function world(markupThere, role, view) {
   PARTS.forEach((f) => vm.runInContext(view && f.endsWith('books-grant-view.js') ? view : read(f), context, { filename: f }));
   const answer = { rows: [], entries: [], periods: [], currency: 'AUD' };
   const options = { member: { id: 'c1', name: 'Client', role, posting: '' }, stores: [], call: () => Promise.resolve(answer), mountList() {}, sheet() {}, closeSheet() {}, onBack() {}, onSwitch() {}, onEnded() {}, view: 'daybook' };
-  return { root, host, logs, mount: () => root.CBBooksGrantView.mount(host, options) };
+  return { root, host, logs, options, mount: () => root.CBBooksGrantView.mount(host, options) };
 }
 const settle = () => new Promise((r) => setTimeout(r, 60));
 
@@ -44,6 +44,17 @@ const settle = () => new Promise((r) => setTimeout(r, 60));
       assert.ok(w.logs.some((l) => /could not be painted/.test(l)), 'no log: ' + w.logs.join('|'));
     });
   }
+  await ok('an exception while KEEPING the answer (keepAnswer) is said in words and logged, not taken for "ended"', async () => {
+    const w = world(true, 'auditor', null, { setCurrency() { throw new TypeError('setCurrency is gone'); } }); let ended = 0; w.options.onEnded = () => { ended++; }; w.mount(); await settle();
+    assert.ok(/read-failed/.test(w.host.innerHTML) && ended === 0, 'ended=' + ended + ' ' + w.host.innerHTML.slice(0, 80));
+    assert.ok(w.logs.some((l) => /setCurrency is gone/.test(l)), w.logs.join('|'));
+  });
+  await ok('MUTATION: a load failure taken for "ended" again goes red', async () => {
+    const src = read(PARTS[7]), mutant = src.replace('else paintFailed(mine, failure);' , 'else if (grantKit.viewState.o.onEnded) grantKit.viewState.o.onEnded();');
+    assert.notStrictEqual(mutant, src, 'mutation did not apply');
+    const w = world(true, 'auditor', mutant, { setCurrency() { throw new TypeError('setCurrency is gone'); } }); w.mount(); await settle();
+    assert.ok(!/read-failed/.test(w.host.innerHTML), 'the mutant should stay blank');
+  });
   await ok('control: with the door markup present nothing is flagged and the screen paints its band', async () => {
     const w = world(true, 'auditor'); w.mount(); await settle();
     assert.ok(!/read-failed/.test(w.host.innerHTML) && /bv_back/.test(w.host.innerHTML), w.host.innerHTML.slice(0, 120) + ' ' + w.logs.join('|'));

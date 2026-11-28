@@ -401,8 +401,9 @@
   }
   function reload() {
     var mine = grantKit.viewState;
-    return load().then(function () { if (alive() && grantKit.viewState === mine) paint(); }, function () {
-      if (grantKit.viewState.o.onEnded) grantKit.viewState.o.onEnded();
+    return load().then(function () { if (alive() && grantKit.viewState === mine) paint(); }, function (failure) {
+      if (failure && failure.status === 401 && grantKit.viewState.o.onEnded) grantKit.viewState.o.onEnded(); /* the sign-in ended: the page leaves; ANY other exception (keepAnswer, a cell, a wire) is said, never taken for "ended" */
+      else paintFailed(mine, failure);
     }).catch(function (failure) { paintFailed(mine, failure); });
   }
   /** FAIL LOUD (1138, the blank client): a screen that threw while painting says so in words, in the page, with Try again and the way back, and logs why; it never leaves the pane empty. Only the client still open is told */
