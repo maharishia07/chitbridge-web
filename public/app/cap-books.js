@@ -3072,11 +3072,15 @@ function bkDvDraw(body, reply, range, since) {
     });
 }
 /**
- * ONEP-2 PR7 — the firm seat's tools on this Day book (books-audit-tools.js, books-grant-filters.js): ONE module, mounted only in an auditor or adviser seat
- * whose server says marking is on (CBBooksAuditTools.seatOn). The owner, a bookkeeper and any seat with no firm grant get none of it. Every write is the same call the firm view always made.
+ * ONEP-2 PR7 — the firm seat's tools on this Day book (books-audit-tools.js, books-grant-filters.js): ONE module, mounted only in an auditor or adviser seat (bkAudit). The marks bar, the Mark filter
+ * and the c / q keys also need the server to say marking is on (bkMarking: CBBooksAuditTools.seatOn). The owner, a bookkeeper and any seat with no firm grant get none of it. Every write is the same call the firm view always made.
  */
 function bkAudit() {
-  return typeof CBBooksAuditTools !== 'undefined' && typeof CBBooksGrantFilters !== 'undefined' && CBBooksAuditTools.seatOn(BK.mk);
+  return typeof CBBooksAuditTools !== 'undefined' && typeof CBBooksGrantFilters !== 'undefined' && CBBooksAuditTools.firmSeat();
+}
+/** a firm seat AND the server says marking is on for it (mark_actions): the marks bar, the Mark filter and the c / q keys */
+function bkMarking() {
+  return bkAudit() && CBBooksAuditTools.seatOn(BK.mk);
 }
 /** the since view is asked for (the address, then the toggle) and the seat is a firm seat: one read, no range */
 function bkSinceOn() {
@@ -3154,7 +3158,7 @@ function bkAuditPosted(e) {
 function bkJetFilters() {
   var book = BK.dv;
   var all = CBBooksGrantFilters.filtersFor(BK.mk, { period: function () { return book.period; }, currency: function () { return book.r.currency; }, region: function () { return book.r.country; }, rows: function () { return book.r.entries || []; } });
-  return all.map(function (filter) { return filter.key === 'by' ? Object.assign({}, filter, { key: 'madeby' }) : filter; }).filter(function (filter) { return BK_JET_KEYS.indexOf(filter.key) >= 0; }).map(function (filter) {
+  return all.map(function (filter) { return filter.key === 'by' ? Object.assign({}, filter, { key: 'madeby' }) : filter; }).filter(function (filter) { return BK_JET_KEYS.indexOf(filter.key) >= 0 && (filter.key !== 'mark' || bkMarking()); }).map(function (filter) {
     var judge = filter.match;
     return Object.assign({}, filter, { match: function (e, v) { return judge(bkJetRow(e), v); } });
   });
@@ -3180,7 +3184,7 @@ function bkJetWatch(host) {
   };
   document.addEventListener('change', settle);
   document.addEventListener('click', settle);
-  CBBooksAuditTools.keys(host, { mark: function () { return BK.mk; }, on: bkAudit, entryAt: bkJetEntryAt });
+  CBBooksAuditTools.keys(host, { mark: function () { return BK.mk; }, on: bkMarking, entryAt: bkJetEntryAt });
 }
 /** every page is in: the firm seat's filters judge every entry now held */
 function bkJetRefresh(book) {
@@ -3202,7 +3206,7 @@ function bkAuditPaint() {
   if (note) note.innerHTML = book.since ? '' : tools.riskNote();
   BK.dvQ = false;
   bkAuditPeriods(book);
-  BK.mk.bar(document.getElementById('bk_marks'), { onFilter: function (on) { BK.dvQ = on; if (on) bkQueriesPaint(); else bkQueriesBack(); } }).then(function (handle) { BK.dvBar = handle; });
+  if (bkMarking()) BK.mk.bar(document.getElementById('bk_marks'), { onFilter: function (on) { BK.dvQ = on; if (on) bkQueriesPaint(); else bkQueriesBack(); } }).then(function (handle) { BK.dvBar = handle; });
 }
 /** the bell's words (&mark= a Query, &note= my note, &nl= its label) arrive in the address of a firm seat: read once, forgotten from the address, and the thread or the note opens */
 function bkAskedOpen() {

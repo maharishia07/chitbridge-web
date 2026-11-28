@@ -18,7 +18,7 @@ let n = 0;
 const ok = (name, fn) => Promise.resolve().then(fn).then(() => { n++; console.log('  ok   ' + name); });
 const cap = read('public/app/cap-books.js');
 const grab = (src, name) => { const m = new RegExp(String.raw`(?:async )?function ${name}\([^)]*\) \{[\s\S]*?\n\}\n`).exec(src); assert.ok(m, name + ' not found'); return m[0]; };
-const FN = (src) => ['bkAudit', 'bkSinceOn', 'bkDbSeed', 'bkJetRange', 'bkJetPeriod', 'bkJetChosen', 'bkJetPreset', 'bkJetRow', 'bkJetRisk', 'bkJetFilters', 'bkDvTotal', 'bkDvOpenDay', 'bkDvAppend', 'bkDaybook', 'bkDvReadQuery', 'bkPlWindow', 'bkDbPeriod'].map((f) => grab(src, f)).join('') + (src.match(/var BK_JET_KEYS = [^\n]*\n/) || [''])[0] + (src.match(/var BK_PAGE = 100;\n/) || [''])[0];
+const FN = (src) => ['bkAudit', 'bkMarking', 'bkSinceOn', 'bkDbSeed', 'bkJetRange', 'bkJetPeriod', 'bkJetChosen', 'bkJetPreset', 'bkJetRow', 'bkJetRisk', 'bkJetFilters', 'bkDvTotal', 'bkDvOpenDay', 'bkDvAppend', 'bkDaybook', 'bkDvReadQuery', 'bkPlWindow', 'bkDbPeriod'].map((f) => grab(src, f)).join('') + (src.match(/var BK_JET_KEYS = [^\n]*\n/) || [''])[0] + (src.match(/var BK_PAGE = 100;\n/) || [''])[0];
 const E = (id, no, posting, recorded, dr, extra) => Object.assign({ entry_id: id, entry_no: no, posting_date: posting, recorded_at: recorded, lines: [{ dr_minor: dr }] }, extra || {});
 const ENTRIES = [
   E('e1', 'J-1', '2026-07-10', '2026-07-10T10:00:00Z', 15000),
@@ -47,7 +47,7 @@ function world(seat, search, replyOver) {
   vm.runInContext(['books-grant-api.js', 'books-acting.js', 'books-grant-filters.js', 'books-audit-tools.js'].map((f) => read('public/app/' + f)).join('\n'), root);
   if (seat) root.CBBooksActing.enter({ id: 's1', name: 'Acme Pty' }, seat);
   root.api = async (name, o) => { calls.push([name, JSON.stringify((o && o.query) || null), seat && seat !== 'owner' ? 'X-Books-For' : '-']); return Object.assign({ currency: 'AUD', country: 'AU', entries: ENTRIES, total: 6, count: 6, next: null, mark_actions: { set: { ok: true } } }, replyOver || {}); };
-  vm.runInContext(FN(cap) + '\n;globalThis.__go = bkDaybook; globalThis.__bkAudit = bkAudit; globalThis.__jet = bkJetFilters; globalThis.__risk = bkJetRisk;', root);
+  vm.runInContext(FN(cap) + '\n;globalThis.__go = bkDaybook; globalThis.__bkAudit = bkAudit; globalThis.__marking = bkMarking; globalThis.__jet = bkJetFilters; globalThis.__risk = bkJetRisk;', root);
   return { root, calls, body };
 }
 const DAY = 'booksDaybook{"limit":100,"order":"desc","from":"2026-07-01","to":"2026-07-31"}';
@@ -63,7 +63,8 @@ const ids = (w, key, v) => ENTRIES.filter((e) => w.root.__jet().filter((f) => f.
   await ok('the seat test: the auditor and the adviser get the tools, the owner and a seat with no firm grant do not (even when the server says marking is on)', async () => {
     assert.strictEqual(world('auditor', '').root.__bkAudit(), true); assert.strictEqual(world('adviser', '').root.__bkAudit(), true);
     assert.strictEqual(world(null, '').root.__bkAudit(), false); assert.strictEqual(world('owner', '').root.__bkAudit(), false);
-    const off = world('auditor', ''); off.root.BK.mk = mkFake(null); assert.strictEqual(off.root.__bkAudit(), false);
+    const off = world('auditor', ''); off.root.BK.mk = mkFake(null); assert.strictEqual(off.root.__bkAudit(), true); assert.strictEqual(off.root.__marking(), false); /* marking off: the JET filters, Risk, book order and since stay (the painter had them), the marks bar and the Mark filter go */
+    assert.strictEqual(world('auditor', '').root.__marking(), true); assert.strictEqual(world(null, '').root.__marking(), false);
   });
   await ok('the JET filters on the owner list: Mark · Risk · Recorded · Made · Round sum · Narration · Year end · Made by (the owner keeps its own Kind · Person · Evidence · Saved)', async () => {
     const w = world('auditor', ''); await w.root.__go(w.body);
@@ -139,7 +140,7 @@ const ids = (w, key, v) => ENTRIES.filter((e) => w.root.__jet().filter((f) => f.
   });
   await ok('PERIOD DROPDOWN: a firm seat reads GET /periods?marks=1 once and draws each year and month with checked n of m; a pick reads that window', () => {
     assert.ok(/api\('booksPeriods', \{ query: \{ marks: 1 \} \}\)/.test(cap) && /CBPeriodPick\.control\(choices, bkAuditPeriodOf\(choices, book\.window\), bkPeriodPicked\)/.test(cap));
-    assert.ok(/bkAuditPeriods\(book\);[\s\S]{0,4}BK\.mk\.bar\(/.test(cap) && /if \(BK\.dv && bkAudit\(\)\) bkAuditPeriods\(BK\.dv\)/.test(cap)); /* and again when a mark changes */
+    assert.ok(/bkAuditPeriods\(book\);[\s\S]{0,40}BK\.mk\.bar\(/.test(cap) && /if \(BK\.dv && bkAudit\(\)\) bkAuditPeriods\(BK\.dv\)/.test(cap)); /* and again when a mark changes */
     assert.ok(/period-pick\.js/.test(read('public/accounts.html')));
   });
   await ok('BELL WORDS: opened in a firm seat whether or not marking is on (the painter did), forgotten from the address either way', () => {
@@ -166,7 +167,7 @@ const ids = (w, key, v) => ENTRIES.filter((e) => w.root.__jet().filter((f) => f.
   });
   /* ---- mutations ---- */
   await ok('MUTATION 1: drop the seat gate (bkAudit always true) -> the owner gets the tools -> red', async () => {
-    const mutated = cap.replace('CBBooksAuditTools.seatOn(BK.mk);', 'true;');
+    const mutated = cap.replace("typeof CBBooksGrantFilters !== 'undefined' && CBBooksAuditTools.firmSeat();", 'true;');
     const w = world(null, ''); vm.runInContext(FN(mutated) + ';globalThis.__bkAudit = bkAudit;', w.root); assert.strictEqual(w.root.__bkAudit(), true);
     assert.strictEqual(world(null, '').root.__bkAudit(), false);
   });
