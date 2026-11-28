@@ -84,8 +84,16 @@ const firmCalls = (p) => p.calls.filter((c) => /^\/api\/books-grants/.test(c.p))
   check(finGate > 0 && finGate < finRead, 'finance.html: the seat answer comes before dues?finance=1 (no refused call, the worded state instead)');
   const empGate = emp.indexOf('CBAvatar.seatKnown'), empRead = emp.indexOf('CBAssign.holds()');
   check(empGate > 0 && empGate < empRead, 'employees.html: the seat answer comes before chits/holds (no refused call, no column)');
-  const acc = fs.readFileSync(path.join(__dirname, '..', 'public', 'accounts.html'), 'utf8'), hv = acc.indexOf('function hashView()');
-  check(hv > 0 && acc.slice(hv, hv + 600).indexOf('CBAvatar.staffSeat()') > 0 && acc.slice(hv, hv + 600).indexOf('staffSeat') < acc.slice(hv, hv + 600).indexOf('NAV.some'), 'accounts.html: ONE place decides the tabs (hashView): Counter staff get none, a typed # included, so compare / bank / every tab makes no call');
+  const acc = fs.readFileSync(path.join(__dirname, '..', 'public', 'accounts.html'), 'utf8'), hv = acc.indexOf('function hashView()'), body = acc.slice(hv, hv + 700);
+  check(hv > 0 && body.indexOf('moneyShut()') > 0 && body.indexOf('moneyShut()') < body.indexOf('NAV.some'), 'accounts.html: ONE place decides the tabs (hashView): it asks moneyShut() before any tab, a typed # included, so compare / bank / every tab makes no call for Counter staff');
+  const start = app('accounts-start.js'), cut = start.slice(start.indexOf('function moneyShut()'), start.indexOf('function moneyClosed()'));
+  const shut = (o) => { const w = { CBBooksActing: { current: () => o.acting }, CBAvatar: { staffSeat: () => o.fresh }, CBEdition: { seat: () => o.remembered } }; w.window = w; vm.createContext(w); vm.runInContext(cut + ';this.r = moneyShut();', w); return w.r; };
+  check(shut({ acting: null, fresh: true, remembered: null }) === true, 'moneyShut: Counter staff (fresh /me answer) are shut out');
+  check(shut({ acting: { store: 'x' }, fresh: true, remembered: { money: false } }) === false, 'moneyShut: acting for a client under a live grant is NEVER shut (the grant decides, seatClosed): the acting exemption');
+  check(shut({ acting: null, fresh: false, remembered: { money: false } }) === false, 'moneyShut: a fresh answer wins over the remembered one');
+  check(shut({ acting: null, fresh: null, remembered: { money: false } }) === true, 'moneyShut: /me not answered yet, the remembered seat on this device shuts it');
+  check(shut({ acting: null, fresh: null, remembered: null }) === false, 'moneyShut: nothing known = not shut (the api still refuses)');
+  check(/moneyShut()/.test(start.slice(start.indexOf('function moneyClosed()'), start.indexOf('function moneyClosed()') + 200)), 'moneyClosed draws its sentence from the same moneyShut()');
   console.log(failures ? failures + ' failed' : 'all passed');
   process.exit(failures ? 1 : 0);
 })();

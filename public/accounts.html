@@ -1003,7 +1003,7 @@ CBOnePerson.attach({
 /* ⭐ THE # DECIDES THE PAGE (M138): Back, Forward and a typed or shared link land on the page the address says. chrome() writes the # with replaceState, which fires nothing, so a click never loops here. */
 function hashView() {
   const v = hashPageOf();
-  if (window.CBAvatar && CBAvatar.staffSeat && CBAvatar.staffSeat()) return null; /* the one seat rule (avatar.js staffSeat: the api's seat.money === false): Counter staff get no Accounts tab, a typed # included, so no tab reads what the seat may not (moneyClosed drew the one sentence) */
+  if (moneyShut()) return null; /* the one definition (accounts-start.js moneyShut: the api's seat.money === false and not acting under a grant): Counter staff get no Accounts tab, a typed # included, so no tab reads what the seat may not (moneyClosed draws the one sentence) */
   return NAV.some((item) => item[0] === v) ? v : null;
 }
 window.addEventListener('hashchange', () => {
