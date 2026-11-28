@@ -408,11 +408,7 @@ function _rdDetailPane(it) {
   var verifyBtn =
     idType && it.rung !== 'verified'
       ? '<button data-cbsid="SCR033-B05"' + _rdGrey('verify') + ' onclick="verifyReadiness(\'' +
-        escJs(it.standard) +
-        "','" +
-        escJs(it.doc) +
-        "','" +
-        idType +
+        escJs(it.standard) + "','" + escJs(it.doc) + "','" + idType +
         '\')" title="Checked against the source registry, live" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--ok-3);background:var(--ok-tint);color:var(--ok-3);border-radius:9px;padding:7px 12px;cursor:pointer">' +
         tx('🔗 Verify at source') +
         '</button>'
@@ -420,11 +416,7 @@ function _rdDetailPane(it) {
   var skill = _rdSkill(it);
   var draftBtn = skill
     ? '<button data-cbsid="SCR033-B06"' + _rdGrey('gather') + ' onclick="aiDraftReadiness(\'' +
-      escJs(it.standard) +
-      "','" +
-      escJs(it.doc) +
-      "','" +
-      skill +
+      escJs(it.standard) + "','" + escJs(it.doc) + "','" + skill +
       '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
       tx('✨ Draft with AI') +
       '</button>'
