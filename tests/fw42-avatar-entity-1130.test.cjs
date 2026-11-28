@@ -6,7 +6,7 @@
 const assert = require('assert'), fs = require('fs'), path = require('path'), vm = require('vm');
 const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'avatar.js'), 'utf8');
 function cut(name) { const a = src.indexOf('function ' + name + '('); let d = 0, i = src.indexOf('{', a); for (let j = i; j < src.length; j++) { if (src[j] === '{') d++; if (src[j] === '}' && --d === 0) return src.slice(a, j + 1); } }
-const ctx = {}; vm.createContext(ctx);
+const ctx = { root: {} }; vm.createContext(ctx);
 vm.runInContext(cut('personOf') + '\n' + cut('roleLabelOf') + '\n' + cut('entityWord') + '\nthis.p = personOf;', ctx);
 assert.strictEqual(ctx.p({ role: 'entity', name: 'Asha', entity: 'Moonee Espresso' }).role, 'Owner · Moonee Espresso');
 assert.strictEqual(ctx.p({ role: 'entity', name: 'Asha', entity: { id: 'e1', name: 'Bayside Bookkeeping' } }).role, 'Owner · Bayside Bookkeeping');
