@@ -21,9 +21,7 @@
     return typeof root.tx === 'function' ? root.tx(label) : label;
   }
   /** a failure that changes nothing the person sees (a browser that keeps nothing): logged quietly where the page has the one logger */
-  function quiet(where, failure) {
-    if (typeof root.cbQuiet === 'function') root.cbQuiet(where, failure);
-  }
+  function quiet(where, failure) { if (typeof root.cbQuiet === 'function') root.cbQuiet(where, failure); }
   /** one stored word of this viewer, '' when the browser refuses or keeps none */
   function lsGet(key) {
     try {
@@ -41,10 +39,10 @@
       quiet('home2:write', failure);
     }
   }
-  /** a card's state rank: needs you 0, in use 1, anything else 2, not started 3 */
+  /** a card's state rank: needs you 0, in use 1, anything else 2, not started 3 (UX-221: the seat's lead card, the Till for Counter staff, is never folded: not started counts as in use for it) */
   function rank(card) {
     var stateNode = card.querySelector('[data-state]'), state = stateNode ? stateNode.getAttribute('data-state') : '';
-    return state === 'needs_you' ? 0 : state === 'in_use' ? 1 : state === 'not_started' ? 3 : 2;
+    return state === 'needs_you' ? 0 : state === 'in_use' || (state === 'not_started' && lead(card)) ? 1 : state === 'not_started' ? 3 : 2;
   }
   /** a card's first fact as the shell painted it ('' for the dash) */
   function factOf(card) {
@@ -183,6 +181,7 @@
     if (tools) home.host.querySelector('.ix-fs').appendChild(tools);
   }
 
+  function lead(card) { return root.CBEdition && root.CBEdition.isLead(idOf(card)) ? 1 : 0; } /* UX-221: 1 when this card is the entry the seat works from first (the Till for Counter staff) */
   /** the id of a card node */
   function idOf(node) {
     return node.getAttribute('data-id') || (node.getAttribute('data-testid') || '').replace('shell-chip-', '');
@@ -209,7 +208,7 @@
   /** the group's cards in order (needs you first, then in use, then the manifest's own order), moved into that order when they are not */
   function orderedCards(home, id) {
     var group = home.byId[id], panel = home.panels[id], cards = cardsOf(panel);
-    var want = cards.slice().sort(function (left, right) { return rank(left) - rank(right) || group.ids.indexOf(idOf(left)) - group.ids.indexOf(idOf(right)); });
+    var want = cards.slice().sort(function (left, right) { return lead(right) - lead(left) || rank(left) - rank(right) || group.ids.indexOf(idOf(left)) - group.ids.indexOf(idOf(right)); });
     if (want.some(function (card, index) { return card !== cards[index]; })) want.forEach(function (card) { panel.insertBefore(card, panel.querySelector('.ix-ln')); });
     return want;
   }

@@ -1,5 +1,5 @@
 /* tests/acc-410-return-one-source.test.cjs — ACC-410 (walk AE 27 Nov, P1) + ACC-411: the VAT period and the Emirate are the SHOP's setup answers, so the owner, the adviser and the auditor read the same return.
- * HAND  A shop that holds no VAT period: the return answers `needs: stagger` + the authority's sentence. The firm view then says that sentence (never "Nothing to show here") and draws no net (never "To pay or refund AED 0.00").
+ * HAND  A shop that holds no VAT period: the return answers `needs: stagger` + the authority's sentence (the firm seat reads it on the owner's screen since ONEP-1; its figures: tests/onep1-return-one-path.test.cjs).
  *       The owner's pick "Monthly" is kept as the shop's setup answer period = the pack's monthly key ('4'), Emirate Dubai = region: PUT country-setup { country, currency, fy_start_month, particulars: { period: '4', region: 'Dubai' } }.
  *       The device no longer sends its own stagger or Emirate: the server reads the held ones for any seat. The month that has begun is asked at today (the server ignores a day still to come), so the return opens on the month that holds the entries.
  * Proof of the api half (the same boxes for the owner and the firm seat): chitbridge-api tests/books-returns.test.cjs (ACC-410 block).   CARD 14-accounting/tax-return */
@@ -9,30 +9,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public/app', f),
 let n = 0;
 const ok = (name, fn) => Promise.resolve().then(fn).then(() => { n++; console.log('  ok   ' + name); });
 
-/* the firm view ---------------------------------------------------------------------------------------------- */
-const root = { tx: (s) => s, esc: (s) => String(s == null ? '' : s), shopDay: (d) => 'D' + String(d).slice(0, 10), document: { getElementById: () => null }, location: { search: '' }, Promise, Date, JSON, Math, Object, Array, String, Number };
-root.window = root; root.globalThis = root; vm.createContext(root);
-vm.runInContext(read('books-grant-reports.js'), root);
-const kit = root.CBBooksGrantKit; kit.words = (s) => s; kit.minorWords = (m) => 'AED ' + (m / 100).toFixed(2);
-const bas = kit.REPORTS.filter((r) => r.k === 'bas')[0];
-const WHY = 'The FTA assigns the Tax Period (ER Art. 62): say which stagger.';
-const waiting = { needs: 'stagger', why: WHY, net_minor: 0, boxes: [], periods: [] };
-const held = { period: { label: 'Nov 2026', due: '2026-12-28' }, net_minor: -1500, boxes: [{ code: '14', tax_minor: -1500 }] };
-
 (async () => {
-  await ok('firm view: a return waiting on the shop draws no net (no "To pay or refund AED 0.00")', () => {
-    kit.viewState = { answer: waiting, report: 'bas', day: '' };
-    assert.strictEqual(kit.facts(bas), '');
-  });
-  await ok('firm view: a return the shop has set up still shows the server\'s own net', () => {
-    kit.viewState = { answer: held, report: 'bas', day: '' };
-    assert.ok(kit.facts(bas).includes('AED -15.00'), kit.facts(bas));
-  });
-  await ok('firm view: the empty state says what the return waits for (the server\'s sentence), not "Nothing to show here"', () => {
-    const src = read('books-grant-list.js');
-    assert.ok(/empty: waitingEmpty\(report\) \|\|/.test(src) && /report\.k !== 'bas' \|\| !answer \|\| !answer\.needs/.test(src));
-    assert.ok(/answer\.why/.test(src) && /This return is waiting on the shop/.test(src));
-  });
 
   /* the owner's screen ----------------------------------------------------------------------------------------- */
   const src = read('cap-period.js'), keep = read('cap-period-stock.js');
@@ -40,7 +17,7 @@ const held = { period: { label: 'Nov 2026', due: '2026-12-28' }, net_minor: -150
 \}
 `).exec(from || src); assert.ok(m, name + ' not found'); return m[0]; };
   const calls = [];
-  const ctx = { Object, String, Date, JSON, PE_RET: { q: {}, r: null }, tx: (s) => s, bkQuiet: (w, f, fb) => fb, peReturnLoad: async () => ({ reloaded: true }),
+  const ctx = { Object, String, Date, JSON, PE_RET: { q: {}, r: null }, peOwner: () => true, tx: (s) => s, bkQuiet: (w, f, fb) => fb, peReturnLoad: async () => ({ reloaded: true }),
     api: async (name, o) => { calls.push([name, o && o.body]); return name === 'countrySetup' ? { country: { code: 'AE' }, currency: 'AED', fy_start_month: 1 } : {}; },
     peBusyDay0: null };
   vm.createContext(ctx);

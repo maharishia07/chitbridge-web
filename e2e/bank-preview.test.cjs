@@ -263,7 +263,8 @@ const make = (over) => {
   const item = { ref: 'bank:abc', event: { type: 'expense', amount: 1 }, party: { status: 'new', name: 'Origin Energy', kind: 'supplier' } };
   const done = await post(item);
   assert.deepStrictEqual(calls.map((x) => x[0]), ['supAdd', 'booksEventPost']);
-  assert.strictEqual(calls[1][1].kind, 'expense', 'the server reads kind, never type');
+  assert.strictEqual(calls[1][1].kind, 'bank_expense_supplier', 'an expense with a party is ONE supplier expense (BB-P1-3); the server reads kind, never type');
+  assert.strictEqual(calls[1][1].supplier, 'sup-1');
   assert.ok(!('type' in calls[1][1]) && !('ref' in calls[1][1]) && !('party' in calls[1][1]), 'only keys the closed POST /events body lists');
   assert.strictEqual(calls[1][1].client_ref, 'bank:abc');
   assert.strictEqual(done.ok, true);

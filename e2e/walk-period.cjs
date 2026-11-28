@@ -32,6 +32,7 @@ W.run('period', async (w) => {
   await ctx.route(base + '/api/**', async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
     S.calls.push({ m, p, q: u.search, h });
+    if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'AUD' } }); /* ONEP-2: the owner's page a statement door opens (accounts.html) asks for the shop's name */
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: OTHER, name: 'Store Two', city: 'Delhi', km: 9, purpose: 'Snacks' }] });
     if (p === '/api/books-grants/consent') return J(r, 200, { headline: 'Let your network parent read your books', can_read: ['your trial balance', 'your profit and loss'], cannot: ['change or add anything'], costs: u.searchParams.get('can_see_costs') === 'false' ? 'It will not see your costs and margins.' : 'It will see your costs and margins.', rights: 'You can end this at any time.' });
@@ -50,9 +51,9 @@ W.run('period', async (w) => {
       }
       if (p === '/api/books/trial-balance') { const ex = example('GET /api/books/trial-balance'); return J(r, 200, Object.assign(ex, { currency: 'AUD', asOf: day('asOf') || '2026-11-16', shown_as_at: day('asOf') || '2026-11-16', rows: [Object.assign({}, ex.rows[0], { code: '1000', name: 'Cash', dr_minor: 123400, cr_minor: 0 })] })); }
       if (p === '/api/books/pl') { const ex = example('GET /api/books/pl'); return J(r, 200, Object.assign(ex, { currency: 'AUD', from: day('from') || '2026-07-01', to: day('to') || '2026-11-16', income: [Object.assign({}, ex.income[0], { code: '4000', name: 'Sales', amount_minor: 170000, role: 'sales' })], expense: [Object.assign({}, ex.expense[0], { code: '5000', name: 'Purchases', amount_minor: 70000, role: 'purchases' })], total_income_minor: 170000, total_expense_minor: 70000, profit_minor: 100000, gross_profit: { sales_minor: 170000, cost_of_sales_minor: 70000, gross_profit_minor: 100000 } })); }
-      if (p === '/api/books/bs') { const ex = example('GET /api/books/bs'); return J(r, 200, Object.assign(ex, { currency: 'AUD', asOf: day('asOf') || '2026-11-16', fy_from: '2025-07-01', shown_as_at: day('asOf') || '2026-11-16', equity: [Object.assign({}, ex.equity[0], { code: '3900', name: 'Net profit', role: 'profit_to_date', amount_minor: 100000 })] })); }
+      if (p === '/api/books/bs') { const ex = example('GET /api/books/bs'); return J(r, 200, Object.assign(ex, { currency: 'AUD', asOf: day('asOf') || '2026-11-16', fy_from: '2025-07-01', shown_as_at: day('asOf') || '2026-11-16', equity: [Object.assign({}, ex.equity[0], { code: null, name: 'Net profit', role: 'profit_to_date', amount_minor: 100000 })] })); } /* the server's profit line has NO code (api lib/books-bs-shape.js: { code: null, name: 'Net profit', role: 'profit_to_date' }); the owner's balance sheet names a code-less line with its period (bkBsLineName), a coded one is a ledger link. The stand-in had a code 3900 only because the old firm painter ignored it */
       if (p === '/api/books/daybook') { const ex = example('GET /api/books/daybook'); return J(r, 200, Object.assign(ex, { currency: 'AUD', from: day('from'), to: day('to'), entries: [], count: 0 })); }
-      const ex = example('GET ' + p); return J(r, 200, Object.assign(ex, { parties: [] }));
+      const ex = example('GET ' + p); if (Array.isArray(ex.parties)) ex.parties = []; return J(r, 200, ex); /* only a key the api's own example has (the owner's page the doors open also reads /health, which has no parties: X1) */
     }
     return J(r, 200, {});
   });
@@ -64,7 +65,11 @@ W.run('period', async (w) => {
   const openNetwork = async () => { await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-store-' + MEMBER), { timeout: 20000 }); await page.waitForTimeout(300); };
   const booksSection = async () => { await page.click(T('nw-books-door')); await page.waitForSelector(T('bg-give'), { timeout: 10000 }); await page.waitForTimeout(300); };
 
-  const lastCall = (path) => { const list = S.calls.filter((c) => c.p === path); return list.length ? new URLSearchParams(list[list.length - 1].q) : new URLSearchParams(''); };
+  const lastCall = (path, since) => { const list = S.calls.slice(since || 0).filter((c) => c.p === path); return list.length ? new URLSearchParams(list[list.length - 1].q) : new URLSearchParams(''); };
+  /* ONEP-2 (web #814-#819): the trial balance, P&L and balance sheet are DOORS of this view (bv-tb-open / bv-pl-open / bv-bs-open): a press opens the OWNER's screen in this seat (accounts.html#/tb|pl|bs, the period riding in the address).
+     The period facts are asserted on what that screen asks the server (only the calls AFTER the press count: `since`) and shows; back() returns to the firm view the way a person does. */
+  const door = async (k, sel) => { if (page.url().indexOf('/accounts.html') >= 0) await back(); /* a step before left on the owner's page: come back first */ const since = S.calls.length; await page.click(T('bv-' + k + '-open')); await page.waitForURL((u) => u.pathname === '/accounts.html', { timeout: 20000 }); await page.waitForSelector(sel, { timeout: 20000 }); await page.waitForTimeout(500); return since; };
+  const back = async () => { await page.goBack(); await page.waitForSelector('#bv_period', { timeout: 15000 }); await page.waitForTimeout(500); };
   const tab = async (k, sel) => { await page.click(T('bv-tab-' + k)); await page.waitForTimeout(500); if (sel) await page.waitForSelector(sel, { timeout: 8000 }); };
   const picked = () => page.$eval('#bv_period', (el) => el.value);
   const pick = async (value) => { await page.selectOption('#bv_period', value); await page.waitForTimeout(700); };
@@ -85,22 +90,26 @@ W.run('period', async (w) => {
     return { ok: lines.includes('Sep 2025 · 40 entries · Locked · 40/40 checked') && lines.includes('Oct 2025 · 30 entries · Locked · 12/30 checked') && lines.some((l) => /^FY 2025-26 · .*2025 – .*2026 · 70 entries · 12 of 12 months locked · 52\/70 checked$/.test(l)) && chips === 0, saw: lines.join(' | ') + ' · chips ' + chips };
   });
   await w.step('P3', 'Trial balance: "As at" the year end (30 Jun 2026), not today', async () => {
-    await tab('tb', T('bv-asat'));
-    const q = lastCall('/api/books/trial-balance'), head = await txt(T('bv-asat'));
-    return { ok: q.get('asOf') === '2026-06-30' && /30/.test(head) && /2026/.test(head) && /As at/.test(head), saw: 'asOf ' + q.get('asOf') + ' · ' + head };
+    const since = await door('tb', T('tb-balanced'));
+    const q = lastCall('/api/books/trial-balance', since), day = await page.$eval('#tb_asof', (el) => el.value); /* the owner's screen says "As of" in its date box; the year end rode in the address (to=) and is the day it asks */
+    return { ok: q.get('asOf') === '2026-06-30' && day === '2026-06-30', saw: 'asOf ' + q.get('asOf') + ' · "As of" box ' + day };
   });
   await w.step('P4', 'Profit and loss: "For <from> – <to>" (a period, not "as at"), with a gross profit line (sales less cost of sales)', async () => {
-    await tab('pl', T('bv-for'));
-    const q = lastCall('/api/books/pl'), head = await txt(T('bv-for')), facts = await txt(T('bv-facts')), rows = await txt(T('bv-list'));
-    return { ok: q.get('from') === '2025-07-01' && q.get('to') === '2026-06-30' && /^For /.test(head) && /2025/.test(head) && /2026/.test(head) && !(await has(T('bv-asat'))) && /Gross profit/.test(facts) && /1,000/.test(facts) && /Gross profit \(sales less cost of sales\)/.test(rows), saw: head + ' · ' + facts };
+    await back();
+    const since = await door('pl', T('pl-table'));
+    const q = lastCall('/api/books/pl', since), head = await txt(T('pl-range')), gross = await txt(T('pl-gross')), profit = await txt(T('pl-profit'));
+    /* the owner's range line is the period itself (1 Jul 2025 - 30 Jun 2026), with no balance-sheet "as at" range on the screen; the old "For " prefix was the firm painter's wording */
+    return { ok: q.get('from') === '2025-07-01' && q.get('to') === '2026-06-30' && /Jul.*2025.*Jun.*2026/.test(head) && !(await has(T('bs-range'))) && /Gross profit \(sales less cost of sales\)/.test(gross) && /1,000/.test(gross) && /Profit/.test(profit), saw: head + ' · ' + gross + ' · ' + profit };
   });
   await w.step('P5', 'Balance sheet: as at the year end, and its profit line says which period it is the profit of', async () => {
-    await tab('bs', T('bv-row-0'));
-    const q = lastCall('/api/books/bs'), rows = await txt(T('bv-list'));
-    return { ok: q.get('asOf') === '2026-06-30' && /Profit .*2025.*–.*2026/.test(rows) && !/Net profit/.test(rows), saw: 'asOf ' + q.get('asOf') + ' · ' + rows.slice(0, 120) };
+    await back();
+    const since = await door('bs', T('bs-table'));
+    const q = lastCall('/api/books/bs', since), rows = await txt(T('bs-table'));
+    /* the owner's screen keeps the server's own name (Net profit) and follows it with the period (bkBsLineName); "never the bare name" replaces the old "not Net profit", which was the firm painter's rename to "Profit" */
+    return { ok: q.get('asOf') === '2026-06-30' && /[Pp]rofit 1 Jul 2025 – 30 Jun 2026|[Pp]rofit .*2025.*–.*2026/.test(rows) && !/Net profit(?! .*2025)/.test(rows), saw: 'asOf ' + q.get('asOf') + ' · ' + rows.slice(0, 160) };
   });
   await w.step('P6', 'Who owes whom reads as at the year end (capped at the shop day, E1); Months lists the months of the chosen year only', async () => {
-    await tab('dues'); const d = lastCall('/api/books/dues');
+    await back(); await tab('dues'); const d = lastCall('/api/books/dues');
     await tab('periods', T('bv-row-0')); const rows = await txt(T('bv-list'));
     const asOf = ['2026-06-30', TD.TODAY].sort()[0]; /* E1: the as-at is the earlier of the year end and the shop day, so a year still in progress is read as at today, never a future day */
     return { ok: d.get('asOf') === asOf && /September 2025/.test(rows) && /October 2025/.test(rows) && !/March 2025/.test(rows), saw: 'dues asOf ' + d.get('asOf') + ' · ' + rows.slice(0, 120) };
@@ -110,8 +119,8 @@ W.run('period', async (w) => {
     await pick('y:2024-25');
     const after = page.url();
     await tab('daybook'); const dq = lastCall('/api/books/daybook');
-    await tab('pl', T('bv-for')); const pq = lastCall('/api/books/pl');
-    await tab('tb', T('bv-asat')); const tq = lastCall('/api/books/trial-balance');
+    const sp = await door('pl', T('pl-table')); const pq = lastCall('/api/books/pl', sp); await back();
+    const st = await door('tb', T('tb-balanced')); const tq = lastCall('/api/books/trial-balance', st); await back();
     await tab('dues'); const uq = lastCall('/api/books/dues');
     return { ok: /fy=2025-26/.test(before) && /fy=2024-25/.test(after) && dq.get('from') === '2024-07-01' && dq.get('to') === '2025-06-30' && pq.get('from') === '2024-07-01' && pq.get('to') === '2025-06-30' && tq.get('asOf') === '2025-06-30' && uq.get('asOf') === '2025-06-30', saw: before.slice(-40) + ' → ' + after.slice(-40) + ' · day ' + dq.get('from') + ' · pl ' + pq.get('to') + ' · tb ' + tq.get('asOf') + ' · dues ' + uq.get('asOf') };
   });
@@ -122,10 +131,12 @@ W.run('period', async (w) => {
   });
   await w.step('P9', 'a link with the period opens on it (?view=pl&fy=2024-25), and a month pick reads that month: "For 1 Sep 2025 – 30 Sep 2025"', async () => {
     await page.goto(base + '/network.html?open=' + MEMBER + '&view=pl&fy=2024-25'); await page.waitForSelector('#bv_period', { timeout: 15000 }); await page.waitForTimeout(700);
-    const v1 = await picked(), q1 = lastCall('/api/books/pl');
-    await pick('m:2025-09-01|2025-09-30'); await page.waitForSelector(T('bv-for'), { timeout: 8000 });
-    const q2 = lastCall('/api/books/pl'), head = await txt(T('bv-for'));
-    return { ok: v1 === 'y:2024-25' && q1.get('from') === '2024-07-01' && q2.get('from') === '2025-09-01' && q2.get('to') === '2025-09-30' && /Sep/.test(head) && /from=2025-09-01/.test(page.url()), saw: v1 + ' · ' + q1.get('from') + ' · ' + q2.get('from') + ' – ' + q2.get('to') + ' · ' + head + ' · ' + page.url().slice(-60) };
+    /* ONEP-2: ?view=pl is no view of the firm's page now (P&L is the owner's screen): the link still opens the firm view ON THE PERIOD, and the P&L door carries it */
+    const v1 = await picked(), s1 = await door('pl', T('pl-table')), q1 = lastCall('/api/books/pl', s1); await back();
+    await pick('m:2025-09-01|2025-09-30');
+    const s2 = await door('pl', T('pl-table')); await page.waitForSelector(T('pl-range'), { timeout: 8000 });
+    const q2 = lastCall('/api/books/pl', s2), head = await txt(T('pl-range')), carried = page.url(); await back();
+    return { ok: v1 === 'y:2024-25' && q1.get('from') === '2024-07-01' && q2.get('from') === '2025-09-01' && q2.get('to') === '2025-09-30' && /Sep/.test(head) && /from=2025-09-01/.test(carried), saw: v1 + ' · ' + q1.get('from') + ' · ' + q2.get('from') + ' – ' + q2.get('to') + ' · ' + head + ' · ' + carried.slice(-60) };
   });
   await w.step('X1', 'every /api/books answer the stand-in served matched the api contract (web-api.contract.json)', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
   await w.step('M1', 'fits 1366×768 and 390×844: no sideways scroll, the control stays on the screen (390: full width under the tabs)', async () => {

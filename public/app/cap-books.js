@@ -456,11 +456,9 @@ function bkErr(e) {
 }
 /** STAFF-BOOKS: a view the server refuses this seat (403: the money reads are the owner's and the auditor's) says so in the server's own sentence, in the ONE empty/refused state (emptyState), never a raw error and never a blank pane.
  *  Any other failure keeps bkErr's words. `what` names the view. */
-/** the ONE sentence of who may read a gated books screen (twin of the api gate lib/books-readers.js READ_MONEY_WORDS: owner · the shop's accountant or bookkeeper · auditor) */
-var BK_READ_WORDS = "Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.";
 function bkRefused(e, what) {
   if (!e || e.status !== 403) return bkErr(e);
-  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || BK_READ_WORDS)) + ' ' + esc(tx('A job title is only a name. To read the books, the owner picks the Bookkeeper seat for you under People.'))); /* AG-F-06: a person called Bookkeeper by job title alone has no seat; the answer says what to ask for */
+  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc((typeof CBRoles !== 'undefined' ? CBRoles.refusal('books') : '')) /* UX-224: the one refusal (CBRoles), not the api's long list of who may read; AG-F-06's "ask the owner" is its last words */); /* AG-F-06: a person called Bookkeeper by job title alone has no seat; the answer says what to ask for */
 }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
@@ -2964,7 +2962,7 @@ function bkAttachToEntry(entry) {
 }
 /**
  * CMP066 (cap-flag.js): the owner's own private bookmarks and notes on this business's entries. The call carries the token and NOTHING else: never X-Books-For, so a flag is kept in the caller's own organisation.
- * Only on the business's OWN books (not while acting for a client: the firm's seats are the grant view's); the subject is this business's own id.
+ * Only on the business's OWN books here (bkFlagsIngest); while acting for a client the P&L's Explain uses this same call (bkExplainControl): token only, so the note stays in the firm's own organisation.
  */
 function bkFlagCall(method, path, body) {
   return fetch(CFG.API_BASE + path, { method: method, cache: 'no-store', headers: Object.assign(CBBooksActing.tokenHeader(), { 'Content-Type': 'application/json' }), body: body ? JSON.stringify(body) : undefined }).then(function (r) {
@@ -4557,9 +4555,24 @@ function bkTbTotalRowHTML(reply, currency, comparison) {
       '</b></td>' + (comparison ? '<td></td><td></td><td></td>' : '') + '</tr>'
   );
 }
+/** ONEP-2: the day the trial balance opens at when the address carries one (to=YYYY-MM-DD, the firm's door and the Bank way back): read ONCE per page, a bad or empty value is no pick (today stays). Owner and seat call this same function */
+function bkTbSeedDay() {
+  return bkCarriedDay('tbSeeded');
+}
+/** ONEP-2: the ONE reader of the day the firm's door carries (to=YYYY-MM-DD). Read ONCE per page per screen (flag BK[key]); a bad day is no pick (''). Owner and seat call it; it writes nothing */
+function bkCarriedDay(key) {
+  if (BK[key]) return '';
+  BK[key] = true;
+  var day = new URLSearchParams(location.search || '').get('to') || '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !isNaN(Date.parse(day)) && day <= bkToday() ? day : ''; /* AUDBS: a day that has not happened is no pick (the period end of the year in progress rides the firm's door): the seat opens at the owner's default, today, so both seats ask the same day */
+}
+/** the day the trial balance is read at: the day pressed, else the one typed, else the address's (once), else today */
+function bkTbDay() {
+  return BK.tbDay || (document.getElementById('tb_asof') || {}).value || bkTbSeedDay() || bkToday();
+}
 /* the Trial balance tab: every account's debit and credit as of one date */
 async function bkTB(body) {
-  var asOf = BK.tbDay || (document.getElementById('tb_asof') || {}).value || bkToday();
+  var asOf = bkTbDay();
   BK.tbDay = '';
   try {
     var reply = await api('booksTB', { query: { asOf: asOf } });
@@ -4732,7 +4745,7 @@ function bkPlGroups(lines, currency, compare, from, to) {
       };
       return (
         bkStRow('bk-grp', esc(head.label), []).replace('</tr>', '<td colspan="' + (compare ? 5 : 2) + '"></td></tr>') +
-        accts.map(function (x) { return bkStRow(compare && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + bkDrillLink(x.code, x.name, 'pl', from, to, 'pl', tx('P&L')) + '</span>', figs(x)); }).join('') +
+        accts.map(function (x) { return bkStRow(compare && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + bkDrillLink(x.code, x.name, 'pl', from, to, 'pl', tx('P&L')) + (compare && x.change_over && bkExplainOn() ? '<span class="bk-ex" data-pl-ex="' + esc(bkExplainId(x.code, to)) + '" data-pl-exl="' + esc(String(x.name || x.code).replace(/[<>]/g, '').slice(0, 56) + ' · ' + String(to).slice(0, 10)) + '"></span>' : '') + '</span>', figs(x)); }).join('') +
         bkStRow('bk-sub' + (compare && head.change_over ? ' bk-over' : ''), esc(tx('Total') + ' ' + head.label), figs(head))
       );
     })
@@ -4767,8 +4780,30 @@ function bkPlTotalRow(cmp, c, total) {
   cells.push({ v: bkPct(total.share), wide: true });
   return bkStRow('bk-tot' + (cmp && total.over ? ' bk-over' : ''), esc(total.label), cells);
 }
+/** ONEP-2: the window the P&L opens at when the address carries one (from=YYYY-MM-DD&to=YYYY-MM-DD, the firm's door), and its compare mode (compare=year|period|none, else the owner's default 'year'). Read ONCE per page; a bad pair (not a date, from after to) is no pick, the owner's default stays. Owner and seat call this same function; it only sets BK_PL in memory and writes nothing */
+function bkPlSeed() {
+  if (BK.plSeeded) return;
+  BK.plSeeded = true;
+  var q = new URLSearchParams(location.search || ''), win = bkPlWindow(q.get('from') || '', q.get('to') || '');
+  if (!win) return;
+  BK_PL.preset = 'custom';
+  BK_PL.from = win[0];
+  BK_PL.to = win[1];
+  BK_PL.compare = ['year', 'period', 'none'].indexOf(q.get('compare')) >= 0 ? q.get('compare') : 'year';
+}
+/** a carried window as [from, to], or null when either end is no real date or from is after to */
+function bkPlWindow(from, to) {
+  var iso = /^\d{4}-\d{2}-\d{2}$/;
+  var real = function (d) { return iso.test(d) && !isNaN(Date.parse(d)); };
+  return real(from) && real(to) && from <= to ? [from, to] : null;
+}
+/** the P&L's range line: a range running past today is read to the day the server says (period.through, F-67), with "year to date", never the year to come */
+function bkPlRangeHTML(reply, period, comparison) {
+  return bkSpan(reply.from, period.through || reply.to) + (period.through ? ' · ' + tx('year to date') : '') + (comparison ? ' · ' + tx('against') + ' ' + bkSpan(comparison.from, comparison.to) : '');
+}
 /** what the P&L asks the server: the compare mode and either the custom dates or the preset and its step back */
 function bkPlQuery() {
+  bkPlSeed();
   var query = { compare: BK_PL.compare };
   if (BK_PL.preset === 'custom') {
     query.from = BK_PL.from || bkFyFrom();
@@ -4793,12 +4828,52 @@ function bkPlSectionTotal(reply, comparison, currency, kind, label) {
     over: compared[kind + '_change_over']
   });
 }
+/**
+ * ONEP-2 PR 3: the auditor's and adviser's "Explain" on a changed P&L line (NET005-P06, kept from the firm's old painter): my own note on the account line for this period
+ * (cap-flag.js kind 'account'; the id is '<code>@<period end day>'). ONLY in a firm seat (CBBooksActing.current() is not the owner); the owner's own seat paints none and makes no flags call.
+ * The write is bkFlagCall's: token only, NO X-Books-For, so the note is kept in the firm's OWN organisation, never the client's. The server decides who may (a refusal hides the chip).
+ */
+function bkExplainOn() {
+  var seat = typeof CBBooksActing !== 'undefined' && CBBooksActing.current ? CBBooksActing.current() : null;
+  return !!seat && seat.role !== 'owner' && typeof CBFlag !== 'undefined' && !!seat.store && !!seat.store.id;
+}
+function bkExplainId(code, to) {
+  return String(code || '').toLowerCase() + '@' + String(to || '').slice(0, 10);
+}
+/** one 'account' control per client, separate from the owner's BK.fl (cap-flag keeps one live control per kind); dropped when the seat changes or leaves */
+function bkExplainControl() {
+  var id = CBBooksActing.current().store.id;
+  if (BK.fa && BK.faFor === id) return BK.fa;
+  if (BK.fa) BK.fa.destroy();
+  BK.faFor = id;
+  BK.fa = CBFlag.use({ call: bkFlagCall, kind: 'account', entity: function () { var c = CBBooksActing.current(); return c ? c.store.id : null; } });
+  if (!BK.faClear && CBBooksActing.onClear) BK.faClear = CBBooksActing.onClear(function () { if (BK.fa) BK.fa.destroy(); BK.fa = null; BK.faFor = null; });
+  return BK.fa;
+}
+/** after the P&L is drawn: ONE read of my explanations of the changed lines, then a chip in each placeholder; a stale paint (the period changed meanwhile) is left alone, a failed or refused read draws none */
+function bkExplainPaint(body) {
+  var slots = [].slice.call(body.querySelectorAll ? body.querySelectorAll('[data-pl-ex]') : []);
+  if (!slots.length || !bkExplainOn()) return;
+  var fa = bkExplainControl(), seat = CBBooksActing.current().store.id;
+  fa.load(slots.map(function (n) { return n.getAttribute('data-pl-ex'); })).then(function () {
+    var now = CBBooksActing.current();
+    if (BK.fa !== fa || !now || now.store.id !== seat || fa.off()) return;
+    slots.forEach(function (n) { if (n.parentNode) n.innerHTML = '<span data-cbsid="NET005-P06">' + fa.chip(n.getAttribute('data-pl-ex'), n.getAttribute('data-pl-exl')) + '</span>'; });
+  });
+}
 /** the P&L's first line: Profit or Loss, its share of income and, beside last year, what it was */
 function bkPlLeadHTML(reply, cmp, c) {
   var profit = Number(reply.profit_minor);
   return '<div style="padding:4px 0 10px;font-size:var(--fs-3)" data-testid="pl-profit"><b>' + esc(tx(profit >= 0 ? 'Profit' : 'Loss')) + ' ' + esc(bkMoney(Math.abs(profit || 0), c)) + '</b>' +
     (reply.profit_share_bp != null ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + bkPct(reply.profit_share_bp) + ' ' + esc(tx('of income')) + '</span>' : '') +
     (cmp ? ' <span style="color:var(--grey);font-size:var(--fs-1)" data-testid="pl-profit-was">· ' + esc(tx('was')) + ' ' + esc(bkMoney(cmp.profit_minor, c)) + (cmp.profit_change_bp != null ? ' (' + bkPct(cmp.profit_change_bp, true) + ')' : '') + '</span>' : '') + '</div>';
+}
+/** the P&L's gross profit line, the server's own (reply.gross_profit: sales less cost of sales, null when the period has no sales account): a cost of sales of 0 says it equals sales (W4-16), never a margin fact */
+function bkPlGrossHTML(reply, c) {
+  var g = reply.gross_profit;
+  if (!g || g.gross_profit_minor == null) return '';
+  var words = g.cost_of_sales_minor === 0 ? 'Gross profit (no cost of sales booked, so it equals sales)' : 'Gross profit (sales less cost of sales)';
+  return '<div style="padding:0 0 10px;font-size:var(--fs-1);color:var(--grey)" data-testid="pl-gross">' + esc(tx(words)) + ' ' + esc(bkMoney(g.gross_profit_minor, c)) + '</div>';
 }
 /** the P&L's column heads: this period, last year · change · % when compared, % of income */
 function bkPlHeadHTML(cmp) {
@@ -4826,8 +4901,8 @@ async function bkPL(body) {
       ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="pl_from" aria-label="' + esc(tx('From')) + '" value="' + esc(reply.from) + '" onchange="bkPlDates()"><span>→</span><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="pl_to" aria-label="' + esc(tx('To')) + '" value="' + esc(reply.to) + '" onchange="bkPlDates()">'
       : '';
     var cmpSel = bkPlCompareHTML();
-    var range = bkSpan(reply.from, reply.to) + (comparison ? ' · ' + tx('against') + ' ' + bkSpan(comparison.from, comparison.to) : '');
-    var lead = bkPlLeadHTML(reply, comparison, currency);
+    var range = bkPlRangeHTML(reply, period, comparison);
+    var lead = bkPlLeadHTML(reply, comparison, currency) + bkPlGrossHTML(reply, currency);
     var head = bkPlHeadHTML(comparison);
     body.innerHTML =
       bkStmtCss() +
@@ -4841,9 +4916,27 @@ async function bkPL(body) {
       bkPlGroups(by.expense, currency, comparison, reply.from, reply.to) +
       bkPlSectionTotal(reply, comparison, currency, 'expense', tx('Total expenses')) +
       '</tbody></table></div>' + (comparison ? bkOverNote(reply.over_rule, currency) : '');
+    if (comparison) bkExplainPaint(body);
   } catch (e) {
     body.innerHTML = bkRefused(e, 'Profit and loss');
   }
+}
+/** ONEP-2: the as-at day the balance sheet opens at when the address carries one (to=), read once; the owner's default (today) stays when it carries none */
+function bkBsSeed() {
+  var day = bkCarriedDay('bsSeeded');
+  if (!day) return;
+  BK_BS.kind = 'custom';
+  BK_BS.asOf = day;
+}
+/** the day a heading may say: the server's shown_as_at (AUDBS: the day the figures are read at, no longer capped to today), else the day asked */
+function bkBsShownDay(reply) {
+  return reply.shown_as_at || reply.asOf;
+}
+/** W20: the year's profit line carries its period: the server's own name (Net profit / Net loss) then fy_from to the heading day; no fy_from, no change */
+function bkBsLineName(x, reply) {
+  var to = bkBsShownDay(reply);
+  if (x.role !== 'profit_to_date' || !reply.fy_from || !to) return x.name;
+  return x.name + ' ' + bkSpan(reply.fy_from, to);
 }
 function bkBsPick(v) {
   BK_BS.kind = v;
@@ -4860,7 +4953,7 @@ function bkBsDate() {
   bkTab('bs');
 }
 /** a side of the balance sheet: the pack's own chart heads, each with its ledgers and a subtotal, then the side's carried total */
-function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, change) {
+function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, change, reply) {
   /* leader-compare #2: `change` (the server read last year) adds Change and % after the year-ago column; a head or total, which carries none, stays blank */
   var cells = function (x) {
     var row = [{ v: bkFig(x.amount_minor, c) }, { v: bkFig(x.prior_month_minor, c), wide: true }, { v: bkFig(x.prior_year_minor, c) }];
@@ -4875,19 +4968,19 @@ function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, ch
     mine.forEach(function (x) {
       var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
       var note = pair ? '<span class="bk-note" data-testid="st-netof" title="' + esc(tx('Net of') + ' ' + pair[0].name + ' ' + pair[0].code + ' ' + tx('less') + ' ' + pair[1].name + ' ' + pair[1].code) + '">' + esc(tx('net of') + ' ' + pair[0].name + ' ' + tx('less') + ' ' + pair[1].name) + '</span>' : '';
-      out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + note + '</span>', cells(x));
+      out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(bkBsLineName(x, reply || {}))) + note + '</span>', cells(x));
     });
     if (!same) out += bkStRow('bk-sub', esc(tx('Total') + ' ' + headGroup.name), cells(headGroup));
   });
   var known = (heads || []).map(function (headGroup) { return headGroup.code; });
   (items || []).filter(function (x) { return known.indexOf(x.group ? x.group.code : null) < 0; }).forEach(function (x) { /* a ledger on no listed head still shows: the lines must foot to the total the server carries (GF-05 M5) */
-    out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + '</span>', cells(x));
+    out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(bkBsLineName(x, reply || {}))) + '</span>', cells(x));
   });
   return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c) }].concat(change ? [{ v: '' }, { v: '' }] : []));
 }
 /** the period bar's range text: the day, then the month-ago and year-ago days when compared */
 function bkBsRange(reply, compare) {
-  return tx('as at') + ' ' + bkDate(reply.asOf) + (compare.month ? ' · ' + bkDate(compare.month.as_at) + ' · ' + bkDate(compare.year && compare.year.as_at) : '');
+  return tx('as at') + ' ' + bkDate(bkBsShownDay(reply)) + (reply.asOf && reply.asOf > bkToday() ? ' · ' + tx('year to date') : '') + (compare.month ? ' · ' + bkDate(compare.month.as_at) + ' · ' + bkDate(compare.year && compare.year.as_at) : '');
 }
 /** the chip beside the period bar: ✓ balances, or a warning when assets and liabilities + equity differ (or the net assets do not agree) */
 function bkBsBalancedChip(balanced, reply) {
@@ -4911,6 +5004,7 @@ function bkBsLeadHTML(reply, cmp, c) {
 }
 /* the Balance sheet tab: net assets first, "as at" a day with ‹ ›, this date beside a month ago and a year ago, by the pack's own chart heads */
 async function bkBS(body) {
+  bkBsSeed();
   var asked = BK_BS.kind === 'custom' ? { asOf: BK_BS.asOf || bkToday() } : { kind: BK_BS.kind, step: BK_BS.step };
   try {
     var reply = await api('booksBS', { query: asked });
@@ -4918,12 +5012,12 @@ async function bkBS(body) {
       asAt = reply.as_at || {},
       comparison = reply.compare || {},
       custom = BK_BS.kind === 'custom',
-      ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor),
+      ok = reply.balanced != null ? !!reply.balanced : Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor) /* the server's own verdict (routes/books.js balanced); the compare only for an older reply */,
       groups = reply.groups || {},
       fyFrom = reply.fy_from || bkFyFrom(),
       change = bkBsHasChange(reply);
     var opts = [['today', 'Today'], ['month', 'Last month end'], ['year', 'Last year end'], ['custom', 'Pick a date']];
-    var dates = custom ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' + esc(reply.asOf) + '" onchange="bkBsDate()">' : '';
+    var dates = custom ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' + esc(bkBsShownDay(reply)) + '" onchange="bkBsDate()">' : '';
     var wasOf = function (side) {
       return bkBsWas(comparison, side);
     };
@@ -4934,9 +5028,9 @@ async function bkBS(body) {
         extra: bkBsBalancedChip(ok, reply) }) +
       lead +
       '<div class="bk-scroll"><table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th>' + (change ? '<th class="num">' + esc(tx('Change')) + '</th><th class="num">%</th>' : '') + '</tr></thead><tbody>' +
-      bkBsSide(tx('Assets'), reply.assets, groups.assets, currency, reply.total_assets_minor, wasOf('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom, change) +
-      bkBsSide(tx('Liabilities'), reply.liabilities, groups.liabilities, currency, reply.total_liabilities_minor, wasOf('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom, change) +
-      bkBsSide(tx('Equity'), reply.equity, groups.equity, currency, reply.total_equity_minor, wasOf('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom, change) +
+      bkBsSide(tx('Assets'), reply.assets, groups.assets, currency, reply.total_assets_minor, wasOf('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom, change, reply) +
+      bkBsSide(tx('Liabilities'), reply.liabilities, groups.liabilities, currency, reply.total_liabilities_minor, wasOf('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom, change, reply) +
+      bkBsSide(tx('Equity'), reply.equity, groups.equity, currency, reply.total_equity_minor, wasOf('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom, change, reply) +
       bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, currency), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }].concat(change ? [{ v: '' }, { v: '' }] : [])) +
       '</tbody></table></div>' + (change ? bkOverNote(reply.over_rule, currency, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
   } catch (e) {

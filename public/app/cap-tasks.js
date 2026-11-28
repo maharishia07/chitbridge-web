@@ -188,7 +188,7 @@
     var refused = e && e.status === 403;
     board.el.innerHTML =
       '<div class="empty" data-testid="tk-fail"><div class="t">' +
-      esc(T(refused ? 'This sign-in cannot open this' : "Couldn't read your orders")) +
+      esc(refused ? (typeof CBRoles !== 'undefined' ? CBRoles.refusal('any') : '') : T("Couldn't read your orders")) +
       '</div>' +
       '<button data-cbsid="TSK003-B01" type="button" class="act" id="tk_retry" data-testid="tk-retry">' +
       esc(T('Try again')) +

@@ -16,7 +16,7 @@
   function $(id) {
     return root.document.getElementById(id);
   }
-  /** the sign-in name AS TYPED at the sign-in screen, whole (asha01@mayur-restaurant.br): W15-59 - the short form failed when typed as shown, so it is never cut. */
+  /** the sign-in name AS TYPED at the sign-in screen (asha01@mayur-restaurant): O4 - the api sends it whole as `sign_in_as` (lib/handle.js typedForm); the page never strips a suffix itself. */
   function signInName(u) {
     return String(u == null ? '' : u);
   }

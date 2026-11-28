@@ -392,6 +392,13 @@ function _rdRow(it, selKey) {
     '</div>'
   );
 }
+/** DRIFT 31: the server's word on what this login may do here (GET /readiness · /lanes carry may { gather, verify }): a refused action is drawn greyed WITH the reason, never live then refused (READ_ONLY) */
+var _RD_MAY_WORD = { read_only: 'Your login can only view', comment_only: 'Your login can only comment' };
+function _rdGrey(key) {
+  var may = UI.laneRd && UI.laneRd.may && UI.laneRd.may[key];
+  if (!may || may.may !== false) return '';
+  return ' disabled aria-disabled="true" title="' + esc(tx(_RD_MAY_WORD[may.code] || _RD_MAY_WORD.read_only)) + '"';
+}
 function _rdDetailPane(it) {
   if (!it)
     return '<div style="color:var(--grey);font-size:var(--fs-2);padding:24px;text-align:center">Select a clearance on the left to see its lifecycle.</div>';
@@ -400,24 +407,16 @@ function _rdDetailPane(it) {
   var idType = _rdIdType(it);
   var verifyBtn =
     idType && it.rung !== 'verified'
-      ? '<button data-cbsid="SCR033-B05" onclick="verifyReadiness(\'' +
-        escJs(it.standard) +
-        "','" +
-        escJs(it.doc) +
-        "','" +
-        idType +
+      ? '<button data-cbsid="SCR033-B05"' + _rdGrey('verify') + ' onclick="verifyReadiness(\'' +
+        escJs(it.standard) + "','" + escJs(it.doc) + "','" + idType +
         '\')" title="Checked against the source registry, live" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--ok-3);background:var(--ok-tint);color:var(--ok-3);border-radius:9px;padding:7px 12px;cursor:pointer">' +
         tx('🔗 Verify at source') +
         '</button>'
       : '';
   var skill = _rdSkill(it);
   var draftBtn = skill
-    ? '<button data-cbsid="SCR033-B06" onclick="aiDraftReadiness(\'' +
-      escJs(it.standard) +
-      "','" +
-      escJs(it.doc) +
-      "','" +
-      skill +
+    ? '<button data-cbsid="SCR033-B06"' + _rdGrey('gather') + ' onclick="aiDraftReadiness(\'' +
+      escJs(it.standard) + "','" + escJs(it.doc) + "','" + skill +
       '\')"' + outsideAttrs('ai') + ' title="AI drafts it — you review and confirm" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' +
       tx('✨ Draft with AI') +
       '</button>'
@@ -425,7 +424,7 @@ function _rdDetailPane(it) {
   var actBtn =
     it.status === 'gathered'
       ? '<span style="font-size:var(--fs-2);color:' + m.col + ';font-weight:700">' + m.lbl + '</span>'
-      : '<button data-cbsid="SCR033-B07" onclick="gatherReadiness(\'' +
+      : '<button data-cbsid="SCR033-B07"' + _rdGrey('gather') + ' onclick="gatherReadiness(\'' +
         escJs(it.standard) +
         "','" +
         escJs(it.doc) +

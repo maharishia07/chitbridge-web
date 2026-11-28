@@ -224,7 +224,7 @@ const bkhMonthsDue = (data) => Math.max(data.months.filter((month) => month < bk
 /** one line per account: its monthly sign-offs "n of m" (named when there is more than one account) */
 function bkhSignedLinesHtml(data) {
   const many = data.accounts.length > 1;
-  return data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: bkhMonthsDue(data) })) + bkhE(bkhUnexplainedMonths(data, account)) + bkhE(data.unexplained && data.unexplained.no_run && data.unexplained.words ? ' · ' + tx(data.unexplained.words) : '') + '</div>'; }).join('');
+  return data.accounts.map((account) => { const t = bkhTally(data, [account]); return '<div data-testid="bank-home-signed-' + bkhE(account.account_id) + '">' + (many ? bkhE(bkstAccountName(account)) + ' · ' : '') + bkhE(txf('Monthly sign-offs: {n} of {m}', { n: t.signed + t.unfiled, m: bkhMonthsDue(data) })) + bkhE(bkhUnexplainedMonths(data, account)) + bkhE(t.signed + t.unfiled > 0 && data.unexplained && data.unexplained.no_run && data.unexplained.words ? ' · ' + tx(data.unexplained.words) : '') /* DRIFT 10b: the shop-level phrase only on an account that HAS a signed month */ + '</div>'; }).join('');
 }
 /** a month with no statement: the month in progress, a month not yet due, a month signed off with no file kept, or a gap (the person who may add gets the button to add it) */
 function bkhGapCellHtml(state, account, month, key, mayAdd) {

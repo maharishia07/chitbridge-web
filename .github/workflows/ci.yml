@@ -67,6 +67,8 @@ jobs:
           node scripts/check-adoption.js
       - name: Retest 1130 proofs (inline-handler XSS, ?api= allow-list, cart basis, refused save)
         run: npm run check:retest1130
+      - name: Firm-connect web 1138 (UX-215/216/220; every mutant must be killed)
+        run: node tests/firm-connect-web.test.cjs --mutants
       - name: One answer to what trade is this shop (vertical-box; REL-7)
         run: node tests/vertical-box.test.cjs
       - name: Misfix 1121 (F-54 menu fits 1366x768, F-67 P&L head to today)
@@ -88,6 +90,7 @@ jobs:
           node tests/chunk0-proofs.test.cjs
           node tests/chunk0-web-proofs2.test.cjs
           node tests/pm-53-edition-chip.test.cjs
+          node tests/ux221-seat-hides.test.cjs
       # RECON-QA-1 (18 Nov): 34 offline guards that no runner reached (library level none). Each ran green once on sit-grund in the api image (node 22, no browser, no sibling repo), 18 Nov; fin-d7-terms-bank was stale and fixed first.
       - name: Offline guards no runner reached before 18 Nov (RECON-QA-1)
         run: |
@@ -130,7 +133,7 @@ jobs:
           node tests/ye-f15-card-stage.test.cjs
           node tests/ye-f13-one-name.test.cjs
           node tests/ye-f12-opening-years-words.test.cjs
-          node tests/ye-f11-firm-return-tab.test.cjs
+          node tests/onep1-return-one-path.test.cjs
           node tests/ye-f07-overdue-words.test.cjs
           node tests/ye-f08-year-warnings.test.cjs
           node tests/ye-f06-stage-evidence.test.cjs
@@ -411,6 +414,7 @@ jobs:
           node e2e/ui-codes-labs.test.cjs
           node e2e/bank-preview.test.cjs
           node e2e/bank-add-batch.test.cjs
+          node e2e/bank-party-post.test.cjs
           node e2e/bank-rules-1129.test.cjs
           node e2e/bank-ui-answers.test.cjs
           node e2e/web02-fixes.test.cjs
@@ -455,6 +459,8 @@ jobs:
           # the 17 Nov size-ceiling splits (behaviour-neutral): each part file holds what it owns, loaded the way the page loads it; books-parts also proves the moved functions are main's text unchanged
           node tests/rail-parts.test.cjs
           node tests/books-grant-parts.test.cjs
+          node tests/books-grant-fail-loud.test.cjs
+          node tests/accounts-card-clears-skeleton.test.cjs
           node tests/books-practice-parts.test.cjs
           node tests/cap-mark-sheet.test.cjs
           node tests/aud-f73-auditor-tax-return.test.cjs

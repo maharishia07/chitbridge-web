@@ -32,6 +32,7 @@ W.run('books-grant', async (w) => {
   await ctx.route(base + '/api/**', async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
     S.calls.push({ m, p, q: u.search, h });
+    if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } }); /* ONEP-2: the owner's page the statement doors open (accounts.html) asks for the shop's name */
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     /* AUD-RC-2 (18 Nov): a firm note on an entry OUTSIDE the Day book's window: only POST /flags/query (by id, not windowed by year) holds it */
     if (p === '/api/flags/query') { const ids = (JSON.parse(q.postData() || '{}').ids) || []; const flags = {}; ids.forEach((id) => { if (id === NOTE_ENTRY) flags[id] = [{ flag_id: '9', kind: 'note', visibility: 'org', subject_kind: 'posting', subject_entity: MEMBER, subject_id: NOTE_ENTRY, label: 'PY/2026-27/000005', note: 'rc2 firm note on the running year', state: 'open', seat: 'auditor', author_name: 'Seed Auditor', author_id: 'x', mine: true, created_at: DAY(-1) }]; }); return J(r, 200, { flags }); }
@@ -41,7 +42,7 @@ W.run('books-grant', async (w) => {
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: OTHER, name: 'Store Two', city: 'Delhi', km: 9, purpose: 'Snacks' }] });
     if (p === '/api/books-grants/consent') return J(r, 200, { headline: 'Let your network parent read your books', can_read: ['your trial balance', 'your profit and loss'], cannot: ['change or add anything'], costs: u.searchParams.get('can_see_costs') === 'false' ? 'It will not see your costs and margins.' : 'It will see your costs and margins.', rights: 'You can end this at any time.' });
     if (p === '/api/books-grants/log') return J(r, 200, { looks: [{ at: DAY(-1), grant_id: GRANT, grantee_entity: BRAND, actor_identity_id: 'x', route_pattern: 'GET /trial-balance', query_shape: null, status: 200, outcome: 'allowed' }, { at: DAY(-2), grant_id: GRANT, grantee_entity: BRAND, actor_identity_id: 'x', route_pattern: 'GET /packs', query_shape: null, status: 403, outcome: 'not_listed' }] });
-    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: S.given, received: [{ grant_id: GRANT, grantor_entity: MEMBER, grantee_entity: BRAND, state: 'live', expires_at: DAY(200) }] });
+    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: S.given, received: [{ grant_id: GRANT, grantor_entity: MEMBER, grantor_name: 'Store One', grantee_entity: BRAND, state: 'live', expires_at: DAY(200) }] });
     if (p === '/api/books-grants' && m === 'POST') { S.gives.push(JSON.parse(q.postData() || '{}')); return J(r, 201, { grant_id: GRANT, grantor_entity: MEMBER, grantee_entity: BRAND, purpose: 'x', expires_at: DAY(300) }); }
     if (/\/api\/books-grants\/[^/]+\/revoke$/.test(p)) { S.revokes.push(p); S.given = S.given.map((g) => Object.assign({}, g, { state: 'revoked', revoked_at: DAY(0) })); return J(r, 200, { grant_id: GRANT }); }
     if (p.indexOf('/api/books/') === 0) {
@@ -89,26 +90,42 @@ W.run('books-grant', async (w) => {
     const one = await has(T('nw-books-' + MEMBER)), two = await has(T('nw-books-' + OTHER));
     return { ok: one && !two, saw: 'Store One button: ' + one + ' · Store Two button: ' + two };
   });
-  await w.step('A2', 'the auditor · keyboard: focus "Open books", Enter → the header line names Store One with the read only tag, the trial balance is listed', async () => {
+  /* ONEP-2 (web #814-#819), the doors: the firm view no longer reads or paints the trial balance, the P&L or the balance sheet. Its Trial balance / Profit and loss / Balance sheet buttons (bv-tb-open, bv-pl-open, bv-bs-open; on a phone the
+     "_tb" "_pl" "_bs" lines of the one screen select) OPEN THE OWNER'S SCREEN in this seat (accounts.html#/tb|pl|bs, read only). Every business fact these steps held about those three screens is asserted here on THAT screen:
+     its own testids (tb-balanced, pl-table, pl-profit, bs-table, tb-over-note ... and the bk-over-dot / tr.bk-over highlight the owner's statements draw), the calls it makes (X-Books-For on every read), the same hand figures.
+     The ledger drill and the entry sheet are still the firm view's (a Day book entry -> its account line -> the ledger), so D1-D5 reach them from the Day book. */
+  const openBooks = async () => { await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-store-' + MEMBER), { timeout: 20000 }); await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(300); };
+  const toOwner = async (ready) => { await page.waitForURL((u) => u.pathname === '/accounts.html', { timeout: 20000 }); await page.waitForSelector(ready, { timeout: 20000 }); await page.waitForTimeout(500); };
+  const doorPress = async (k, ready, how) => { const since = S.calls.length; if (how === 'key') { await page.focus(T('bv-' + k + '-open')); await page.keyboard.press('Enter'); } else await page.click(T('bv-' + k + '-open')); await toOwner(ready); return since; };
+  const phoneDoor = async (k, ready) => { const since = S.calls.length; await page.selectOption(T('bv-tab-select'), '_' + k); await toOwner(ready); return since; };
+  const flatRow = (tid, code) => page.locator('tr', { has: page.locator(T(tid + '-open-' + code)) }).first().innerText().then((s) => s.replace(/\s+/g, ' ')).catch(() => '');
+  const marked = (tid, what) => page.$$eval('[data-testid^="' + tid + '-open-"]', (els, w2) => els.filter((e) => (w2 === 'dot' ? !!e.closest('tr').querySelector('.bk-over-dot') : e.closest('tr').classList.contains('bk-over'))).map((e) => e.getAttribute('data-testid').replace(/^.*-open-/, '')), what); /* the account rows that carry the highlight (code list), by the dot and by the tint */
+  const inScreen = (sel) => page.evaluate((s) => { const n = document.querySelector(s); return !!n && n.getBoundingClientRect().bottom <= window.innerHeight; }, sel);
+  await w.step('A2', 'the auditor · keyboard: focus "Open books", Enter → the header line names Store One with the read only tag; the Trial balance door opens the owner\'s trial balance in the seat (same band, read only) and it is listed', async () => {
     await page.focus(T('nw-books-' + MEMBER)); await page.keyboard.press('Enter');
     await page.waitForSelector(T('bv-band'), { timeout: 10000 });
-    await page.click(T('bv-tab-tb')); /* acc17 (walk A2 was a test bug): the books open on the Day book of the year under review since the period merge, so the trial balance is the tab pressed, not the first screen */
-    await page.waitForSelector(T('bv-tb-bank'), { timeout: 10000 }); /* listreg 17 Nov: wait on a trial-balance-only element; bv-row-0 is also drawn by the Day book, so the read raced the tab switch */
-    const band = await txt(T('bv-band')), rows = await txt(T('bv-list'));
-    const asked = S.calls.filter((c) => c.p === '/api/books/trial-balance');
+    const firmBand = await txt(T('bv-band'));
+    const since = await doorPress('tb', T('bv-tb-bank')); /* acc17 / listreg 17 Nov: wait on a trial-balance-only element (the bank line), not a row the Day book also draws */
+    const band = await txt(T('ba-band')), rows = await txt('table.bk-tbm');
+    const asked = S.calls.slice(since).filter((c) => c.p === '/api/books/trial-balance');
     const bankLine = await txt(T('bv-tb-bank')).catch(() => ''); /* RANK 9: the bank agreement of the day, under the trial balance, with its Open Bank button */
-    return { ok: /Signed off to/.test(bankLine) && /Statement/.test(bankLine) && /nothing unexplained/.test(bankLine) && (await has(T('bv-tb-bank-open-acc-1000'))) && /Store One/.test(band) && /read only/.test(band) && /Cash/.test(rows) && /1,234|1234/.test(rows) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER), saw: band + ' · ' + rows.slice(0, 80) + ' · header sent ' + asked.length + '×' };
+    return { ok: /Signed off to/.test(bankLine) && /Statement/.test(bankLine) && /nothing unexplained/.test(bankLine) && (await has(T('bv-tb-bank-open-acc-1000'))) && /Store One/.test(firmBand) && /read only/.test(firmBand) && /Store One/.test(band) && /read only/.test(band) && /Cash/.test(rows) && /1,234|1234/.test(rows) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER), saw: firmBand.slice(0, 50) + ' → owner seat: ' + band.slice(0, 60) + ' · ' + rows.slice(0, 80) + ' · header sent ' + asked.length + '×' };
   });
-  await w.step('A3', 'the auditor · the view has no write control (every button is Back or a report)', async () => {
+  await w.step('A3', 'the auditor · the view has no write control (every button is Back or a report); the statements are doors, not writes', async () => {
+    await openBooks();
     const names = await page.$$eval(T('bv-band') + ' button,' + T('bv-tabs') + ' button', (els) => els.map((e) => e.textContent.trim()));
-    return { ok: names.every((n) => /Back|Clients|Trial|Profit|Balance|Day|owes|Closed|Months|Tax return|GSTR-3B|BAS|VAT return|Bank/.test(n)) && !(await has('#nw_body [data-act]')), saw: names.join(' · ') };
+    return { ok: names.every((n) => /Back|Clients|Trial|Profit|Balance|Day|owes|Closed|Months|Tax return|GSTR-3B|BAS|VAT return|Bank|Changed since/.test(n)) && !(await has('#nw_body [data-act]')), saw: names.join(' · ') };
   });
   /* W19 (Athi 16 Nov, "be more space cautious in each page"): on a client's books the STATIC header (crumb, name, read only tag, period slot, tabs) takes at most 15% of the viewport height and the DYNAMIC part (totals, filters, the list's own bar and head) at most another 5%, so the first data row starts at 20% or less under the app header; a list under ten rows has no search box. GUARD NAME: w19-first-data-top */
-  /* W19 (Athi 16 Nov): the first data row of every client view by 20% (1366x768) / 30% (390x844) of the screen, measured from y = 0: ONE guard for both seats, e2e/lib/first-data-top.cjs (the accountant seat calls it from walk-books-adviser.cjs). */
+  /* W19 (Athi 16 Nov): the first data row of every client view by 20% (1366x768) / 30% (390x844) of the screen, measured from y = 0: ONE guard for both seats, e2e/lib/first-data-top.cjs (the accountant seat calls it from walk-books-adviser.cjs). The three statements are doors now and are not views of this page: the lib skips them. */
   await w.step('W19', 'the auditor · w19-first-data-top: every books view at 1366x768 and 390x844 starts its data by 20% / 30% of the viewport from y = 0 (a view above it is held at its measured ceiling, which only falls)', () => require('./lib/first-data-top.cjs').firstDataTop(page, { T, has, WIDE, NARROW, seat: 'auditor' }));
-  await w.step('D1', 'the auditor drill · trial balance row Cash → its ledger: opening, the line with its running balance, the period total and the closing', async () => {
-    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); /* acc17: the books open on the Day book, and W19 leaves the last tab: the ledger is opened from the trial balance, so that tab is pressed first */
-    await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
+  /* the three statements are doors: their first data row is held to the SAME ceilings (20% / 30%, the held ceilings only fall) on the OWNER's screen the door opens in the seat */
+  await w.step('W19o', 'the auditor · w19-first-data-top on the owner\'s trial balance, P&L and balance sheet the doors open: first data row by 20% / 30% of the viewport from y = 0', () => require('./lib/first-data-top.cjs').ownerFirstDataTop(page, { T, WIDE, NARROW, seat: 'auditor', openFirm: openBooks }));
+  await page.setViewportSize(WIDE); await openBooks();
+  await w.step('D1', 'the auditor drill · Day book entry → its Cash line → the ledger: opening, the line with its running balance, the period total and the closing', async () => {
+    await page.click(T('bv-tab-daybook')); await page.waitForFunction((sel) => { const n = document.querySelector(sel); return n && /JV-/.test(n.textContent); }, T('bv-row-0'), { timeout: 10000 });
+    await page.click(T('bv-row-0'), { position: { x: 24, y: 16 } }); await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 }); /* the ledger is reached from an entry's account line now (the trial balance row opens its entries on the owner's screen: D1b) */
+    await page.click(T('bd-jl-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const title = await txt(T('bd-title')), facts = await txt(T('bd-facts')), line = await txt(T('bd-line-0'));
     const asked = S.calls.filter((c) => c.p === "/api/books/ledger/1000");
     return { ok: /1000 Cash/.test(title) && /Opening/.test(facts) && /Total debit/.test(facts) && /Closing/.test(facts) && /JV-0001/.test(line) && /1,234/.test(line) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER && /limit=100/.test(c.q)), saw: title + ' · ' + facts + ' · ' + line };
@@ -136,46 +153,48 @@ W.run('books-grant', async (w) => {
     await page.click(T('bv-row-0'), { position: { x: 24, y: 16 } }); /* the Entry cell: the middle of the row is the Evidence chip, which opens its own dialog */ await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 });
     const title = await txt(T('bd-title'));
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     return { ok: /JV-0001/.test(row) && /1,234/.test(row) && /JV-0001/.test(title) && !(await has(T('bd-back'))), saw: row + ' · ' + title };
   });
-  await w.step('A4', 'the auditor · Profit and loss by keyboard: Tab to the tab, Enter → income, expense and the profit', async () => {
-    await page.focus(T('bv-tab-pl')); await page.keyboard.press('Enter');
-    await page.waitForSelector(T('bv-fact-profit_minor'), { timeout: 10000 });
-    const facts = await txt(T('bv-facts')), rows = await txt(T('bv-list'));
+  await w.step('A4', 'the auditor · Profit and loss by keyboard: Tab to the door, Enter → the owner\'s P&L: income, expense and the profit', async () => {
+    await doorPress('pl', T('pl-profit'), 'key');
+    const facts = await txt(T('pl-profit')), rows = await txt(T('pl-table'));
     return { ok: /Profit/.test(facts) && /Rent/.test(rows) && /Sales/.test(rows), saw: facts + ' · ' + rows.slice(0, 70) };
   });
   await w.step('A4c', 'the auditor · P&L comparatives: Last year, Change (amount) and % beside each ledger; exactly Sales and Rent highlighted (the dot and the tint), Other income (under 1,000.00) and Wages (5%) not; the note states the rule; no sideways scroll', async () => {
-    const head = await txt(T('bv-list')), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), tint = await page.locator('.bv-over').count(), note = await txt(T('bv-cmp-note')), a = await noScroll();
-    const rowOf = (n) => page.locator(T('bv-list') + ' [data-testid^="bv-row-"]').filter({ hasText: n }).first();
-    const flat = (n) => rowOf(n).innerText().then((s) => s.replace(/\s+/g, ' '));
-    const sales = await flat('Sales'), wages = await flat('Wages'), other = await flat('Other income');
-    return { ok: /last year/i.test(head) && /change/i.test(head) && dots === 2 && tint === 2 && /10,000/.test(sales) && /[+]25[.]0%/.test(sales) && /[+]5[.]0%/.test(wages) && /[+].*1,000/.test(wages) && !/●/.test(wages) && !/●/.test(other) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Sales: ' + sales + ' · Wages: ' + wages + ' · no sideways ' + a.x };
+    const head = await txt(T('pl-table')), dots = await marked('pl', 'dot'), tint = await marked('pl', 'tint'), note = await txt(T('pl-over-note')), a = await noScroll();
+    const sales = await flatRow('pl', '4000'), wages = await flatRow('pl', '5100'), other = await flatRow('pl', '4100');
+    return { ok: /last year/i.test(head) && /change/i.test(head) && dots.join() === '4000,5000' && tint.join() === '4000,5000' && /10,000/.test(sales) && /[+]25[.]0%/.test(sales) && /[+]5[.]0%/.test(wages) && /[+].*1,000/.test(wages) && !/●/.test(wages) && !/●/.test(other) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Sales: ' + sales + ' · Wages: ' + wages + ' · no sideways ' + a.x };
   });
   await w.step('A4d', 'the auditor · trial balance: Last year (Dr/Cr), Change and % beside each account; only Cash is highlighted (+1,034.00 on 200.00), Sales (credit rose 34.00, so +34.00 Cr: F3, on its own side) is not; the note states the rule under the list', async () => {
-    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(300);
-    const head = await txt(T('bv-list')), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), tint = await page.locator('.bv-over').count(), note = await txt(T('bv-cmp-note')), a = await noScroll();
-    const flat = (n) => page.locator(T('bv-list') + ' [data-testid^="bv-row-"]').filter({ hasText: n }).first().innerText().then((x) => x.replace(/s+/g, ' '));
-    const cash = await flat('Cash'), sales = await flat('Sales');
-    const heads = [/last year/i.test(head), /change/i.test(head)]; return { ok: /last year/i.test(head) && /change/i.test(head) && dots === 1 && tint === 1 && /200[.]00 Dr/.test(cash) && /[+]₹1,034[.]00/.test(cash) && /[+]517[.]0%/.test(cash) && /1,200[.]00 Cr/.test(sales) && /[+]₹34[.]00\sCr/.test(sales) && /[+]2[.]8%/.test(sales) && !/●/.test(sales) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'headings ' + heads + ' · list head: ' + head.slice(0, 160) + ' · dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Cash: ' + cash + ' · Sales: ' + sales + ' · no sideways ' + a.x };
+    await openBooks(); await doorPress('tb', T('tb-balanced'));
+    const head = await txt('table.bk-tbm'), dots = await marked('tb', 'dot'), tint = await marked('tb', 'tint'), note = await txt(T('tb-over-note')), a = await noScroll();
+    const cash = await flatRow('tb', '1000'), sales = await flatRow('tb', '4000');
+    return { ok: /last year/i.test(head) && /change/i.test(head) && dots.join() === '1000' && tint.join() === '1000' && /200[.]00 Dr/.test(cash) && /[+]₹1,034[.]00/.test(cash) && /[+]517[.]0%/.test(cash) && /1,200[.]00 Cr/.test(sales) && /[+]₹34[.]00\sCr/.test(sales) && /[+]2[.]8%/.test(sales) && !/●/.test(sales) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'list head: ' + head.slice(0, 160) + ' · dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Cash: ' + cash + ' · Sales: ' + sales + ' · no sideways ' + a.x };
   });
-  await w.step('A4e', 'the auditor · balance sheet: Last year, Change and % beside each account; Cash highlighted (+1,034.00 on 200.00), the loan (+20.00, 4.2%) not; the note states the rule', async () => {
-    await page.click(T('bv-tab-bs')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(300);
-    const head = await txt(T('bv-list')), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), tint = await page.locator('.bv-over').count(), note = await txt(T('bv-cmp-note')), a = await noScroll();
-    const flat = (n) => page.locator(T('bv-list') + ' [data-testid^="bv-row-"]').filter({ hasText: n }).first().innerText().then((x) => x.replace(/s+/g, ' '));
-    const cash = await flat('Cash'), loan = await flat('Bank loan');
-    return { ok: /last year/i.test(head) && /change/i.test(head) && dots === 1 && tint === 1 && /1,234[.]00/.test(cash) && /200[.]00/.test(cash) && /[+]₹1,034[.]00/.test(cash) && /[+]517[.]0%/.test(cash) && /[+]₹20[.]00/.test(loan) && /[+]4[.]2%/.test(loan) && !/●/.test(loan) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Cash: ' + cash + ' · Loan: ' + loan + ' · no sideways ' + a.x };
+  await w.step('D1b', 'the auditor drill · on the owner\'s trial balance a row (Cash) opens its entries under it, read with the seat\'s header, with "Open all" to the ledger', async () => {
+    const since = S.calls.length;
+    await page.click(T('tb-open-1000')); await page.waitForSelector(T('drill-1000'), { timeout: 10000 });
+    const drill = await txt(T('drill-1000')), asked = S.calls.slice(since).filter((c) => c.p === '/api/books/ledger/1000');
+    return { ok: /Cash sale/.test(drill) && /1,234/.test(drill) && /Dr/.test(drill) && (await has(T('drill-all-1000'))) && asked.length === 1 && asked[0].h['x-books-for'] === MEMBER, saw: drill.slice(0, 100) + ' · ledger reads ' + asked.length };
   });
-  await w.step('A5', 'the auditor · a part the server refuses is said in the server\'s words, not shown as an empty table', async () => {
+  await w.step('A4e', 'the auditor · balance sheet: Last year (a year ago), Change and % beside each account; Cash highlighted (+1,034.00 on 200.00), the loan (+20.00, 4.2%) not; the note states the rule', async () => {
+    await openBooks(); await doorPress('bs', T('bs-table'));
+    const head = await txt(T('bs-table')), dots = await marked('bs', 'dot'), tint = await marked('bs', 'tint'), note = await txt(T('bs-over-note')), a = await noScroll();
+    const cash = await flatRow('bs', '1000'), loan = await flatRow('bs', '2000');
+    /* the owner's balance sheet heads the year-ago column "A year ago" (the firm painter said "Last year"): the same column */
+    return { ok: /a year ago/i.test(head) && /change/i.test(head) && dots.join() === '1000' && tint.join() === '1000' && /1,234[.]00/.test(cash) && /200[.]00/.test(cash) && /[+]₹1,034[.]00/.test(cash) && /[+]517[.]0%/.test(cash) && /[+]₹20[.]00/.test(loan) && /[+]4[.]2%/.test(loan) && !/●/.test(loan) && /Highlighted: change of 10% and .*1,000 or more/.test(note) && a.x, saw: 'dots ' + dots + ' tinted ' + tint + ' · ' + note + ' · Cash: ' + cash + ' · Loan: ' + loan + ' · no sideways ' + a.x };
+  });
+  await w.step('A5', 'the auditor · a part the server refuses is said in words, not shown as an empty table', async () => {
     S.refuse = { path: '/api/books/bs', words: 'This part of the books is not open to an auditor.' };
-    await page.click(T('bv-tab-bs')); await page.waitForSelector(T('bv-why'), { timeout: 10000 });
-    const why = await txt(T('bv-why') + ' p'), tbl = await has(T('bv-row-0'));
+    await openBooks(); await doorPress('bs', '.empty');
+    const why = await txt('.empty'), tbl = await has(T('bs-table'));
     S.refuse = null;
-    return { ok: why === 'Your role cannot open this part.' /* W19: the code's own words */ && !tbl, saw: why };
+    /* the owner's screen says a refused read in the one refusal of the roles (CBRoles: "Your seat cannot read the books. Ask the owner."), not the firm painter's own words */
+    return { ok: /Balance sheet/.test(why) && /Your seat cannot read the books/.test(why) && !tbl, saw: why };
   });
   await w.step('A6', 'the auditor · fits 1366×768 with no page scroll, in the view and on the list', async () => {
-    const a = await noScroll();
-    return { ok: a.y && a.x, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x };
+    const owner = await noScroll(); await openBooks(); const a = await noScroll();
+    return { ok: owner.y && owner.x && a.y && a.x, saw: 'owner screen: no vertical scroll ' + owner.y + ' · no sideways ' + owner.x + ' | the list: ' + a.y + ' / ' + a.x };
   });
   await w.step('A7', 'the auditor · Back to My network → the list again, focus on the same "Open books"', async () => {
     await page.click(T('bv-back')); await page.waitForSelector(T('nw-store-' + MEMBER), { timeout: 10000 }); await page.waitForTimeout(200);
@@ -189,30 +208,31 @@ W.run('books-grant', async (w) => {
     return { ok: a.y && a.x, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x };
   });
 
-  await w.step('D6', 'the auditor drill · 390×844: trial balance → ledger sheet fits, no page scroll', async () => {
-    await page.selectOption(T('bv-tab-select'), 'tb'); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); /* acc17: the books open on the Day book; on a phone the six screens are ONE select (bv-tab-select), no tab buttons (T6 header line) */
-    await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
+  await w.step('D6', 'the auditor drill · 390×844: Day book entry → Cash ledger sheet fits, no page scroll', async () => {
+    await page.click(T('bv-row-0'), { position: { x: 24, y: 16 } }); await page.waitForSelector(T('bd-jl-0'), { timeout: 10000 }); /* the ledger is opened from an entry's account line (the trial balance is the owner's screen: D1b) */
+    await page.click(T('bd-jl-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const a = await noScroll(), sheet = await page.evaluate(() => { const d = document.getElementById('nw_sheet').getBoundingClientRect(); return d.width <= window.innerWidth + 1 && d.height <= window.innerHeight + 1; });
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
     return { ok: a.y && a.x && sheet, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · sheet inside the screen ' + sheet };
   });
 
   await w.step('A8c', 'the auditor · 390×844: the P&L keeps Amount and Change, the note shows, a highlighted row is marked, no page scroll, no sideways scroll', async () => {
-    await page.selectOption(T('bv-tab-select'), 'pl'); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(300);
-    const a = await noScroll(), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), note = await has(T('bv-cmp-note')), noteIn = await page.evaluate(() => { const n = document.querySelector('[data-testid="bv-cmp-note"]'); return !!n && n.getBoundingClientRect().bottom <= window.innerHeight; });
-    return { ok: a.y && a.x && dots === 2 && note && noteIn, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · dots ' + dots + ' · note ' + note + ' in the screen ' + noteIn };
+    await openBooks(); await phoneDoor('pl', T('pl-table')); await page.waitForTimeout(300);
+    const a = await noScroll(), dots = await marked('pl', 'dot'), note = await has(T('pl-over-note')), noteIn = await inScreen(T('pl-over-note'));
+    return { ok: a.y && a.x && dots.length === 2 && note && noteIn, saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · dots ' + dots + ' · note ' + note + ' in the screen ' + noteIn };
   });
   await w.step('A8d', 'the auditor · 390×844: the trial balance and the balance sheet keep their Amount and Change, the note shows, one highlighted row is marked each, no page scroll, no sideways scroll', async () => {
     const seen = [];
-    for (const tab of ['tb', 'bs']) {
-      await page.selectOption(T('bv-tab-select'), tab); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(500);
-      const a = await noScroll(), dots = await page.locator('[data-cbsid="NET005-P02"]').count(), noteIn = await page.evaluate(() => { const n = document.querySelector('[data-testid="bv-cmp-note"]'); return !!n && n.getBoundingClientRect().bottom <= window.innerHeight; });
+    for (const [tab, tid, ready] of [['tb', 'tb', T('tb-balanced')], ['bs', 'bs', T('bs-table')]]) {
+      await openBooks(); await phoneDoor(tab, ready); await page.waitForTimeout(500);
+      const a = await noScroll(), dots = await marked(tid, 'dot'), noteIn = await inScreen(T(tid + '-over-note'));
       seen.push(tab + ': no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · dots ' + dots + ' · note in the screen ' + noteIn);
-      if (!(a.y && a.x && dots === 1 && noteIn)) return { ok: false, saw: seen.join(' | ') };
+      if (!(a.y && a.x && dots.length === 1 && noteIn)) return { ok: false, saw: seen.join(' | ') };
     }
     return { ok: true, saw: seen.join(' | ') };
   });
   await w.step('A9', 'the auditor · Months: one lock line (Books start Jul 2025 · Locked to 31 Jan 2026 · Open: Feb 2026 (gap)); no month before Jul 2025 is listed', async () => {
+    await openBooks();
     await page.selectOption(T('bv-tab-select'), 'periods'); await page.waitForSelector(T('bv-lock-lines'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
     const lines = await page.getAttribute(T('bv-lock-lines'), 'data-full'), list = await txt(T('bv-list'));
     return { ok: /Books start Jul 2025/.test(lines) && /Locked to .*Jan.* 2026/.test(lines) && /Open: Feb 2026 \(gap\)/.test(lines) && !/2024/.test(list) && /July 2025/.test(list), saw: lines + ' | ' + list.slice(0, 80) };
@@ -259,9 +279,10 @@ W.run('books-grant', async (w) => {
     return { ok: /Acme Brand/.test(ask) && /read only/i.test(ask) && /until/i.test(ask) && none && S.gives.length === 1 && sent.consent === true && sent.grantee === BRAND && sent.can_see_costs === false && !!sent.expires_at, saw: ask.slice(0, 110) + ' · posts ' + S.gives.length };
   });
   await w.step('M5', 'the member · Who looked: when, who, what — the refused look is said as refused', async () => {
-    await page.click(T('bg-seg-looks')); await page.waitForSelector(T('bg-look-allowed'), { timeout: 10000 });
+    await page.click(T('bg-seg-looks')); await page.waitForSelector('[data-testid^="bg-visit-"]', { timeout: 10000 });
+    await page.click('[data-testid^="bg-visit-"]'); await page.waitForSelector(T('bg-visit-pages'), { timeout: 5000 }); /* UX-220: one row per visit; the pages are its detail and a refused look is counted */
     const list = await txt(T('bg-list'));
-    return { ok: /trial balance/i.test(list) && /Looked/.test(list) && /Refused: not open to an auditor/.test(list), saw: list.slice(0, 140) };
+    return { ok: /trial balance/i.test(list) && /[0-9]+ pages?/.test(list) && (await has(T('bg-visit-refused'))), saw: list.slice(0, 140) };
   });
   await w.step('M6', 'the member · End access asks first, then ends: the row says Ended', async () => {
     await page.click(T('bg-seg-given')); await page.waitForSelector('[data-testid^="bg-grant-"]', { timeout: 10000 });

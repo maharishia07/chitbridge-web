@@ -238,7 +238,7 @@ var CBSettings = (function () {
   /** a read that failed is said in words, never painted as an empty list */
   function failWords(e) {
     return e && e.status === 403
-      ? { title: T('This sign-in cannot open this'), sub: CBAction.words(e, '') }
+      ? { title: (typeof CBRoles !== 'undefined' ? CBRoles.refusal('any') : ''), sub: CBAction.words(e, '') }
       : { title: T('Could not read this'), sub: T('Nothing was lost. Try again in a moment.') };
   }
   function list(el, o) {

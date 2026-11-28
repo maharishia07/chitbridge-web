@@ -644,7 +644,7 @@ function viewOnlyLogin() {
 }
 /** the reason a view-only login is shown beside a greyed money door (one sentence for Accounts and Returns) */
 function viewOnlyMoneyWhy() {
-  return tx("Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.");
+  return (typeof CBRoles !== 'undefined' ? CBRoles.refusal('books') : '');
 }
 function jwtPayload(t) {
   try {

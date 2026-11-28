@@ -182,7 +182,7 @@
       adding = E.o.embed && E.o.view === 'add';
     E.el.innerHTML =
       '<div class="empty" data-testid="emp-fail"><div class="t">' +
-      esc(T(refused ? 'This sign-in cannot open this' : adding ? "Couldn't open the form" : "Couldn't read your people")) +
+      esc(refused ? (typeof CBRoles !== 'undefined' ? CBRoles.refusal('any') : '') : T(adding ? "Couldn't open the form" : "Couldn't read your people")) +
       '</div>' +
       '<button data-cbsid="EMP001-B01" type="button" class="act" id="emp_retry" data-testid="emp-retry">' +
       esc(T('Try again')) +
@@ -245,7 +245,7 @@
         mono: true,
         wrap: true /* the whole sign-in name, wrapped, never cut (W10) */,
         cell: function (p) {
-          return Copy.signInName(p.user_id) || '—';
+          return Copy.signInName(p.sign_in_as) || '—';
         }
       },
       {
@@ -338,7 +338,7 @@
         }
       ],
       search: function (p) {
-        return [p.name, p.user_id, p.role, p.access.label, p.phone].join(' ');
+        return [p.name, p.sign_in_as, p.role, p.access.label, p.phone].join(' ');
       },
       sorts: [
         {
@@ -418,7 +418,7 @@
         esc(node.name) +
         '</h2>' +
         '<div class="emp-sub">' +
-        Copy.nameWithCopy(node.user_id, 'emp-userid', 'mono') +
+        Copy.nameWithCopy(node.sign_in_as, 'emp-userid', 'mono') +
         ' ' +
         stateTag(node) +
         '</div>' +
@@ -841,7 +841,7 @@
       : '<div class="emp-out" data-testid="emp-added-code">' + esc(codeSentence(reply)) + '</div>';
     return (
       '<h2 data-testid="emp-added">' + esc(T('Added')) + '</h2><div class="emp-sub"><b>' + esc(name) + '</b></div>' +
-      '<div>' + Copy.nameWithCopy((person && person.user_id) || (reply.actor && reply.actor.login_format), 'emp-added-id', 'mono') + '</div>' +
+      '<div>' + Copy.nameWithCopy((person && person.sign_in_as) || (reply.actor && reply.actor.login_format), 'emp-added-id', 'mono') + '</div>' +
       codePart +
       '<button data-cbsid="EMP001-B13" type="button" class="act" id="emp_done" data-testid="emp-done">' + esc(T('Done')) + '</button>'
     );

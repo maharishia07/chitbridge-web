@@ -16,7 +16,7 @@ globalThis.esc = (value) => String(value);
 require(pub('app/shop-time.js'));
 const P = require(pub('app/bank-preview.js')), Band = require(pub('app/bank-band.js')), Tb = (require(pub('app/bank-tb-line.js')), globalThis.CBBankTbLine), Rep = (require(pub('app/bank-demo-report.js')), globalThis.CBBankDemoReport);
 globalThis.window = globalThis; /* the page's engine scripts, in the page's order */
-for (const f of ['money', 'tax', 'chart', 'accounts-packs', 'posting-voucher', 'posting', 'bank-entry', 'bank-json', 'bank-brs', 'bank-files']) require(pub('engine/' + f + '.js'));
+for (const f of ['money', 'tax', 'chart', 'accounts-packs', 'posting-voucher', 'posting-bad-debt', 'posting', 'bank-entry', 'bank-json', 'bank-brs', 'bank-files']) require(pub('engine/' + f + '.js'));
 const REAL = { recon: require(pub('engine/bank-recon.js')), project: require(pub('engine/bank-project.js')), entry: require(pub('engine/bank-entry.js')) };
 let ran = 0;
 const ok = (name) => console.log('ok  ' + name) || ran++;

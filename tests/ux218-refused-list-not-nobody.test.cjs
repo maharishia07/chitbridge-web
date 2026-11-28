@@ -8,12 +8,15 @@ let ok = 0;
 const pass = (w) => { ok++; console.log('  ok  ' + w); };
 assert(/if \(!panel\.why\) throw failure;\s*\n\s*panel\.given = \[\]; panel\.parents = \[\]; panel\.looks = \[\];/.test(src));
 pass('a refused read empties the lists it holds');
-const empties = src.match(/empty: panel\.why\s*\n\s*\? \{ title: words\('Only the owner sees this'\), body: panel\.why \}/g) || [];
+/* web #820 (UX-215/216/220) moved the Who looked list into its own module (books-grant-visits.js, one line, `screen.why`): the guard follows the code MOVE and still demands BOTH refusal empty states (Access I gave in member.js, Who looked in visits.js) */
+const visits = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'books-grant-visits.js'), 'utf8');
+const all = src + '\n' + visits;
+const empties = all.match(/empty: (?:panel|screen)\.why\s*\n?\s*\? \{ title: words\('Only the owner sees this'\), body: (?:panel|screen)\.why \}/g) || [];
 assert.strictEqual(empties.length, 2);
 pass('both empty states (Access I gave, Who looked) say it was refused when the server refused');
-for (const m of src.matchAll(/title: words\('(Nobody[^']*)'\)/g)) {
-  const at = src.lastIndexOf('empty:', m.index);
-  assert(/panel\.why\s*\n\s*\?/.test(src.slice(at, m.index)), m[1] + ' is drawn without the refused branch');
+for (const m of all.matchAll(/title: words\('(Nobody[^']*)'\)/g)) {
+  const at = all.lastIndexOf('empty:', m.index);
+  assert(/(?:panel|screen)\.why\s*\n?\s*\?/.test(all.slice(at, m.index)), m[1] + ' is drawn without the refused branch');
 }
 pass('every "Nobody ..." title sits behind the refused branch');
 console.log(ok + ' passed');
