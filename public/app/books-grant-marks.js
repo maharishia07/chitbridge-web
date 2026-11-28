@@ -25,62 +25,23 @@
   grantKit.mountQueues = mountQueues;
   /* ── rank 10: changed since my last check. The Day book can be read as "the entries posted since THIS person last pressed Mark as checked on this client" (api: GET /daybook?since=mine; the server holds the check point and
      the count, this page adds nothing up). Mark as checked sends back the watermark the list carried (seen_to), never a moment of its own. The act is the person's own (POST /api/books-grants/practice/baseline), never the client's. ── */
-  grantKit.SINCE_LIMIT = 500;
-  var MARK_CODE = 'NET005-B09';
-  var TOGGLE_CODE = 'NET005-B08';
-  function sinceAsked() {
-    try { return new root.URLSearchParams(root.location.search).get('since') === 'mine'; } catch (failure) { if (root.cbQuiet) root.cbQuiet('books-grant:since', failure); return false; }
-  }
-  /** the one control: Changed since my last check (a toggle on the Day book), and in that view the count and Mark as checked */
+  var T = root.CBBooksAuditTools; /* ONEP-2 PR7a: the since bar, Mark as checked and the Risk bits are ONE module (books-audit-tools.js), shared with the owner's Day book */
+  grantKit.SINCE_LIMIT = T.SINCE_LIMIT;
+  function sinceAsked() { return T.sinceAsked(); }
   function sinceBar() {
-    var on = grantKit.viewState.since, seen = grantKit.viewState.seen;
-    var toggle = '<button type="button" class="act quiet" id="bv_since" aria-pressed="' + on + '" data-cbsid="' + TOGGLE_CODE + '" data-testid="bv-since">' + esc(grantKit.words(on ? 'Back to the period' : 'Changed since my last check')) + '</button>';
-    var line = on && seen ? sinceLine(seen) : '';
-    return '<div class="bv-since" data-testid="bv-since-bar" role="group" aria-label="' + esc(grantKit.words('Changed since my last check')) + '" style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0">' + toggle + line + '</div>';
+    return T.sinceBar({ on: grantKit.viewState.since, seen: grantKit.viewState.seen, shown: ((grantKit.viewState.answer && grantKit.viewState.answer.entries) || []).length });
   }
-  /** in the since view: how many entries were posted since, and (when every one is listed) Mark as checked */
-  function sinceLine(seen) {
-    var count = Number(seen.total || 0), shown = ((grantKit.viewState.answer && grantKit.viewState.answer.entries) || []).length;
-    return '<span class="sub" data-testid="bv-since-line">' + esc(count + ' ' + grantKit.words(count === 1 ? 'entry posted since' : 'entries posted since') + ' ' + sinceFrom(seen.since)) + '</span>' + sinceAction(count, shown);
-  }
-  /** where the count starts: the day of the last check, or the start of the person's access */
-  function sinceFrom(info) {
-    if (info && info.never) return grantKit.words('your access began');
-    return info && info.at ? root.shopDay(info.at) : '';
-  }
-  /** nothing when no entry is new; the newest-N note when not every one is listed; Mark as checked when all are */
-  function sinceAction(count, shown) {
-    if (count <= 0) return '';
-    if (count > shown) return '<span class="sub" data-testid="bv-since-more">' + esc(grantKit.words('Showing the newest') + ' ' + shown + '. ' + grantKit.words('Mark as checked waits until every entry is listed.')) + '</span>';
-    return '<button type="button" class="act" id="bv_mark_checked" data-cbsid="' + MARK_CODE + '" data-testid="bv-mark-checked">' + esc(grantKit.words('Mark as checked')) + '</button>';
-  }
-  /** the tab row carries the since toggle: one line at a laptop, never a row of its own */
-  grantKit.TABROW_CSS = '<style>.bv-tabrow .act{white-space:nowrap}@media (max-width:700px){.bv-tabrow{row-gap:2px}}</style>';
+  grantKit.TABROW_CSS = T.TABROW_CSS;
   function setSince(on) {
     grantKit.viewState.since = on;
     grantKit.viewState.seen = null;
-    if (root.history && root.history.replaceState) {
-      try {
-        var query = new root.URLSearchParams(root.location.search);
-        if (on) query.set('since', 'mine'); else query.delete('since');
-        root.history.replaceState(root.history.state, '', root.location.pathname + (query.toString() ? '?' + query.toString() : '') + (root.location.hash || ''));
-      } catch (failure) { if (root.cbQuiet) root.cbQuiet('books-grant:since-address', failure); }
-    }
+    T.writeSince(on);
     grantKit.reload().then(function () { var b = grantKit.$('bv_since'); if (b) b.focus(); });
   }
-  /** Mark as checked: asks first (it sets this client's count to 0 for this person), names the client and the point; then the server stores it */
+  /** Mark as checked: the shared module asks, names the client and sends the grant route's own call (practiceBaseline) */
   function markChecked() {
-    var seen = grantKit.viewState.seen, name = (grantKit.viewState.o.member && grantKit.viewState.o.member.name) || grantKit.words('this client');
-    if (!seen || !seen.to || typeof root.CBConfirm !== 'function') return;
-    var body = esc(grantKit.words('Entries posted up to') + ' ' + root.shopDay(seen.to) + ' ' + grantKit.words('will stop counting as changed. Anything posted after will still count.'));
-    root.CBConfirm(grantKit.words('Mark') + ' ' + name + ' ' + grantKit.words('as checked?'), body, grantKit.words('Mark as checked'), function () {
-      root.CBBooksGrantApi.run(grantKit.viewState.o.call, 'practiceBaseline', { body: { client: grantKit.viewState.o.member.id, seen_to: seen.to } }).then(function () {
-        if (root.toast) root.toast(grantKit.words('Checked. Changes count from here.'));
-        grantKit.reload().then(function () { var b = grantKit.$('bv_since'); if (b) b.focus(); });
-      }, function (failure) {
-        if (root.toast) root.toast((failure && failure.message) || grantKit.words('We could not save that. Nothing was changed.'));
-      });
-    });
+    var member = grantKit.viewState.o.member;
+    T.markChecked({ seen: grantKit.viewState.seen, name: member && member.name, client: member && member.id, call: grantKit.viewState.o.call, done: function () { grantKit.reload().then(function () { var b = grantKit.$('bv_since'); if (b) b.focus(); }); } });
   }
   function wireSince() {
     if (grantKit.$('bv_since')) grantKit.$('bv_since').onclick = function () { setSince(!grantKit.viewState.since); };

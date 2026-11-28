@@ -74,60 +74,24 @@
     if (grantKit.afterYearEnd() !== !!grantKit.viewState.yeRead && grantKit.current().k === 'daybook' && !grantKit.viewState.day) grantKit.reload(); /* Year end · Dated after it is a different read (the days after the period): once per change, never in a loop */
     writeNarrowingAddress(filters);
   }
-  /** the narrowing rides the address (replace, never a new history entry) */
+  /** the narrowing rides the address (replace, never a new history entry): the shared module writes it */
   function writeNarrowingAddress(filters) {
-    if (!root.history || !root.history.replaceState) return;
-    try {
-      var url = narrowedAddress(filters);
-      if (url !== root.location.pathname + root.location.search + (root.location.hash || '')) root.history.replaceState(root.history.state, '', url);
-    } catch (failure) { if (root.cbQuiet) root.cbQuiet('books-grant:narrowing', failure); }
+    root.CBBooksAuditTools.narrowAddress(grantKit.viewState.dbf, Object.keys(filters.fromAddress('?' + filters.toAddress(grantKit.viewState.dbf))));
   }
-  /** this page's address with the Day book's narrowing in place of the old one */
-  function narrowedAddress(filters) {
-    var query = new root.URLSearchParams(root.location.search);
-    filters.paramNames().forEach(function (name) { query.delete(name); });
-    var more = filters.toAddress(grantKit.viewState.dbf), text = query.toString() + (more ? (query.toString() ? '&' : '') + more : '');
-    var url = root.location.pathname + (text ? '?' + text : '') + (root.location.hash || '');
-    return url;
-  }
-  /** A3C rank 8: on a focused Day book row "c" checks it and moves down, "q" opens its question; never while typing */
+  /** A3C rank 8: on a focused Day book row "c" checks it and moves down, "q" opens its question; never while typing (books-audit-tools.js keys) */
   function wireDaybook(host, report) {
     if (host.__bvKeys) return;
-    host.__bvKeys = true;
     var settle = function () {
       if (!host.isConnected) { root.document.removeEventListener('change', settle); root.document.removeEventListener('click', settle); return; }
       root.setTimeout(function () { rememberNarrowing(host); }, 0);
     };
     root.document.addEventListener('change', settle); /* the Filters pop-up sits outside the list: listen on the page */
     root.document.addEventListener('click', settle);
-    host.addEventListener('keydown', function (event) { onRowKey(host, report, event); });
-  }
-  /** a key on a focused Day book row: c checks it and moves down, q opens its question */
-  function onRowKey(host, report, event) {
-    var keyed = keyedRow(host, report, event);
-    if (!keyed) return;
-    event.preventDefault();
-    var entry = keyed.entry, mark = keyed.mark;
-    if (event.key === 'q') { mark.sheet(entry.entry_id, { title: entry.entry_no, opener: keyed.rowEl }); return; }
-    var rowsNow = [].slice.call(host.querySelectorAll('[data-row]')), next = rowsNow[rowsNow.indexOf(keyed.rowEl) + 1];
-    if (mark.mayCheck(entry.entry_id) && mark.markOf(entry.entry_id).state === 'none') mark.set(entry.entry_id, 'clear', '', null);
-    if (next) next.focus();
-  }
-  /** the row, its entry and the mark helper a key press is for (null when the key is not ours: typing, a modifier, marking off, no row) */
-  function keyedRow(host, report, event) {
-    var mark = grantKit.viewState.mk;
-    if (!isRowKey(event) || !mark || !grantKit.markable(report)) return null;
-    var rowEl = event.target.closest('[data-row]');
-    if (!rowEl) return null;
-    var entry = report.rows(grantKit.viewState.answer || {})[Number(rowEl.getAttribute('data-row'))];
-    return entry && entry.entry_id ? { rowEl: rowEl, entry: entry, mark: mark } : null;
-  }
-  /** c or q, on its own, and not while typing in a field */
-  function isRowKey(event) {
-    var target = event.target;
-    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || !target || !target.closest) return false;
-    if (event.key !== 'c' && event.key !== 'q') return false;
-    return !(/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable);
+    root.CBBooksAuditTools.keys(host, {
+      mark: function () { return grantKit.viewState.mk; },
+      on: function () { return grantKit.markable(report); },
+      entryAt: function (rowEl) { return report.rows(grantKit.viewState.answer || {})[Number(rowEl.getAttribute('data-row'))]; }
+    });
   }
   /** W21: the two headings in the reader's voice: a firm reads "Customers owe <client>" and "<client> owes suppliers"; the owner's own books say you (no member = the owner) */
   function duesVoice(client) {

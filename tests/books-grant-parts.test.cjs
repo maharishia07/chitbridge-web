@@ -27,7 +27,7 @@ const t = (name, fn) => {
   } catch (e) { fail(e); }
 };
 
-const PARTS = ['public/app/ui-field.js', 'public/app/ui-money.js', 'public/app/books-grant-reports.js', 'public/app/books-grant-cells.js', 'public/app/books-grant-marks.js', 'public/app/books-grant-list.js', 'public/app/books-grant-view.js'];
+const PARTS = ['public/app/ui-field.js', 'public/app/ui-money.js', 'public/app/books-audit-tools.js', 'public/app/books-grant-reports.js', 'public/app/books-grant-cells.js', 'public/app/books-grant-marks.js', 'public/app/books-grant-list.js', 'public/app/books-grant-view.js'];
 const DOOR = 'public/app/books-clients-door.js', API = 'public/app/books-grant-api.js';
 function load(extra) {
   const root = Object.assign({

@@ -17,8 +17,7 @@
   grantKit.figure = figure;
   /** NET005-P05: under the Day book, the fixed hours and day counts the Risk column and its filters use (one sentence; not a setting) */
   function riskNote(report) {
-    if (report.k !== 'daybook' || grantKit.viewState.since) return '';
-    return '<style>.bv-risk{display:inline-block;min-width:1.6em;text-align:center;border-radius:10px;padding:0 6px;background:var(--amber-t);color:var(--amber-i);font-weight:600}.bv-risknote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-risknote" data-cbsid="NET005-P05" data-testid="bv-risk-note">' + esc(grantKit.words('Risk counts one point for each of: recorded after the period end · over 7 days late · at a weekend · after hours (8 pm to 7 am) · a round sum (multiple of 100) · no narration.')) + '</div>';
+    return report.k !== 'daybook' || grantKit.viewState.since ? '' : root.CBBooksAuditTools.riskNote();
   }
   /** a figure in the answer's currency, the way the books screens paint it (CBBooksActing.money) */
   function minorWords(minor) {
@@ -36,14 +35,8 @@
     var F = root.CBBooksGrantFilters;
     return F ? F.riskOf(e, grantKit.viewState.period, grantKit.viewState.answer && grantKit.viewState.answer.currency, grantKit.viewState.answer && grantKit.viewState.answer.country) : [];
   }
-  /** "1 risk" / "3 risks": the shell's txn (Intl.PluralRules of the reader's locale, the catalogue's one/other forms); English one/other when the page has no txn */
-  function riskCount(n) {
-    return typeof root.txn === 'function' ? root.txn('{count} risk', '{count} risks', n) : n + (n === 1 ? ' risk' : ' risks');
-  }
-  /** the Risk cell: the count, with the rules it counts as its title and as words for a reader; none = a dash */
   function riskCell(row) {
-    var list = row.risk_list || [];
-    return list.length ? '<span class="bv-risk" data-cbsid="NET005-P04" data-testid="bv-risk" role="img" aria-label="' + esc(riskCount(list.length) + ': ' + list.join(', ')) + '" title="' + esc(list.join(', ')) + '">' + list.length + '</span>' : '—';
+    return root.CBBooksAuditTools.riskCell(row);
   }
   /** a cell, by its column: a kind (risk, mark, money …) or a name says how it is painted; the rest is the server's value as words */
   function figure(row, column) {
