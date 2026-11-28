@@ -111,7 +111,7 @@
   /** held(call) → { <member entity id>: the live grant this business holds on its books }: a login that may not list grants gets {} and the list shows nothing extra */
   function heldSplit(call) {
     var known = root.CBAvatar && root.CBAvatar.seatKnown ? root.CBAvatar.seatKnown() : Promise.resolve(false);
-    return known.then(function (staff) { return staff && root.CBAvatar.lastMe() && root.CBAvatar.lastMe().is_practice === false ? {} : callEndpoint(call, 'grantsList'); }).then(
+    return known.then(function (staff) { return staff ? {} : callEndpoint(call, 'grantsList'); }).then(
       function (answer) { return splitOfGrants(answer); },
       function (failure) {
         return failure && (failure.status === 401 || failure.status === 403) ? {} : { unread: true }; /* a login that may not list grants has none; a list that could not be read is said as that (l16 fable3), never as "no grant" */
@@ -228,9 +228,8 @@
   var loadedAt = Date.now(), SEAT_WAIT_MS = 10000; /* /me that never answers (offline, a failed read) must not hide a firm's Home: after the wait the page asks, as it did before */
   /** the seat rule is CBAvatar's (staffSeat, the one rule for every page's owner-only read); this is only the firm reads' name for it */
   function readsClients() {
-    var av = root.CBAvatar, me = av && av.lastMe ? av.lastMe() : null;
-    if (!me) return Date.now() - loadedAt > SEAT_WAIT_MS ? true : null;
-    return !(av.staffSeat() && me.is_practice === false); /* a staff actor of a PRACTICE may still be a firm person (W12): only a staff actor of a shop that is not a practice holds no client */
+    var staff = root.CBAvatar && root.CBAvatar.staffSeat ? root.CBAvatar.staffSeat() : null;
+    return staff === null ? (Date.now() - loadedAt > SEAT_WAIT_MS ? true : null) : !staff;
   }
   root.CBBooksGrantApi = { run: callEndpoint, readsClients: readsClients, held: held, heldSplit: heldSplit, doorsFor: doorsFor, clientColumns: clientColumns, endedWords: endedWords, visible: visible, endedToggle: endedToggle, wireEnded: wireEnded, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, closedBooks: closedBooks, closedFrame: closedFrame, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
 })(typeof window !== 'undefined' ? window : globalThis);

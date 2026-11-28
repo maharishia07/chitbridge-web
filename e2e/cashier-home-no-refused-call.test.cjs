@@ -47,17 +47,16 @@ function page(seat, apiSrc, avSrc) {
   vm.runInContext(SRC.door, root);
   return { calls, root, announce: (entity) => root.CBAvatar.announce(entity) };
 }
-const me = (actor, whole, hat, practice) => ({ identity_type: actor ? 'actor' : 'entity', whole_entity: whole, hat, is_practice: practice, country: 'AU' });
+const me = (seat, practice) => ({ is_practice: practice, country: 'AU', seat });
 const SEATS = [
-  { name: 'owner', me: me(false, false, null, false), asks: true },
-  { name: 'firm', me: me(false, false, null, true), asks: true },
-  { name: 'whole', me: me(true, true, 'act', false), asks: true },
-  { name: 'manager', me: me(true, false, 'manager', false), asks: true },
-  { name: 'cashier', me: me(true, false, 'act', false), asks: false, refused: true }
+  { name: 'owner', me: me({ owner: true, money: true, sells: true, lead: null, entries: null }, false), asks: true },
+  { name: 'firm', me: me({ owner: true, money: true, sells: true, lead: null, entries: null }, true), asks: true },
+  { name: 'bookkeeper', me: me({ owner: false, money: true, sells: false, lead: null, entries: null }, false), asks: true },
+  { name: 'cashier', me: me({ owner: false, money: false, sells: true, lead: 'till', entries: ['till', 'tasks', 'crm', 'account'] }, false), asks: false, refused: true }
 ];
 const firmCalls = (p) => p.calls.filter((c) => /^\/api\/books-grants/.test(c.p));
 (async () => {
-  check(AV.includes('function staffOf(me)') && SRC.api.includes('av.staffSeat()'), 'ONE seat rule (CBAvatar.staffOf); readsClients and heldSplit read it, never a second test');
+  check(AV.includes('function staffOf(me)') && SRC.api.includes('staffSeat'), 'ONE seat rule (CBAvatar.staffOf); readsClients and heldSplit read it, never a second test');
   check(SRC.api.includes('SEAT_WAIT_MS'), 'a /me that never answers does not hide a firm Home for ever (the page asks after the wait)');
   for (const seat of SEATS) {
     const p = page(seat);
@@ -70,13 +69,13 @@ const firmCalls = (p) => p.calls.filter((c) => /^\/api\/books-grants/.test(c.p))
     else check(firm.length === 0, seat.name + ': Counter staff asks NO firm read on Home (' + firm.length + ' calls)');
     check(p.calls.filter((c) => c.status >= 400).length === 0 || seat.asks, seat.name + ': zero 4xx calls');
   }
-  const mutated = page(SEATS[4], null, AV_CUT.replace('seat.actor === true &&', 'false &&'));
-  mutated.announce(SEATS[4].me);
+  const mutated = page(SEATS[3], null, AV_CUT.replace('me.seat.money === false', 'false'));
+  mutated.announce(SEATS[3].me);
   await wait(800);
   check(firmCalls(mutated).filter((c) => c.status === 403).length > 0, 'mutation: with the seat answer forced to "ask" the cashier Home calls the refused reads (the guard goes red without the fix)');
   /* the same seat rule gates every other page's owner-only read (walk 28 Nov: network heldSplit, finance dues?finance=1, employees chits/holds): the staff seat asks none of them */
-  const staff = page(SEATS[4]), owner = page(SEATS[0]);
-  staff.announce(SEATS[4].me); owner.announce(SEATS[0].me);
+  const staff = page(SEATS[3]), owner = page(SEATS[0]);
+  staff.announce(SEATS[3].me); owner.announce(SEATS[0].me);
   const held = (pg) => { const calls = []; return pg.root.CBBooksGrantApi.heldSplit((m, path) => { calls.push(path); return Promise.resolve({ received: [], given: [] }); }).then(() => calls); };
   check((await held(staff)).length === 0, 'network.html: heldSplit asks nothing for the staff seat (no GET /api/books-grants)');
   check((await held(owner)).length === 1, 'network.html: heldSplit still asks for the owner');
@@ -85,6 +84,8 @@ const firmCalls = (p) => p.calls.filter((c) => /^\/api\/books-grants/.test(c.p))
   check(finGate > 0 && finGate < finRead, 'finance.html: the seat answer comes before dues?finance=1 (no refused call, the worded state instead)');
   const empGate = emp.indexOf('CBAvatar.seatKnown'), empRead = emp.indexOf('CBAssign.holds()');
   check(empGate > 0 && empGate < empRead, 'employees.html: the seat answer comes before chits/holds (no refused call, no column)');
+  const acc = fs.readFileSync(path.join(__dirname, '..', 'public', 'accounts.html'), 'utf8'), hv = acc.indexOf('function hashView()');
+  check(hv > 0 && acc.slice(hv, hv + 600).indexOf('CBAvatar.staffSeat()') > 0 && acc.slice(hv, hv + 600).indexOf('staffSeat') < acc.slice(hv, hv + 600).indexOf('NAV.some'), 'accounts.html: ONE place decides the tabs (hashView): Counter staff get none, a typed # included, so compare / bank / every tab makes no call');
   console.log(failures ? failures + ' failed' : 'all passed');
   process.exit(failures ? 1 : 0);
 })();
