@@ -55,7 +55,8 @@ W.run('firm-connect', async (w) => {
   const wrote = (re) => S.writes.filter((x) => re.test(x));
   const confirmYes = async () => { await page.waitForSelector(T('confirm'), { timeout: 5000 }); const said = await txt(T('confirm')); await page.click(T('confirm-ok')); await page.waitForTimeout(500); return said; };
   const open = async (hash) => { await page.goto(base + '/network.html' + (hash || '')); await page.reload(); await page.waitForSelector(T('nw-body'), { timeout: 20000 }); await page.waitForTimeout(400); };
-  const pickRow = async (tid, action) => { await page.click(T(tid)); await page.waitForSelector(T(action), { timeout: 5000 }); await page.click(T(action)); };
+  /** open the row (unless its actions already show: a second press would close it) and press one action */
+  const pickRow = async (tid, action) => { if (!(await has(T(action)))) await page.click(T(tid)); await page.waitForSelector(T(action), { timeout: 5000 }); await page.click(T(action)); };
 
   await page.setViewportSize(WIDE);
   await open('#asks');
@@ -165,7 +166,7 @@ W.run('firm-connect', async (w) => {
   await w.step('F15', 'the Home card names the waiting requests and its door opens the Requests', async () => {
     await page.goto(base + '/'); await page.waitForSelector(T('cbshell'), { timeout: 20000 });
     await page.evaluate(() => window.SHELL && window.SHELL.ready);
-    await page.waitForSelector('[data-testid="shell-sheet-full"]', { state: 'attached', timeout: 20000 }); await page.waitForTimeout(1500);
+    await page.waitForSelector(T('shell-facts-network'), { state: 'attached', timeout: 20000 }); await page.waitForTimeout(1500);
     const card = await page.evaluate(() => { const el = document.querySelector('[data-testid="shell-facts-network"]'); return el ? el.innerText.replace(/\s+/g, ' ').trim() : ''; });
     return { ok: /2 requests to connect/.test(card), saw: card };
   });
