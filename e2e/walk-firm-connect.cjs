@@ -167,7 +167,7 @@ W.run('firm-connect', async (w) => {
     await page.goto(base + '/'); await page.waitForSelector(T('cbshell'), { timeout: 20000 });
     await page.evaluate(() => window.SHELL && window.SHELL.ready);
     await page.waitForSelector(T('shell-facts-network'), { state: 'attached', timeout: 20000 }); await page.waitForTimeout(1500);
-    const card = await page.evaluate(() => { const el = document.querySelector('[data-testid="shell-facts-network"]'); return el ? el.innerText.replace(/\s+/g, ' ').trim() : ''; });
+    const card = await page.evaluate(() => { const el = document.querySelector('[data-testid="shell-facts-network"]'); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; });
     return { ok: /2 requests to connect/.test(card), saw: card };
   });
   await w.step('F16', 'the Requests view fits 1366x768 and 390x844 with no page scroll', async () => {

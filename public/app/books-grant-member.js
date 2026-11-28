@@ -402,6 +402,7 @@
         confirm: confirmBody ? { title: words('Save this change?'), body: confirmBody, yes: words('Save') } : undefined,
         failed: words("Couldn't save the change"),
         out: 'bg_out2',
+        onFail: function (said, failure) { var out = $('bg_out2'); out.textContent = root.CBBooksGrantEdit.failSaid(said, failure); out.setAttribute('data-tone', 'error'); },
         outcome: function () {
           panel.o.closeSheet();
           reload();

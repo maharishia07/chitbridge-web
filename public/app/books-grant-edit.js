@@ -6,7 +6,7 @@
  * RISK      personal-data
  * OWNS      the detail of one grant row (who · role · until · why · costs · who posts) so nothing is hidden at 1366 px; the costs box of the Change sheet; what the change sends (PATCH only what moved); the plain-words confirm that a RISE in costs needs (the same words as giving)
  * CALLED BY books-grant-member.js (paintGiven's `next`, openChange)
- * FLOW      detail(grant, say) → the row's detail markup · costsBox(grant) → the checkbox · body(grant, ids) → the PATCH body · riseWords(consent) → the confirm body · wording(failure) → 422/503 said in words
+ * FLOW      detail(grant, say) → the row's detail markup · costsBox(grant) → the checkbox · body(grant, ids) → the PATCH body · riseWords(consent) → the confirm body · wording(failure) → 422/503 said in words · failSaid(said, failure) → the sentence the sheet shows
  * CARD      04-network/ACC-176-AUDITOR-GRANT
  *
  * The server decides: a rise in costs without consent is a 422 BOOKS_GRANT_CONSENT_NEEDED, the column not yet opened is a 503; this file only asks the owner first and says each refusal.
@@ -58,5 +58,9 @@
     else if (failure && failure.code === 'BOOKS_GRANT_CONSENT_NEEDED') failure.message = words('Say yes to showing your costs first. Nothing was changed.');
     return failure;
   }
-  root.CBBooksGrantEdit = { detail: detail, costsBox: costsBox, rising: rising, body: body, riseWords: riseWords, wording: wording };
+  /** what to say when the change failed: the server's refusals above are said as they are (a 503 never shows its words by itself), anything else keeps the action's own sentence */
+  function failSaid(said, failure) {
+    return failure && /^BOOKS_GRANT_(NOT_SWITCHED_ON|CONSENT_NEEDED)$/.test(failure.code) ? failure.message : said;
+  }
+  root.CBBooksGrantEdit = { failSaid: failSaid, detail: detail, costsBox: costsBox, rising: rising, body: body, riseWords: riseWords, wording: wording };
 })(typeof window !== 'undefined' ? window : globalThis);
