@@ -143,6 +143,10 @@ const bkbReadOnly = () => typeof bkReadOnlySeat === 'function' && bkReadOnlySeat
 function bkbActRefusal() {
   return bkbActing() && !CBBooksActing.posts() ? tx('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.') : '';
 }
+/** BB-P1-2: the sentence for the Add press only: an adviser whose grant neither posts nor proposes ('' when the press may open the sheet). Under owner_approves the press OPENS: the lines are sent to the owner to approve, and the server decides */
+function bkbAddRefusal() {
+  return bkbActing() && !CBBooksActing.posts() && !CBBooksActing.proposes() ? bkbActRefusal() : '';
+}
 /** one gated action on the bank page: refused with the sentence when the account is not bound or the act is blocked, else carried out */
 function bkbStep(action) {
   if (!bkbBound()) return false;
@@ -845,7 +849,7 @@ function bankAddBound(r) {
 /** Add missing (on a line) and the Add button both open the one sheet: every line against the books, each with what it needs (FIN-117; the sheet is cap-bank-sheet.js) */
 function bankAdd(row) {
   if (typeof bankSheetOpen !== 'function') return toast(tx('This starts after an update'));
-  if (bkbActRefusal()) return toast(bkbActRefusal());
+  if (bkbAddRefusal()) return toast(bkbAddRefusal());
   bankSheetOpen(row).catch((failure) => bkQuiet('bank-add', failure));
 }
 /* a saved entry → fetch the bank ledger again, so the line is matched (the guard against posting it twice) */

@@ -222,7 +222,7 @@
     }
     /** what a line says once it is neither added nor closed: the entry it would make, the ONE question, every other thing holding it back, the reason and the say-box */
     function lineNoteCore(item, result) {
-      if (result) return result.ok ? tag('ok', cfg.addedWords || 'Added') : tag('bad', 'Not added: ' + result.why);
+      if (result) return result.ok ? tag('ok', result.held ? 'Sent to the owner to approve' : cfg.addedWords || 'Added') : tag('bad', 'Not added: ' + result.why);
       if (item.state === 'closed') return tag('bad', item.why);
       var done = alreadyNote(item, escapeHtml);
       if (done) return done;

@@ -12,14 +12,29 @@
   'use strict';
   var PARTY_DOORS = { supplier: 'supAdd', customer: 'custAdd' };
 
+  /** an adviser acting for a client: the grant's posting decides (it posts, or it proposes to the owner); null when it may */
+  function adviserRefusal(who) {
+    if (who.posts || who.proposes) return null;
+    return catalogueText('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.');
+  }
   /** why this login may not post (the server decides; this only says it first, once); null when it may */
   function ownerRefusal(who) {
-    if (who && who.role === 'adviser') return who.posts ? null : catalogueText('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.'); /* an adviser acting for a client: the grant's posting decides; the server stays the authority */
+    if (who && who.role === 'adviser') return adviserRefusal(who); /* an adviser acting for a client: the grant's posting decides; the server stays the authority */
     return who && who.role && who.role !== 'owner' && who.role !== 'bookkeeper' ? catalogueText('Adding entries is for the owner. Ask the owner to confirm this statement.') : null;
   }
   /** one catalogue sentence: the page's tx() when it has one */
   function catalogueText(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
+  }
+  /** BB-P1-2: an adviser whose grant PROPOSES (owner_approves) sends entries to the owner to approve; a receipt or payment with a named party, and a loan instalment, have no held form yet (the server refuses them), so they are said up front */
+  function proposeRefusal(who, type) {
+    var proposing = !!who && who.role === 'adviser' && !who.posts && !!who.proposes;
+    var noHeldForm = !!PAYMENT_DIRECTION[type] || type === 'loan_repaid';
+    return proposing && noHeldForm ? catalogueText('The owner records payments and loan instalments. Send the other lines to the owner to approve.') : null;
+  }
+  /** why this line cannot be added by this person from here (the seat, the kind, a proposing adviser's payment), in words; null when it can */
+  function lineRefusal(who, type) {
+    return ownerRefusal(who) || refusalOf(type) || proposeRefusal(who, type);
   }
   /** an adviser never makes a party (those doors are outside /api/books and refused): a line that needs a new one waits for the owner to add it */
   function newPartyRefusal(who, name) {
@@ -131,7 +146,7 @@
   function adapter(deps) {
     var made = {}; /* new party (name|kind) → id made in this run, so two lines naming one payee make it once */
     async function post(item) {
-      var refused = ownerRefusal(deps.who) || refusalOf(item.event && item.event.type);
+      var refused = lineRefusal(deps.who, item.event && item.event.type);
       if (refused) return { ok: false, why: refused };
       try {
         return await postLine(deps, made, item);
@@ -142,7 +157,7 @@
     /** a plain entry for a party the books know (or none): the lines POST /events/batch takes; a new party, a payment and a loan instalment keep their own doors, one at a time */
     post.batchable = function (item) {
       var type = item.event && item.event.type;
-      return !ownerRefusal(deps.who) && !refusalOf(type) && type !== 'loan_repaid' && !PAYMENT_DIRECTION[type] && !(item.party && item.party.status === 'new');
+      return !lineRefusal(deps.who, type) && type !== 'loan_repaid' && !PAYMENT_DIRECTION[type] && !(item.party && item.party.status === 'new');
     };
     /** the plain-entry lines in ONE call: a reply per line in order (same shape as post), or null when the call cannot be used so the caller posts them one by one (an owner-approval shop answers 409; every line has its client_ref, so a repeat posts nothing twice) */
     post.many = async function (items) {
@@ -158,9 +173,7 @@
       }
       var results = out && out.results;
       if (!Array.isArray(results) || results.length !== items.length) return null;
-      return results.map(function (one) {
-        return one && one.ok === true ? { ok: true, duplicate: !!one.duplicate, entry_no: one.entry_no || one.no || null, posting_date: one.posting_date || null } : { ok: false, why: (one && one.detail) || 'Could not add this entry.' };
-      });
+      return results.map(rowOf);
     };
     return post;
   }
@@ -203,10 +216,31 @@
     var reply = await deps.api('booksLoanEmi', { params: { ref: item.loanRef }, body: loanEmiBody(item, deps.modeOf) });
     return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
   }
+  /** BB-P1-2: a line the server HELD for the owner (a 202 under owner_approves: the held action, nothing posted) is ok and `held`, never an entry */
+  function heldOf(reply) {
+    if (!reply) return false;
+    if (reply.held === true) return true;
+    var waiting = reply.state === 'waiting_review' || reply.state === 'waiting_accept';
+    return waiting && !!reply.action_id && !reply.entry_no && !reply.entry;
+  }
+  /** one row of a batch answer as the preview keeps it: held for the owner, posted (or a duplicate), or refused with the server's words */
+  function rowOf(one) {
+    if (!one || one.ok !== true) return { ok: false, why: (one && one.detail) || 'Could not add this entry.' };
+    return entryOrHeld(one);
+  }
   /** one entry through POST /events */
   async function postEntry(deps, item, partyId) {
     var reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
-    return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
+    return entryOrHeld(reply);
+  }
+  /** the answer of POST /events as the preview keeps it: held for the owner (a 202), or the entry made (a repeat says duplicate) */
+  function entryOrHeld(reply) {
+    return heldOf(reply) ? { ok: true, held: true, action_id: reply.action_id || null } : entryOf(reply);
+  }
+  /** the entry POST /events made, as the preview keeps it (a repeat says duplicate) */
+  function entryOf(reply) {
+    var one = reply || {};
+    return { ok: true, duplicate: !!one.duplicate, entry_no: one.entry_no || one.no || null, posting_date: one.posting_date || null };
   }
   /** one receipt or payment through POST /payments, the door Dues records through */
   async function postPayment(deps, item, partyId) {

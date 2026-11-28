@@ -203,7 +203,7 @@
   }
   /** the adapter's reply as the preview keeps it */
   function resultOf_(reply) {
-    return reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
+    return reply && reply.ok ? { ok: true, held: reply.held === true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
   }
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
@@ -278,7 +278,10 @@
     var failed = todo.filter(function (item) {
       return !preview.results[item.key].ok;
     });
-    return { tried: todo.length, added: todo.length - failed.length, failed: failed.length };
+    var held = todo.filter(function (item) { return preview.results[item.key].ok && preview.results[item.key].held; }).length; /* BB-P1-2: sent to the owner to approve, not in the books yet */
+    var sum = { tried: todo.length, added: todo.length - failed.length - held, failed: failed.length };
+    if (held) sum.held = held; /* the key appears only when something was held, so every earlier caller reads the same shape */
+    return sum;
   }
   /** the words for why a statement text cannot be taken: engine not loaded, too big, or not a statement; null when it can */
   function textRefusal(opts, text) {
