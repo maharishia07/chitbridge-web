@@ -23,12 +23,12 @@ of file each thing is; this says what already does the job.
 | 112 | `entry` | `books-store.js` |  |
 | 112 | `store` | `move-in-proof.js` | store(conn, entity, rec) — |
 | 106 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
-| 103 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
+| 104 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 102 | `next` | `dayopen.js` | the next thing to do — |
 | 101 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 94 | `refusal` | `availability.js` | and is not judged here (stamp keeps its own rule for those). |
 | 93 | `again` | `signin-ui.js` |  |
-| 91 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 92 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 90 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 89 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 89 | `pack` | `books-store-packs.js` |  |
@@ -78,9 +78,9 @@ of file each thing is; this says what already does the job.
 | 55 | `refuse` | `bank-rec-log.js` | a refusal in words (422); `code` names the kind when it is not the general one |
 | 54 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 53 | `closeModal` | `app.html` |  |
+| 52 | `open` | `cap-attention.js` | a count pressed: |
 | 52 | `status` | `books-backfill.js` | read: |
 | 52 | `posted` | `books-event-guard.js` | post through the one writer; a look-alike rides on the answer as a non-blocking warning |
-| 51 | `open` | `cap-attention.js` | a count pressed: |
 | 51 | `gate` | `country-setup.js` | gate(h, entity): |
 | 51 | `missing` | `signin-pending.js` | a store failure that means "b879 is not applied": |
 | 50 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
@@ -104,10 +104,10 @@ of file each thing is; this says what already does the job.
 | 44 | `load` | `books-grant-view.js` |  |
 | 43 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 43 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
+| 43 | `money` | `cart.js` |  |
 | 42 | `changes` | `books-store.js` |  |
 | 42 | `counter` | `repeat-supply.js` | the customer COUNTERS: |
 | 41 | `opts` | `books-grant-filters.js` |  |
-| 41 | `money` | `cart.js` |  |
 | 41 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
 | 41 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |
 | 40 | `record` | `network-books.js` | record the client now open (or the list, id null) in history: |
@@ -148,11 +148,11 @@ of file each thing is; this says what already does the job.
 | 31 | `group` | `identity.js` | again in a different costume. |
 | 31 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 30 | `options` | `bank-lines.js` | cfg.extra { columns, actions, head, wrapStatus(row, iconHtml) } what a page adds (the owner's page: |
+| 30 | `card` | `cap-shop.js` |  |
 | 30 | `field` | `ui-field.js` | the part: |
 | 30 | `post` | `books-manual.js` | POST /events — |
 | 30 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 30 | `move` | `rail.js` | Order = the order the server refused in: |
-| 29 | `card` | `cap-shop.js` |  |
 | 29 | `step` | `cart.js` |  |
 | 29 | `head` | `list-ctl.js` |  |
 | 29 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
@@ -165,6 +165,7 @@ of file each thing is; this says what already does the job.
 | 28 | `cblog` | `core.js` | const __cblog = []; |
 | 28 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 28 | `chart` | `fx-rates.js` |  |
+| 27 | `more` | `lab-kit.js` | idKey: |
 | 27 | `currency` | `ui-money.js` | the currency a money field uses: |
 | 27 | `refusalOf` | `bill-number-taken.js` | the refusal thrown as data: |
 | 27 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
@@ -200,6 +201,7 @@ of file each thing is; this says what already does the job.
 | 24 | `keep` | `signin.js` | see. |
 | 24 | `mark` | `auth.js` | res.locals.<k> = v for the request log (server.js) — |
 | 23 | `held` | `books-grant-api.js` |  |
+| 23 | `refusal` | `books-grant-asks.js` | the failure with its message said in words when its code is known |
 | 23 | `send` | `cap-quotes.js` |  |
 | 23 | `account` | `cap-settings.js` |  |
 | 23 | `said` | `cap-shop.js` |  |
@@ -207,4 +209,3 @@ of file each thing is; this says what already does the job.
 | 23 | `close` | `person-session.js` | When device_id is null the jti is looked for under every device (an owner revoking a jti from the list). |
 | 23 | `told` | `signin-switched-off.js` | const words = (shop) => 'This account is switched off, so you cannot sign in. |
 | 22 | `figure` | `books-acting.js` | a figure the way the books screens paint it: |
-| 22 | `refusal` | `books-grant-asks.js` | the failure with its message said in words when its code is known |
