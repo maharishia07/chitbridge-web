@@ -143,8 +143,11 @@ const refusal = (code, data) => Object.assign(new Error('refused'), { code, data
   assert.strictEqual(POST.loanEmiRefusal({ line: LOAN, loanRef: 'x', interestMinor: 4000 }), null);
   ok('the press refuses with the words of the same loanNeed the sheet holds the line on');
   /* 7 - the receipts a returned cheque can reverse come from the bank ledger lines the api already returns: money in, a party, a payment received, not reversed, from 90 days before the statement */
-  const line = (extra) => Object.assign({ dr_minor: 30000, party_id: 'p1', entry_id: 'e1', event_type: 'payment_received', party_name: 'Ravi Stores', date: '2026-10-12' }, extra);
-  assert.deepStrictEqual(POST.receiptsOf([line(), line({ entry_id: 'e2', reversed_by: 'MJ-1' }), line({ entry_id: 'e3', event_type: 'sale_bill' }), line({ entry_id: 'e4', party_id: null }), line({ entry_id: 'e5', reverses_entry_id: 'x' }), line({ entry_id: 'e6', dr_minor: 0 })]).map((r) => r.ref), ['e1']);
+  const line = (extra) => Object.assign({ dr_minor: 30000, entry_id: 'e1', event_type: 'payment_received', party_name: 'Ravi Stores', date: '2026-10-12' }, extra);
+  const debtor = (id, extra) => Object.assign({ entry_id: id, party_id: 'p-' + id, cr_minor: 30000 }, extra); /* the real ledger: the BANK line has party_id null (SIT, 28 Nov), the debtors line names the party */
+  const found = POST.receiptsOf([line(), line({ entry_id: 'e2', reversed_by: 'MJ-1' }), line({ entry_id: 'e3', event_type: 'sale_bill' }), line({ entry_id: 'e4' }), line({ entry_id: 'e5', reverses_entry_id: 'x' }), line({ entry_id: 'e6', dr_minor: 0 }), line({ entry_id: 'e7' })],
+    [debtor('e1'), debtor('e2'), debtor('e3'), debtor('e5'), debtor('e6'), debtor('e7', { party_id: null })]);
+  assert.deepStrictEqual(found.map((r) => [r.ref, r.party]), [['e1', 'p-e1']], 'only the unreversed payment received whose debtors line names the party (e4 has no debtors line, e7 no party)');
   assert.deepStrictEqual(POST.receiptWindow('2026-10-01', '2026-10-31'), { from: '2026-07-03', to: '2026-10-31' }, '90 days before the first day, to the last');
   ok('receipts: only the unreversed customer payments received (not a bill, not a reversal, not a partyless line); the window starts 90 days before the statement');
   console.log(ran + ' checks');

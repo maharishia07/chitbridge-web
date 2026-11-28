@@ -230,10 +230,12 @@
     var start = Date.parse(String(first).slice(0, 10) + 'T00:00:00Z');
     return isNaN(start) ? null : { from: new Date(start - RECEIPT_LOOKBACK_DAYS * 86400000).toISOString().slice(0, 10), to: String(last || first).slice(0, 10) };
   }
-  /** the cleared customer receipts of the bank ledger's lines (GET /ledger/:account) a returned cheque can reverse: money in, naming a party, not itself reversed, not a reversal, a payment received → the engine's options.receipts [{ ref (the entry id), party, party_name, amount_minor, cheque_no, date }] */
-  function receiptsOf(lines) {
-    return (lines || []).filter(function (one) { return Number(one.dr_minor) > 0 && one.party_id && one.entry_id && !one.reversed_by && !one.reverses_entry_id && one.event_type === 'payment_received'; }).map(function (one) {
-      return { ref: one.entry_id, party: one.party_id, party_name: one.party_name || '', amount_minor: Number(one.dr_minor), cheque_no: (one.source && one.source.how_ref) || null, date: one.date };
+  /** the cleared customer receipts a returned cheque can reverse: the BANK ledger's money-in lines of a payment received, not itself reversed and not a reversal (the bank line carries no party), each joined by its entry id to the DEBTORS ledger's line that names the party → the engine's options.receipts [{ ref (the entry id), party, party_name, amount_minor, cheque_no, date }] */
+  function receiptsOf(lines, debtorLines) {
+    var partyOf = {};
+    (debtorLines || []).forEach(function (one) { if (one.party_id && one.entry_id && Number(one.cr_minor) > 0) partyOf[one.entry_id] = one.party_id; });
+    return (lines || []).filter(function (one) { return Number(one.dr_minor) > 0 && partyOf[one.entry_id] && !one.reversed_by && !one.reverses_entry_id && one.event_type === 'payment_received'; }).map(function (one) {
+      return { ref: one.entry_id, party: partyOf[one.entry_id], party_name: one.party_name || '', amount_minor: Number(one.dr_minor), cheque_no: (one.source && one.source.how_ref) || null, date: one.date };
     });
   }
   /** the days apart of two ISO days, whole days, never negative; null when either is not a day */

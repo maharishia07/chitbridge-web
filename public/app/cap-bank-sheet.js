@@ -412,8 +412,9 @@ function bkshPageUi(host, changed) {
 /** BB-P1-1: the books' cleared customer receipts a returned-cheque line can reverse, read from the bank ledger from 90 days before the statement; a failure is quiet and leaves none (the line then asks, nothing is guessed) */
 async function bkshReceipts() {
   const days = bkbReadOnly() ? null : CBBankPost.receiptWindow(BKB.from, (BKB.keptPeriod && BKB.keptPeriod.to) || BKB.to);
-  const reply = days ? await api('booksLedger', { params: { account: BKB.acct }, query: days }).catch((failure) => bkQuiet('bank-receipts', failure)) : null;
-  return CBBankPost.receiptsOf(reply && reply.lines);
+  const read = (account) => api('booksLedger', { params: { account }, query: days }).catch((failure) => bkQuiet('bank-receipts', failure));
+  const [bank, debtors] = days ? await Promise.all([read(BKB.acct), read('debtors')]) : [null, null]; /* the bank line carries no party: the debtors ledger's line of the same entry does */
+  return CBBankPost.receiptsOf(bank && bank.lines, debtors && debtors.lines);
 }
 async function bankSheetOpen(row) {
   if (!bkbBound()) return;
