@@ -4564,7 +4564,7 @@ function bkCarriedDay(key) {
   if (BK[key]) return '';
   BK[key] = true;
   var day = new URLSearchParams(location.search || '').get('to') || '';
-  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !isNaN(Date.parse(day)) ? day : '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !isNaN(Date.parse(day)) && day <= bkToday() ? day : ''; /* AUDBS: a day that has not happened is no pick (the period end of the year in progress rides the firm's door): the seat opens at the owner's default, today, so both seats ask the same day */
 }
 /** the day the trial balance is read at: the day pressed, else the one typed, else the address's (once), else today */
 function bkTbDay() {
