@@ -8,7 +8,7 @@
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  * CONTROLS  BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B07 use this party · BKS017-B08 use this account (and use it for the similar lines, same words same direction, on press) · BKS017-B09 yes, this is right
  *           BKS017-B10/B11 tax invoice held / not held · BKS017-B12 same payment · BKS017-B13 it is new · BKS017-B15 use this tax · BKS017-B18 add a line the sheet cannot finish as its own entry · BKS017-B19 what this line is (one step) · BKS017-S10 which account that answer names · BKS017-I02 new party name · BKS017-S04 new party kind
- *           BKS017-B36 yes, settle the bill the api found · BKS017-B37 no, pick an account · BKS017-S11 which loan a repayment pays · BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
+ *           BKS017-S12 which receipt a returned cheque reverses (proposed, cb-ux-locale names it) · BKS017-B38 use this receipt (proposed) · BKS017-B36 yes, settle the bill the api found · BKS017-B37 no, pick an account · BKS017-S11 which loan a repayment pays · BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
  * ⭐ Written for pages with no inline script (the demo's CSP): everything is data-act on a button, one delegated listener on the host.
  */
 (function (root) {
@@ -88,7 +88,7 @@
   /** M-06: the interest the owner typed, as written on the lender's statement ("250.00"), taken to minor units by the money unit (toMinor, the shop's currency); a blank or non-number clears it */
   function useInterest(cfg, chosenFor, key) {
     var loan = chosenFor('loanfield', key);
-    if (cfg.controller().loans().length) { if (!loan) return { ok: false, line: true, why: 'Choose which loan this pays.' }; cfg.controller().loan(key, loan); }
+    if (loan) cfg.controller().loan(key, loan); /* what is still missing (no loan picked, no interest) is the ONE loanNeed the controller holds the line on (cap-bank-post.js), not a second copy of the rule here */
     var typed = String(chosenFor('interestfield', key) || '').trim();
     if (!typed) return cfg.controller().interest(key, '');
     var minor = interestMinor(typed, cfg.currency);
@@ -152,6 +152,7 @@
       similar: function (key) { return useSimilar(cfg, offers, key); },
       taxuse: useTax,
       interest: function (key) { return useInterest(cfg, chosenFor, key); },
+      receipt: function (key) { var ref = chosenFor('receiptfield', key); return ref ? cfg.controller().receipt(key, ref) : { ok: false, line: true, why: 'Choose which receipt the bank sent back.' }; } /* BB-P1-1: the returned cheque's receipt */,
       liability: function (key, target) { return useLiability(cfg, key, target); },
       tick: function (key) { return cfg.controller().tick(key); },
       feetax: function (key, target) { return cfg.controller().feeTax(key, target.getAttribute('data-v')); },

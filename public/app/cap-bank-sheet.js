@@ -170,7 +170,8 @@ function bkshController() {
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
     pairing: bkshPairing,
     loans: () => bkshBook().loans || [] /* GET /books/loans: the picker of a loan instalment line */,
-    suggestOpts: Object.defineProperty({ country, lodged_bas: bkshBook().lodged || [] /* GET /books/gst/lodged: a tax payment that equals a lodged net is proposed as GST (engine reads net_minor) */, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems(), card_sales: bkshCardSales() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
+    loanNeed: CBBankPost.loanNeed /* the ONE test of what a loan line still lacks (cap-bank-post.js): the sheet and the press read the same */,
+    suggestOpts: Object.defineProperty({ country, lodged_bas: bkshBook().lodged || [] /* GET /books/gst/lodged: a tax payment that equals a lodged net is proposed as GST (engine reads net_minor) */, learned: bkbRules(), parties: bkshParties(), receipts: bkshBook().receipts || [] /* the cleared receipts a returned cheque can reverse (cap-bank.js bankReceipts) */, open_items: bkbOpenItems(), card_sales: bkshCardSales() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
     parseOpts: { country, currency: bkshBook().stmtCur || undefined, preset: bkshBook().preset || undefined }
   });
 }
@@ -408,11 +409,18 @@ function bkshPageUi(host, changed) {
   });
 }
 /** open the sheet for the statement on screen, or for ONE line of it (Add missing on a line: that line alone) */
+/** BB-P1-1: the books' cleared customer receipts a returned-cheque line can reverse, read from the bank ledger from 90 days before the statement; a failure is quiet and leaves none (the line then asks, nothing is guessed) */
+async function bkshReceipts() {
+  const days = bkbReadOnly() ? null : CBBankPost.receiptWindow(BKB.from, (BKB.keptPeriod && BKB.keptPeriod.to) || BKB.to);
+  const reply = days ? await api('booksLedger', { params: { account: BKB.acct }, query: days }).catch((failure) => bkQuiet('bank-receipts', failure)) : null;
+  return CBBankPost.receiptsOf(reply && reply.lines);
+}
 async function bankSheetOpen(row) {
   if (!bkbBound()) return;
   if (!bkshReady()) return toast(tx('Load the statement file again to add its lines.'));
   BKSH.taxRegistered = await bkshRegistered();
   await bkshReadMonths();
+  BKB.receipts = await bkshReceipts();
   BKSH.refs = null;
   const kept = !!BKSH.ctl && BKSH.key === bkshKey();
   if (!kept) {

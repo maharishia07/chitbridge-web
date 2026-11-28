@@ -27,11 +27,14 @@
     which_liability: 'Which tax is this?',
     which_account: 'Which account is this for?',
     interest: 'Interest needed',
+    which_loan: 'Which loan?',
+    no_loan: 'No loan in your books to pay: add the loan in Books first, then load the statement again',
+    which_receipt: 'Which receipt did the bank send back?',
     interest_too_big: 'Interest is more than the payment',
     no_entry: 'Needs you'
   };
   /** the blockers a person answers on the line, in the order they are asked (is it new at all? then the tax, then the tick); every other blocker is only shown */
-  var ASKED_ = ['may_be_in_books', 'tax_kind', 'gst_basis', 'fee_tax', 'tax_invoice', 'which_liability', 'which_account', 'interest', 'needs_tick', 'balance_break'];
+  var ASKED_ = ['may_be_in_books', 'tax_kind', 'gst_basis', 'fee_tax', 'tax_invoice', 'which_liability', 'which_account', 'which_receipt', 'which_loan', 'interest', 'needs_tick', 'balance_break'];
   /** the plain sentence the ENGINE gives a blocker (bank-project BLOCKER_WORDS, the one register); '' when this engine copy has none, so the short label shows alone and no sentence is written here */
   function sentenceOf(code) {
     var words = root.CBBankProject && root.CBBankProject.BLOCKER_WORDS;
@@ -140,7 +143,8 @@
     minorOf: minorOf,
     moneyText: moneyText,
     dateText: dateText,
-    lineOf: lineOf_
+    lineOf: lineOf_,
+    MATCH_WINDOW_DAYS: MATCH_WINDOW_DAYS
   };
   root.CBBankPreviewLine = lineKit;
   if (typeof module !== 'undefined' && module.exports) module.exports = lineKit;
