@@ -124,8 +124,36 @@
       if (typeof root.toast === 'function') root.toast(bellKit.bellText(bellKit.BELL_WORDS.markFail));
     });
   }
+  /** what the bell asks: the badge's own one-statement question while closed (the dot and the waiting requests), the feed while open (UX-215) */
+  function readQuery(bell) {
+    return bell.open ? undefined : { query: { count: 1 } };
+  }
+  /** keep what an answer holds: the feed's rows, the badge's waiting requests; a badge answer has no rows, so the rows stay */
+  function take(bell, reply) {
+    if (reply && reply.notifications) bell.rows = reply.notifications;
+    if (reply && reply.asks != null) bell.asks = Number(reply.asks) || 0;
+    bell.loading = false;
+  }
+  /** the dot: the badge's count already holds the waiting requests, the feed's does not (they are counted until answered, never seen away) */
+  function countOf(bell, reply) {
+    if (!reply || !reply.notifications) return reply && reply.count != null ? reply.count : bell.rows.length;
+    return (reply.count != null ? reply.count : bell.rows.length) + (bell.asks || 0);
+  }
+  /** the pinned row's press: the requests wait in the Network page, in Who can see my books (a page that is already there reloads onto them) */
+  function pressAsks(bell, repaint) {
+    bell.open = false;
+    repaint();
+    if (/[/]network[.]html$/.test(root.location.pathname)) {
+      root.location.hash = '#asks';
+      root.location.reload();
+    } else root.location.assign('/network.html#asks');
+  }
   /** a press on a row of the list: which kind of notice it is decides what opens; false when it was not on a row of ours */
   function pressRow(bell, opts, node, repaint) {
+    if (node.closest('[data-testid="bell-asks"]')) {
+      pressAsks(bell, repaint);
+      return true;
+    }
     var row = node.closest('[data-testid="bell-row"]');
     if (!row) return false;
     if (row.getAttribute('data-chit')) {
@@ -143,5 +171,9 @@
     return true;
   }
   bellKit.pressRow = pressRow;
+  bellKit.readQuery = readQuery;
+  bellKit.take = take;
+  bellKit.countOf = countOf;
+  bellKit.pressAsks = pressAsks;
   bellKit.openMark = openMark;
 })(typeof window !== 'undefined' ? window : globalThis);

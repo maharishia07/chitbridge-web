@@ -17,6 +17,7 @@
   bellKit.addCss = addCss;
   bellKit.bellButtonHtml = bellButtonHtml;
   bellKit.panelHtml = panelHtml;
+  bellKit.asksRowHtml = asksRowHtml;
   function bellText(words) {
     return typeof tx === 'function' ? tx(words) : words;
   }
@@ -33,6 +34,9 @@
     readFail: 'Could not read your activity — try again',
     markFail: 'That question could not be opened — try again',
     markGone: 'This entry was reversed or removed, so its question cannot be opened',
+    loading: 'Loading',
+    askOne: 'request to connect',
+    askMany: 'requests to connect',
     aria: 'Activity',
     chit: 'a chit',
     needs: 'Clearing needs the latest update on this system',
@@ -228,6 +232,11 @@
     );
   }
 
+  /** UX-215: the one pinned row at the top while requests to connect wait for the owner; it opens the requests, the rows are read there */
+  function asksRowHtml(bell) {
+    if (!(bell.asks > 0)) return '';
+    return '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-asks"><span aria-hidden="true">🤝</span><span><div class="cbb-t"><b>' + esc(bell.asks + ' ' + bellText(bell.asks === 1 ? bellKit.BELL_WORDS.askOne : bellKit.BELL_WORDS.askMany)) + '</b></div></span></button>';
+  }
   /** the open panel: title, the rows (yours first) or the error / empty line, and the footer with Clear all */
   function panelHtml(bell) {
     var items = bell.rows.map(line),
@@ -239,6 +248,8 @@
       });
     var body = bell.err
       ? '<div class="cbb-none" data-testid="bell-error">' + esc(bellText(bellKit.BELL_WORDS.readFail)) + '</div>'
+      : bell.loading && !items.length
+        ? '<div class="cbb-none" data-testid="bell-loading">' + esc(bellText(bellKit.BELL_WORDS.loading)) + '</div>'
       : items.length
         ? (mine.length ? '<div class="cbb-sec">' + esc(bellText(bellKit.BELL_WORDS.forYou)) + '</div>' + mine.map(recordHtml).join('') : '') +
           (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(bellText(bellKit.BELL_WORDS.rest)) + '</div>' : '') + rest.map(recordHtml).join('') : '')
@@ -249,6 +260,7 @@
       '"><div class="cbb-hd">' + bellChip('POP113', 'margin-inline-end:8px') +
       esc(bellText(bellKit.BELL_WORDS.title)) +
       '</div>' +
+      asksRowHtml(bell) +
       body +
       '<div class="cbb-ft"><span class="cbb-out" data-testid="bell-out" data-tone="' +
       esc(bell.tone) +
