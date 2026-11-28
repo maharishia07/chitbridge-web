@@ -20,7 +20,7 @@
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
   function escapeText(text) {
-    return typeof root.esc === 'function' ? root.escapeText(text) : String(text == null ? '' : text);
+    return typeof root.esc === 'function' ? root.esc(text) : String(text == null ? '' : text);
   }
   /** the ONE seat test: a firm seat (an auditor or an adviser acting for a client) AND the server says marking is on for it (mark_actions). The owner and a bookkeeper have no firm seat, so they get none of these tools */
   function firmSeat() {
