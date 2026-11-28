@@ -262,7 +262,7 @@ W.run('books-grant', async (w) => {
     await page.click(T('bg-seg-looks')); await page.waitForSelector('[data-testid^="bg-visit-"]', { timeout: 10000 });
     await page.click('[data-testid^="bg-visit-"]'); await page.waitForSelector(T('bg-visit-pages'), { timeout: 5000 }); /* UX-220: one row per visit; the pages are its detail and a refused look is counted */
     const list = await txt(T('bg-list'));
-    return { ok: /trial balance/i.test(list) && /d+ pages?/.test(list) && /1 refused/.test(list), saw: list.slice(0, 140) };
+    return { ok: /trial balance/i.test(list) && /[0-9]+ pages?/.test(list) && (await has(T('bg-visit-refused'))), saw: list.slice(0, 140) };
   });
   await w.step('M6', 'the member · End access asks first, then ends: the row says Ended', async () => {
     await page.click(T('bg-seg-given')); await page.waitForSelector('[data-testid^="bg-grant-"]', { timeout: 10000 });
