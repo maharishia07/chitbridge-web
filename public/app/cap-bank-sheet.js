@@ -238,6 +238,11 @@ function bkshAsk() {
   if (!said) return null;
   return { title: tx(said.title), body: said.lines.map((words) => '<p>' + bkbE(words) + '</p>').join(''), yes: tx('Add to your books'), danger: false };
 }
+/** what the Add press says it did: the lines added, the ones refused, and (BB-P1-2, owner_approves) the ones sent to the owner to approve */
+function bkshAddedWords(done) {
+  const sent = done.held ? ' ' + txf('{h} sent to the owner to approve: they join your books when the owner accepts.', { h: done.held }) : '';
+  return (done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added })) + sent;
+}
 /** the one write: confirm, post the ready lines one at a time, read the books again, paint what happened on each line */
 async function bkshAdd(btn) {
   const question = bkshAsk();
@@ -252,8 +257,7 @@ async function bkshAdd(btn) {
     bkshAcceptAdded(); /* the owner's own adds read as accepted at once, whichever way the sheet is closed later */
     /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
     BKSH.ctl.answer('ledger_read', Date.now()); /* projects again over the books just read */
-    const sent = done.held ? ' ' + txf('{h} sent to the owner to approve: they join your books when the owner accepts.', { h: done.held }) : ''; /* BB-P1-2: owner_approves */
-    const said = (done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added })) + sent;
+    const said = bkshAddedWords(done);
     const figures = typeof bankFigures === 'function' ? bankFigures() : null;
     if (!done.failed && figures && figures.nil) {
       /* nothing is left: the books agree with the statement, so the sheet closes itself and the Bank view offers the sign-off */
