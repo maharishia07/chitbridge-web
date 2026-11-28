@@ -45,3 +45,12 @@ async function otherShopTraces() {
 function knownLedgerOn() {
   return window.CBAvatar && CBAvatar.ledgerOn ? CBAvatar.ledgerOn() : null;
 }
+/** UX-221 (C3): a seat that /me says may not read the shop's money (Counter staff) is shown ONE sentence and the way back, never the owner's menu of pages that only refuse. The api still refuses every route by its own gate. true = said */
+function moneyClosed() {
+  const seat = window.CBEdition ? CBEdition.seat() : null;
+  if (!seat || seat.money !== false || CBBooksActing.current()) return false;
+  $('nav').innerHTML = '';
+  card('<div id="seat_closed" data-testid="acc-money-closed"></div>', true);
+  CBShell.readFailed($('seat_closed'), { what: '', status: 403, detail: tx('The books are for the owner and the shop’s accountant. Your login sells at the till.'), back: { href: '/', label: tx('Back to Home') } });
+  return true;
+}
