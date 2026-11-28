@@ -65,16 +65,16 @@ const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 /* ── RW3-16: the BAS tab word on a page that loads no pack registry (network.html: the firm's client books) ── */
 {
   const view = read('public/app/books-grant-view.js');
-  const label = view.slice(view.indexOf('function labelOf'), view.indexOf('function tabs'));
+  const label = view.slice(view.indexOf('function returnWord'), view.indexOf('function returnButton'));
   check(label.includes('choices.return_name') && !label.includes('packWord'), 'RW3-16: the tab word is the one GET /periods names (return_name), not a registry the page does not load');
   const html = read('public/network.html');
   check(!html.includes('/engine/tax.js'), 'RW3-16: network.html still loads no 650 KB pack bundle for a tab word');
-  /* run the real labelOf against a tab: BAS from the answer, "Tax return" while the answer names none */
+  /* ONEP-1: run the real returnWord (the door's word): BAS from the answer, "Tax return" while the answer names none */
   const ctx = vm.createContext({ grantKit: { viewState: { choices: { return_name: 'BAS' } } } });
-  vm.runInContext(label.slice(label.indexOf('function labelOf')) + ' this.f = labelOf;', ctx);
-  check(ctx.f({ k: 'bas', label: 'Tax return' }) === 'BAS' && ctx.f({ k: 'tb', label: 'Trial balance' }) === 'Trial balance', 'RW3-16: only the return tab takes the word; the others keep theirs');
+  vm.runInContext(label + ' this.f = returnWord;', ctx);
+  check(ctx.f() === 'BAS', 'RW3-16: the return door takes the word the answer names');
   ctx.grantKit.viewState.choices = { periods: [] };
-  check(ctx.f({ k: 'bas', label: 'Tax return' }) === 'Tax return', 'RW3-16: an answer that names no return leaves the tab "Tax return"');
+  check(ctx.f() === 'Tax return', 'RW3-16: an answer that names no return leaves the door "Tax return"');
 }
 
 Promise.all(pending).then(() => {
