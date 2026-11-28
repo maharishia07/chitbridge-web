@@ -130,7 +130,7 @@ jobs:
           node tests/ye-f15-card-stage.test.cjs
           node tests/ye-f13-one-name.test.cjs
           node tests/ye-f12-opening-years-words.test.cjs
-          node tests/ye-f11-firm-return-tab.test.cjs
+          node tests/onep1-return-one-path.test.cjs
           node tests/ye-f07-overdue-words.test.cjs
           node tests/ye-f08-year-warnings.test.cjs
           node tests/ye-f06-stage-evidence.test.cjs
