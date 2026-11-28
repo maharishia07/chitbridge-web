@@ -35,7 +35,7 @@ const grabFrom = (file, name) => { const t = fs.readFileSync(path.join(__dirname
 const sb3 = { BK: { duesRaw: { needs: { customer: { overdue: 1, overdue_minor: 35000, parties: 1 }, supplier: { overdue: 1, overdue_minor: 3403050, parties: 1 } } } }, BK_NEED_ORDER: ['disputed', 'query', 'held', 'no_tax_invoice', 'no_terms', 'overdue'],
   tx: (x) => x, txn: (a) => a, esc: (x) => String(x), bkMoney: (m) => 'A$' + (m / 100).toLocaleString('en-AU', { minimumFractionDigits: 2 }), bkMountAttribute: () => '' };
 vm.createContext(sb3);
-vm.runInContext(['bkNeedsSum'].map((n) => grabFrom('cap-books.js', n)).concat(['bkNeedsChip', 'bkNeedsChips'].map((n) => grabFrom('cap-books-needs.js', n))).join(';') + ';this.bkNeedsSum=bkNeedsSum;this.bkNeedsChips=bkNeedsChips;', sb3);
+vm.runInContext(['bkNeedsSum'].map((n) => grabFrom('cap-books.js', n)).concat(['bkNeedsChip', 'bkNeedsOverdueParts', 'bkNeedsChips'].map((n) => grabFrom('cap-books-needs.js', n))).join(';') + ';this.bkNeedsSum=bkNeedsSum;this.bkNeedsChips=bkNeedsChips;', sb3);
 const heads = sb3.bkNeedsChips(sb3.bkNeedsSum('all'), 'all', 'AUD', '').join(' ');
 ok(/A\$350\.00<\/b> overdue from customers/.test(heads) && /A\$34,030\.50<\/b> overdue to suppliers/.test(heads) && !/34,380\.50/.test(heads), 'FW-35: two overdue chips, no 34,380.50: ' + heads.replace(/<[^>]+>/g, ''));
 const one = sb3.bkNeedsChips(sb3.bkNeedsSum('pay'), 'pay', 'AUD', '').join(' ');

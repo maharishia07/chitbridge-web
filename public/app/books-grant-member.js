@@ -15,7 +15,7 @@
  */
 (function (root) {
   'use strict';
-  var panel = { host: null, o: {}, given: [], parents: [], looks: [], view: 'given', why: null, notice: [], posted: [], seeThem: false };
+  var panel = { host: null, o: {}, firms: [], node: null, given: [], parents: [], looks: [], view: 'given', why: null, notice: [], posted: [], seeThem: false };
   var ROLE = { auditor: 'Auditor: reads only', adviser: 'Accountant: acts for you' };
   var ROLE_NAME = { adviser: 'Accountant', auditor: 'Auditor' };
   var LOOKED = {
@@ -33,6 +33,10 @@
   }
   function $(id) {
     return root.document.getElementById(id);
+  }
+  /** what the outside-firms module (books-grant-firms.js) needs of this screen: its state and its helpers */
+  function firmsCtx() {
+    return { panel: panel, escapeHtml: esc, words: words, $: $, reload: reload, paint: paint };
   }
   function api(key, o) {
     return root.CBBooksGrantApi.run(panel.o.call, key, o);
@@ -95,16 +99,17 @@
         panel.why = null;
         if (panel.view === 'looks') panel.looks = (answer && answer.looks) || [];
         else { panel.given = (answer && answer.given) || []; panel.parents = (answer && answer.parents) || []; }
-        return weekly();
+        return root.CBBooksGrantFirms.asking(firmsCtx()).then(weekly);
       },
       function (failure) {
         panel.why = failure.status === 403 || failure.status === 503 ? failure.message : null;
         if (!panel.why) throw failure;
+        panel.given = []; panel.parents = []; panel.looks = []; /* a refused read leaves no list behind: the empty state below says it was refused, never "nobody" (UX-218) */
       }
     );
   }
 
-/** what the adviser posted for the owner in the last 7 days: the same queue, filtered (accepted, delegated, since): a line to read, never a list to clear */
+  /** what the adviser posted for the owner in the last 7 days: the same queue, filtered (accepted, delegated, since): a line to read, never a list to clear */
   function weekly() {
     if (panel.view !== 'given' || !(panel.given || []).some(function (g) { return g.preset === 'adviser'; })) return Promise.resolve();
     var since = dayValue(new Date(Date.now() - 7 * 864e5));
@@ -133,7 +138,9 @@
   function paint() {
     panel.host.innerHTML =
       backButton() + '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
-      '<button data-cbsid="NET004-B03" type="button" class="act quiet" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button></div>' +
+      '<button data-cbsid="NET004-B03" type="button" class="act quiet" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button>' +
+      '<button data-cbsid="NET004-B18" type="button" class="act quiet" id="bg_invite" data-testid="bg-invite">' + esc(words('Invite a firm')) + '</button></div>' +
+      (panel.view === 'given' ? root.CBBooksGrantFirms.html(firmsCtx()) : '') +
       '<div class="sub" data-testid="bg-note">' + esc(words('You choose who, in which role, and until when. Every look and every step is recorded.')) + '</div>' +
       noticeHtml() +
       (panel.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(panel.why) + '</div>' : '') +
@@ -146,7 +153,10 @@
     });
     if ($('bg_back')) $('bg_back').onclick = panel.o.onBack;
     greyGive();
+    if (panel.why) $('bg_invite').setAttribute('disabled', '');
     $('bg_give').onclick = openGive;
+    $('bg_invite').onclick = function () { root.CBBooksGrantFirms.invite(firmsCtx()); };
+    Array.prototype.forEach.call(panel.host.querySelectorAll('[data-firm]'), function (button) { button.onclick = function () { root.CBBooksGrantFirms.answer(firmsCtx(), button); }; });
     if ($('bg_seethem')) $('bg_seethem').onclick = function () { panel.view = 'posted'; panel.seeThem = false; reload(); };
     ({ looks: paintLooks, given: paintGiven, accept: paintAccept, posted: paintPosted })[panel.view]($('bg_list'));
   }
@@ -208,7 +218,9 @@
       search: function (g) {
         return [nameOf(g.grantee_entity), g.purpose].join(' ');
       },
-      empty: { title: words('Nobody can see your books'), body: words('Give access to your network parent when an audit needs it.') }
+      empty: panel.why
+        ? { title: words('Only the owner sees this'), body: panel.why }
+        : { title: words('Nobody can see your books'), body: words('Give access to your network parent when an audit needs it.') }
     });
   }
   /** who looked at these books, when and at what, newest first */
@@ -233,7 +245,9 @@
       search: function (look) {
         return [nameOf(look.grantee_entity), whatWords(look.route_pattern), look.outcome].join(' ');
       },
-      empty: { title: words('Nobody has looked yet'), body: words('Each look at your books will be listed here.') }
+      empty: panel.why
+        ? { title: words('Only the owner sees this'), body: panel.why }
+        : { title: words('Nobody has looked yet'), body: words('Each look at your books will be listed here.') }
     });
   }
 
@@ -261,7 +275,7 @@
   function openGive() {
     var parents = allParents();
     if (!parents.length) {
-      panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('You have no network parent to give access to.')) + '</p>');
+      panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('No firm is connected yet. Invite a firm first, or accept a request from one.')) + '</p>');
       return;
     }
     panel.o.sheet(giveForm(parents));

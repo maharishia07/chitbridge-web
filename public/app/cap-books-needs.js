@@ -25,7 +25,7 @@ var BK_NEED_ORDER = ['disputed', 'query', 'held', 'no_tax_invoice', 'no_terms', 
 function bkNeedChips(party) {
   var needTotals = party.needs || {},
     kinds = BK_NEED_ORDER.filter(function (kind) {
-      return Number(needTotals[kind]) > 0;
+      return Number(needTotals[kind]) > 0; /* ACC-412: the api's counts already leave a no-terms bill out of overdue (billBands.overdue), so nothing is re-derived here */
     });
   if (!kinds.length) return '';
   var shown = kinds.slice(0, 3).map(function (kind) {
@@ -59,6 +59,17 @@ function bkNeedFilters() {
 function bkNeedsChip(kind, text, pressed, tidSuffix) {
   return '<button type="button" class="attn-chip" data-cbsid="CMP033-B01"' + bkMountAttribute('CMP033') + ' data-b="needs-head-' + kind + (tidSuffix || '') + '" data-testid="needs-head-' + kind + (tidSuffix || '') + '" aria-pressed="' + (pressed === kind) + '" onclick="bkNeedsHeadPress(\'' + kind + '\')">' + text + '</button>';
 }
+/** the overdue chip(s) of the header line, from the api's own overdue counts (a no-terms bill is never in them: ACC-412) */
+function bkNeedsOverdueParts(sum, currency, pressed) {
+  var parts = [];
+  /* FW-35: both sides on one list = two overdue figures, never one sum of what is owed to us and what we owe */
+  if (sum.overdue && sum.overdue_sides && sum.overdue_sides.length > 1) {
+    sum.overdue_sides.forEach(function (part) {
+      parts.push(bkNeedsChip('overdue', '<b>' + (part.minor != null ? esc(bkMoney(part.minor, currency)) : part.count) + '</b> ' + esc(tx(part.key === 'customer' ? 'overdue from customers' : 'overdue to suppliers')), pressed, '-' + part.key));
+    });
+  } else if (sum.overdue) parts.push(bkNeedsChip('overdue', '<b>' + (sum.overdue_minor != null ? esc(bkMoney(sum.overdue_minor, currency)) : sum.overdue) + '</b> ' + esc(tx('overdue')), pressed));
+  return parts;
+}
 /** the chips of the header line, the server's counts only: parties that need you, then each reason with its count (overdue says the amount) */
 function bkNeedsChips(sum, side, currency, pressed) {
   var words = side === 'pay' ? ['supplier', 'suppliers'] : side === 'rcv' ? ['customer', 'customers'] : ['party', 'parties'],
@@ -73,13 +84,7 @@ function bkNeedsChips(sum, side, currency, pressed) {
   ].forEach(function (reason) {
     if (sum[reason[0]]) parts.push(bkNeedsChip(reason[0], '<b>' + sum[reason[0]] + '</b> ' + esc(reason[1]), pressed));
   });
-  /* FW-35: both sides on one list = two overdue figures, never one sum of what is owed to us and what we owe */
-  if (sum.overdue && sum.overdue_sides && sum.overdue_sides.length > 1) {
-    sum.overdue_sides.forEach(function (part) {
-      parts.push(bkNeedsChip('overdue', '<b>' + (part.minor != null ? esc(bkMoney(part.minor, currency)) : part.count) + '</b> ' + esc(tx(part.key === 'customer' ? 'overdue from customers' : 'overdue to suppliers')), pressed, '-' + part.key));
-    });
-  } else if (sum.overdue) parts.push(bkNeedsChip('overdue', '<b>' + (sum.overdue_minor != null ? esc(bkMoney(sum.overdue_minor, currency)) : sum.overdue) + '</b> ' + esc(tx('overdue')), pressed));
-  return parts;
+  return parts.concat(bkNeedsOverdueParts(sum, currency, pressed));
 }
 /** the header line of Receivables / Payables: "12 suppliers need you · 8 no tax invoice · 3 no terms · A$4,210 overdue" — each a filter (a press again clears it) */
 function bkNeedsHead() {
@@ -108,3 +113,13 @@ function bkNeedOpen(event, pid, kind) {
   var list = CBList.get('dues');
   if (list) list.open(pid, true);
 }
+/* UX-211: Dues is the two sides together; a book holding only ONE side shows the same list under Receivables or Payables, so the menu keeps that one entry (the page's own /dues read; unknown yet = both stay; an open Dues keeps its button) */
+window.cbDuesTwin = function (active) {
+  return active !== 'dues' && !!BK.duesRaw && !bkDuesRows('rcv').length !== !bkDuesRows('pay').length;
+};
+window.cbDuesNavHid = false;
+window.cbDuesNav = function () {
+  var current = document.querySelector('#nav .nav-btn.active'),
+    view = current ? current.dataset.view : '';
+  if (window.cbDuesTwin(view) !== window.cbDuesNavHid && typeof navPaint === 'function' && document.getElementById('nav').innerHTML) navPaint(view);
+};
