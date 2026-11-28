@@ -9,8 +9,8 @@ const pass = (w) => { ok++; console.log('  ok  ' + w); };
 assert(/if \(!panel\.why\) throw failure;\s*\n\s*panel\.given = \[\]; panel\.parents = \[\]; panel\.looks = \[\];/.test(src));
 pass('a refused read empties the lists it holds');
 const empties = src.match(/empty: panel\.why\s*\n\s*\? \{ title: words\('Only the owner sees this'\), body: panel\.why \}/g) || [];
-assert.strictEqual(empties.length, 2);
-pass('both empty states (Access I gave, Who looked) say it was refused when the server refused');
+assert.strictEqual(empties.length, 1); /* web #820 (firm-connect) replaced the Who-looked empty state with the Visits list, which has its own refusal row: one empty state is left here */
+pass('the empty state of Access I gave says it was refused when the server refused');
 for (const m of src.matchAll(/title: words\('(Nobody[^']*)'\)/g)) {
   const at = src.lastIndexOf('empty:', m.index);
   assert(/panel\.why\s*\n\s*\?/.test(src.slice(at, m.index)), m[1] + ' is drawn without the refused branch');

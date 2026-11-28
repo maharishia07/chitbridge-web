@@ -78,9 +78,9 @@ of file each thing is; this says what already does the job.
 | 55 | `refuse` | `bank-rec-log.js` | a refusal in words (422); `code` names the kind when it is not the general one |
 | 54 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 53 | `closeModal` | `app.html` |  |
-| 52 | `open` | `cap-attention.js` | a count pressed: |
 | 52 | `status` | `books-backfill.js` | read: |
 | 52 | `posted` | `books-event-guard.js` | post through the one writer; a look-alike rides on the answer as a non-blocking warning |
+| 51 | `open` | `cap-attention.js` | a count pressed: |
 | 51 | `gate` | `country-setup.js` | gate(h, entity): |
 | 51 | `missing` | `signin-pending.js` | a store failure that means "b879 is not applied": |
 | 50 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
