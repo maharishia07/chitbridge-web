@@ -13,7 +13,7 @@
  *           CI: api @ lock sha ──▶ vendor-till.cjs --check --web-only with CB_WEB_DIR=this repo ──▶ red only if a copy was hand-edited or the pin forgotten
  * CARD      09-counter/README
  *
- * Usage:  node tools/vendor-pin.cjs bump <api-checkout-dir>   (the checkout's HEAD must be an ancestor of origin/main, tree clean)
+ * Usage:  node tools/vendor-pin.cjs bump <api-checkout-dir>   (the checkout's HEAD must be an ancestor of origin/develop, tree clean)
  *         node tools/vendor-pin.cjs drift <api-main-checkout> (warns: has api main changed a master since the pin? never fails)
  */
 'use strict';
@@ -36,8 +36,8 @@ const gitOut = (dirArg, args) => execFileSync('git', ['-C', dirArg].concat(args)
 const bump = (apiDir) => {
   const commit = gitOut(apiDir, ['rev-parse', 'HEAD']);
   if (gitOut(apiDir, ['status', '--porcelain'])) throw new Error(apiDir + ' has uncommitted changes — pin a clean checkout');
-  const onMain = spawnSync('git', ['-C', apiDir, 'merge-base', '--is-ancestor', commit, 'origin/main']);
-  if (onMain.status !== 0) throw new Error(commit.slice(0, 10) + ' is not on api origin/main — pin a merged commit (git fetch origin first)');
+  const onMain = spawnSync('git', ['-C', apiDir, 'merge-base', '--is-ancestor', commit, 'origin/develop']);
+  if (onMain.status !== 0) throw new Error(commit.slice(0, 10) + ' is not on api origin/develop — pin a merged commit (git fetch origin first)');
   const vend = spawnSync(process.execPath, [path.join(apiDir, 'scripts', 'vendor-till.cjs')], { env: Object.assign({}, process.env, { CB_WEB_DIR: WEB_ROOT }), encoding: 'utf8' });
   if (vend.status !== 0) throw new Error('vendor-till.cjs failed:\n' + vend.stdout + vend.stderr);
   const lock = { api: { repo: API_REPO, sha: commit, pinnedAt: new Date().toISOString().slice(0, 10) } };

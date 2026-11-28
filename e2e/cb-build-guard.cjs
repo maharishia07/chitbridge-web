@@ -172,22 +172,22 @@ t('a capability changed against main is shipping with a CB_BUILD different from 
   /**
    * ⭐ REL-24 (13 Nov): the two tests above compare COMMIT TIMES, so a branch cut before the last bump and merged
    * after it (every batch) carries a cap-*.js commit older than the bump and passes with no bump of its own.
-   * This asks the question by ANCESTRY instead: against the merge-base with origin/main, did a versioned file
+   * This asks the question by ANCESTRY instead: against the merge-base with origin/develop, did a versioned file
    * change, and is CB_BUILD the same as on main (or as at the merge-base)? On main itself HEAD IS the merge-base,
    * nothing differs, and the two time-based tests above stay the judge.
    */
-  const main = git(['rev-parse', '--verify', '-q', 'origin/main']);
-  const base = main ? git(['merge-base', 'HEAD', 'origin/main']) : '';
+  const main = git(['rev-parse', '--verify', '-q', 'origin/develop']);
+  const base = main ? git(['merge-base', 'HEAD', 'origin/develop']) : '';
   if (!base) {
-    // CI always has origin/main (fetch-depth 0): a missing one there means the check did not run, which must not look green
-    if (process.env.CI === 'true') throw new Error('CI=true and there is no origin/main to compare with, so the ancestry check cannot run. Fetch it (fetch-depth: 0).');
-    console.log('      (no origin/main to compare with, skipped)');
+    // CI always has origin/develop (fetch-depth 0): a missing one there means the check did not run, which must not look green
+    if (process.env.CI === 'true') throw new Error('CI=true and there is no origin/develop to compare with, so the ancestry check cannot run. Fetch it (fetch-depth: 0).');
+    console.log('      (no origin/develop to compare with, skipped)');
     return;
   }
   const changed = git(['diff', '--name-only', base, '--']).split('\n').map((l) => l.trim()).filter(Boolean);
   const touched = FILES.filter((f) => changed.indexOf(f) > -1);
-  if (!touched.length) { console.log('      no versioned file differs from origin/main: nothing to bump'); return; }
-  const mainValue = cbBuild(gitOrThrow(['show', 'origin/main:public/app.html']));
+  if (!touched.length) { console.log('      no versioned file differs from origin/develop: nothing to bump'); return; }
+  const mainValue = cbBuild(gitOrThrow(['show', 'origin/develop:public/app.html']));
   const baseValue = cbBuild(gitOrThrow(['show', base + ':public/app.html']));
   if (VALUE === mainValue || VALUE === baseValue) {
     throw new Error(touched.length + ' versioned file(s) differ from main and CB_BUILD (' + VALUE + ') is the same as '
@@ -195,7 +195,7 @@ t('a capability changed against main is shipping with a CB_BUILD different from 
       + '\n      ' + touched.slice(0, 8).join('\n      ')
       + '\n      ⭐ THE FIX IS ONE LINE: bump CB_BUILD in public/app.html in this PR.');
   }
-  console.log('      ' + touched.length + ' versioned file(s) differ from origin/main and CB_BUILD ' + VALUE + ' is bumped');
+  console.log('      ' + touched.length + ' versioned file(s) differ from origin/develop and CB_BUILD ' + VALUE + ' is bumped');
 });
 
 console.log('\n  ' + FILES.length + ' versioned file(s) · CB_BUILD ' + VALUE

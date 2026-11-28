@@ -58,7 +58,7 @@ function expect(name, got, wantRed) {
   if (!ok) { bad++; console.log(got.out.split('\n').map((l) => '      ' + l).join('\n')); }
 }
 
-function pointMainAt(s, ref) { s.run(['update-ref', 'refs/remotes/origin/main', ref]); }
+function pointMainAt(s, ref) { s.run(['update-ref', 'refs/remotes/origin/develop', ref]); }
 
 { // 1. fresh change, no bump
   const s = mk(); pointMainAt(s, 'HEAD');
@@ -90,10 +90,10 @@ function pointMainAt(s, ref) { s.run(['update-ref', 'refs/remotes/origin/main', 
   expect('4. no cap-*.js change', verdict(s.dir), false);
 }
 
-{ // 5. no origin/main: red in CI, skipped (green) on a laptop
+{ // 5. no origin/develop: red in CI, skipped (green) on a laptop
   const s = mk();
-  expect('5a. CI=true and no origin/main to compare with', verdict(s.dir, true), true);
-  expect('5b. a local run with no origin/main', verdict(s.dir, false), false);
+  expect('5a. CI=true and no origin/develop to compare with', verdict(s.dir, true), true);
+  expect('5b. a local run with no origin/develop', verdict(s.dir, false), false);
 }
 
 { // 6. a real-sized app.html (1.2 MB, over execFileSync's 1 MB default): a bump must still be read against main's

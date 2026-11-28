@@ -215,7 +215,7 @@ function argValue(args, flag) {
 }
 
 function baseRef(args) {
-  return argValue(args, '--against') || process.env.FILESIZE_BASE || 'origin/' + (process.env.GITHUB_BASE_REF || 'main');
+  return argValue(args, '--against') || process.env.FILESIZE_BASE || 'origin/' + (process.env.GITHUB_BASE_REF || 'develop');
 }
 
 /** the baseline for today: every file over 500 at the lower of its row and its size; no row is added unless first creation or forced */

@@ -3,7 +3,7 @@
  *           each part defines its functions once, the parent no longer defines them, each moved function is the main branch's text unchanged, a part draws with tokens
  *           (cream and dark, 1366 and 390 wide, AA contrast — no colour of its own), every catch in a part says so in words, and the pages load the parts.
  * CALLED BY node e2e/books-parts.test.cjs (offline, no browser, git for the main text)
- * FLOW      read each part and its parent → list the top-level functions → compare with origin/main's text → scan for colours, catches and the page tags
+ * FLOW      read each part and its parent → list the top-level functions → compare with origin/develop's text → scan for colours, catches and the page tags
  * CARD      16-finance/cb-finance
  * MIN walk (a source walk of every part: functions, colours, catches and page tags — the browser walks of CB Accounts run on SIT)
  * MIN cream-and-dark-1366-390
@@ -32,7 +32,7 @@ const CHANGED_BEFORE_SPLIT = ['bkLtPaneHTML', 'bkLockRowHTML', 'bkLockButtonsHTM
 /* empty catches each part carried when its split was proven (PR #756, CI green before the 18 Nov landing): the one in cap-period-accruals.js is a commented catch moved unchanged from cap-period.js */
 const EMPTY_CATCH_AT_SPLIT = { 'cap-period-accruals.js': 1 };
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').split('\r\n').join('\n');
-const mainText = (rel) => cp.execSync('git show origin/main:' + rel, { cwd: ROOT, maxBuffer: 1e8 }).toString().split('\r\n').join('\n');
+const mainText = (rel) => cp.execSync('git show origin/develop:' + rel, { cwd: ROOT, maxBuffer: 1e8 }).toString().split('\r\n').join('\n');
 let failures = 0;
 const check = (ok, what) => {
   console.log((ok ? '  ok   ' : '  FAIL ') + what);

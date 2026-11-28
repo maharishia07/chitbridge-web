@@ -36,10 +36,10 @@ const args = ready.parseArgs(['--repo', 'api', '--body-file', 'b.md', '--fast'])
 ok(args.repo === 'api' && args.bodyFile === 'b.md' && args.fast === true, 'flags are read');
 
 /* generated checks: one per generator, each with a fix command */
-const apiPlan = ready.generatedChecks({ repo: 'api', branch: 'batch/x', base: 'origin/main' });
+const apiPlan = ready.generatedChecks({ repo: 'api', branch: 'batch/x', base: 'origin/develop' });
 ok(apiPlan.some((item) => item.name === 'api-ratchet') && apiPlan.some((item) => item.name === 'seams'), 'a batch branch checks the ratchet and seams');
-ok(ready.generatedChecks({ repo: 'api', branch: 'feat/x', base: 'origin/main' }).some((item) => item.name === 'generated-guard'), 'a feature branch runs the generated-guard');
-ok(ready.generatedChecks({ repo: 'web', branch: 'feat/x', base: 'origin/main' }).length === 4, 'web checks modules, screen list, process docs, seams');
+ok(ready.generatedChecks({ repo: 'api', branch: 'feat/x', base: 'origin/develop' }).some((item) => item.name === 'generated-guard'), 'a feature branch runs the generated-guard');
+ok(ready.generatedChecks({ repo: 'web', branch: 'feat/x', base: 'origin/develop' }).length === 4, 'web checks modules, screen list, process docs, seams');
 ok(apiPlan.concat(ready.generatedChecks({ repo: 'web', branch: 'b', base: 'x' })).every((item) => item.fix), 'every generated check names its fix');
 
 /* a real temp repo: a new test file that no home names is an enrol failure, one that GUARDS names is not */
@@ -51,14 +51,14 @@ fs.mkdirSync(path.join(dir, 'tests'));
 fs.writeFileSync(path.join(dir, 'scripts/guards.cjs'), "const GUARDS = [\n  'enrolled.test.cjs',\n];\n");
 git('add', '-A');
 git('commit', '-q', '-m', 'base');
-git('update-ref', 'refs/remotes/origin/main', 'HEAD');
+git('update-ref', 'refs/remotes/origin/develop', 'HEAD');
 git('checkout', '-q', '-b', 'feat');
 fs.writeFileSync(path.join(dir, 'tests/enrolled.test.cjs'), '// ok\n');
 fs.writeFileSync(path.join(dir, 'tests/orphan.test.cjs'), '// ok\n');
 fs.writeFileSync(path.join(dir, 'tests/bad.txt'), 'x\x08y\n');
 git('add', '-A');
 git('commit', '-q', '-m', 'feat');
-const ctx = { repo: 'api', root: dir, base: 'origin/main', branch: 'feat', files: ['tests/enrolled.test.cjs', 'tests/orphan.test.cjs', 'tests/bad.txt'] };
+const ctx = { repo: 'api', root: dir, base: 'origin/develop', branch: 'feat', files: ['tests/enrolled.test.cjs', 'tests/orphan.test.cjs', 'tests/bad.txt'] };
 const missing = ready.checkEnrolled(ctx);
 ok(missing.length === 1 && /orphan\.test\.cjs/.test(missing[0].message) && /GUARDS/.test(missing[0].fix), 'only the orphan test file is reported, with the GUARDS fix');
 const control = ready.checkControlChars(ctx);

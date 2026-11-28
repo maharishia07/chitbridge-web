@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0     # READ-GUARD: the readability guard diffs against origin/main (merge-base) — it needs the history
+          fetch-depth: 0     # READ-GUARD: the readability guard diffs against origin/develop (merge-base) — it needs the history
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -546,10 +546,10 @@ jobs:
         # are owed. Skipped ONLY when the PR head branch is exactly iter1/mechanical AND that branch carries the commit "chore(iter1): mechanical pass (MNT-4)".
         # It expires on landing: the branch is gone, and every later PR is judged against the re-baselined readability.ratchet.json. No limit or rule is changed.
         run: |
-          if [ "$HEAD_REF" = "iter1/mechanical" ] && git log origin/main..HEAD --format=%s | grep -qxF 'chore(iter1): mechanical pass (MNT-4)'; then
+          if [ "$HEAD_REF" = "iter1/mechanical" ] && git log origin/develop..HEAD --format=%s | grep -qxF 'chore(iter1): mechanical pass (MNT-4)'; then
             echo 'readability guard WAIVED once for the iter1 mechanical pass (head branch iter1/mechanical + the pass commit); see the PR section 6'
           else
-            node tools/readability.cjs --changed --base origin/main --ratchet --md
+            node tools/readability.cjs --changed --base origin/develop --ratchet --md
           fi
       # ⭐ T1-TAX (14 Oct): the web and the api pin the SAME engine versions — web's packs sat at v1.42 while the api booked on v1.45.
       # The api is public; checked out LAST (after every other step) so no earlier guard sees a second tree. Twin branch as walks.yml.
@@ -561,7 +561,7 @@ jobs:
           # the batch branches are named per repo (batch/web-<date> here, batch/api-<date> there): the twin of batch/web-X is batch/api-X
           case "$B" in batch/web-*) B="batch/api-${B#batch/web-}";; esac
           if [ -n "$B" ] && git ls-remote --exit-code --heads https://github.com/maharishia07/chitbridge-api "$B" >/dev/null 2>&1; then
-            echo "ref=$B" >> "$GITHUB_OUTPUT"; else echo "ref=main" >> "$GITHUB_OUTPUT"; fi
+            echo "ref=$B" >> "$GITHUB_OUTPUT"; else echo "ref=develop" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v4
         with:
           repository: maharishia07/chitbridge-api
@@ -616,7 +616,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: maharishia07/chitbridge-api
-          ref: main
+          ref: develop
           path: .side/api-main
           fetch-depth: 0
       - name: has the api changed a master since the pin? (warns, never fails)
@@ -639,7 +639,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: maharishia07/chitbridge-api
-          ref: main
+          ref: develop
           path: .side/api-main
       - name: The check bites on a changed promo.html and passes on a clean copy (self-test)
         run: node e2e/twin-master-first.cjs --self-test

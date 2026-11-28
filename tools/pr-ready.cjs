@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* tools/pr-ready.cjs — ONE command before `git push`: will CI go red for a reason we already know? (LEVER 6, Athi 12 Nov, DECISIONS 44058aeb)
  *
- * OWNS      the pre-push check of a branch in web, api or engines: current with origin/main · nothing uncommitted · no control characters in changed files ·
+ * OWNS      the pre-push check of a branch in web, api or engines: current with origin/develop · nothing uncommitted · no control characters in changed files ·
  *           every new test file enrolled · each generated file equals its regeneration (the repo's own --check tools) · the PR body carries the §6 block, filled,
  *           with the numbers readability --md gives now. One line per failure with the command that fixes it. It never writes a file.
  * CALLED BY every builder, by hand, before the push: `node tools/pr-ready.cjs --body-file body.md` (web) · `node tools/pr-ready.cjs ...` (api, a 20-line
@@ -12,8 +12,8 @@
  * Reuses, never copies: tools/pr-checklist.cjs (the five §6 lines), tools/readability.cjs --md (the numbers), tools/seams.cjs --check, the api's
  * generated-guard / api-register / api-ratchet --check, web's gen-modules-doc / screen-list / gen-process-docs --check.
  *
- *   node tools/pr-ready.cjs [--repo web|api|engines] [--root DIR] [--base origin/main] [--body-file F | --pr N] [--fast] [--no-fetch] [--json]
- *   --fast   skip the slow checks (the readability numbers and every regeneration check); --no-fetch   do not fetch origin main first.
+ *   node tools/pr-ready.cjs [--repo web|api|engines] [--root DIR] [--base origin/develop] [--body-file F | --pr N] [--fast] [--no-fetch] [--json]
+ *   --fast   skip the slow checks (the readability numbers and every regeneration check); --no-fetch   do not fetch origin develop first.
  */
 'use strict';
 const fs = require('fs');
@@ -55,11 +55,11 @@ function reasonOf(out) {
   return lines.find((line) => /✗|fail|differs|drift|missing|stale/i.test(line)) || lines[lines.length - 1] || 'no output';
 }
 
-/** is origin/main an ancestor of HEAD? (a stale checkout is the commonest avoidable red) */
+/** is origin/develop an ancestor of HEAD? (a stale checkout is the commonest avoidable red) */
 function checkFresh(ctx) {
-  if (!ctx.noFetch) gitText(ctx.root, ['fetch', '-q', 'origin', 'main']);
+  if (!ctx.noFetch) gitText(ctx.root, ['fetch', '-q', 'origin', 'develop']);
   const base = gitText(ctx.root, ['rev-parse', '--verify', ctx.base]);
-  if (!base) return [{ check: 'base', message: 'cannot read ' + ctx.base + ' (fetch failed?)', fix: 'git fetch origin main' }];
+  if (!base) return [{ check: 'base', message: 'cannot read ' + ctx.base + ' (fetch failed?)', fix: 'git fetch origin develop' }];
   const ancestor = spawnSync('git', ['-C', ctx.root, 'merge-base', '--is-ancestor', base, 'HEAD']);
   if (ancestor.status === 0) return [];
   const behind = gitText(ctx.root, ['rev-list', '--count', 'HEAD..' + ctx.base]);
@@ -121,12 +121,12 @@ function checkEnrolled(ctx) {
 function generatedChecks(ctx) {
   const seams = { name: 'seams', cmd: 'node', args: [path.join(TOOLS, 'seams.cjs'), '--check', '--repo', ctx.repo], fix: 'patch the lines the check names in docs/SEAMS.md (never the all-checkout seams --write)' };
   if (ctx.repo === 'api') {
-    const strict = ctx.branch === 'main' || ctx.branch.startsWith('batch/');
+    const strict = ctx.branch === 'main' || ctx.branch === 'develop' || ctx.branch.startsWith('batch/');
     const mode = { CB_GENERATED: strict ? 'strict' : 'regen' };
-    const list = [{ name: 'api-register', cmd: 'node', args: ['tools/api-register.cjs', '--check'], env: mode, fix: 'node tools/api-register.cjs (regenerates docs/api-register.json, API-REGISTER.md, error-codes) in a worktree of origin/main + the branch' }];
+    const list = [{ name: 'api-register', cmd: 'node', args: ['tools/api-register.cjs', '--check'], env: mode, fix: 'node tools/api-register.cjs (regenerates docs/api-register.json, API-REGISTER.md, error-codes) in a worktree of origin/develop + the branch' }];
     list.push(strict
       ? { name: 'api-ratchet', cmd: 'node', args: ['tools/api-ratchet.cjs', '--base', ctx.base], fix: 'node tools/api-ratchet.cjs --write' }
-      : { name: 'generated-guard', cmd: 'node', args: ['tools/generated-guard.cjs', '--base', ctx.base], env: mode, fix: 'git checkout $(git merge-base origin/main HEAD) -- <the derived files it names> (CI regenerates them on a feature branch)' });
+      : { name: 'generated-guard', cmd: 'node', args: ['tools/generated-guard.cjs', '--base', ctx.base], env: mode, fix: 'git checkout $(git merge-base origin/develop HEAD) -- <the derived files it names> (CI regenerates them on a feature branch)' });
     return list.concat(seams);
   }
   if (ctx.repo === 'web') {
@@ -193,7 +193,7 @@ function checkBody(ctx) {
 
 /** the arguments of the command line */
 function parseArgs(argv) {
-  const out = { repo: 'web', root: process.cwd(), base: 'origin/main', fast: false, noFetch: false, json: false };
+  const out = { repo: 'web', root: process.cwd(), base: 'origin/develop', fast: false, noFetch: false, json: false };
   for (let at = 0; at < argv.length; at += 1) {
     const key = argv[at];
     if (key === '--fast') out.fast = true;
