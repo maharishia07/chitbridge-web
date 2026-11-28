@@ -124,11 +124,7 @@ function crmPrivacy(frame, params) {
     onRetry: function () {
       crmPrivLoad();
     },
-    empty: function () {
-      return PRV.state === 'notyet'
-        ? { title: tx('Privacy requests start after an update.'), sub: tx('Nothing is lost.') }
-        : { title: tx('No privacy requests.'), sub: tx('Log one when a person asks to see, correct or erase their data.') };
-    },
+    empty: crmPrivEmpty,
     filters: [
       {
         key: 'open',
@@ -196,6 +192,12 @@ function crmPrivFoot() {
     ' ›</button>'
   );
 }
+/** the words of an empty register: refused (403, need-to-know) · not yet (503) · none logged */
+function crmPrivEmpty() {
+  if (PRV.state === 'refused') return { title: tx('Your login cannot see privacy requests.'), sub: tx('Ask the owner to open them for you.') };
+  if (PRV.state === 'notyet') return { title: tx('Privacy requests start after an update.'), sub: tx('Nothing is lost.') };
+  return { title: tx('No privacy requests.'), sub: tx('Log one when a person asks to see, correct or erase their data.') };
+}
 async function crmPrivLoad() {
   PRV.state = 'loading';
   crmPrivRefresh();
@@ -214,7 +216,7 @@ async function crmPrivLoad() {
     PRV.state = 'ready';
     PRV.err = null;
   } catch (e) {
-    PRV.state = e && e.status === 503 ? 'notyet' : 'error';
+    PRV.state = e && e.status === 503 ? 'notyet' : e && e.status === 403 ? 'refused' : 'error'; /* DRIFT 6: a refusal is drawn as a refusal (CRM-40, need-to-know), never a connection fault with a retry that cannot succeed */
     PRV.err = e;
   }
   crmPrivRefresh();
