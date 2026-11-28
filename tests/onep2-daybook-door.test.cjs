@@ -12,10 +12,10 @@ let n = 0;
 const ok = (name, fn) => Promise.resolve().then(fn).then(() => { n++; console.log('  ok   ' + name); });
 const PARTS = ['public/app/books-audit-tools.js', 'public/app/books-grant-reports.js', 'public/app/books-grant-cells.js', 'public/app/books-grant-marks.js', 'public/app/books-grant-list.js', 'public/app/books-grant-view.js'];
 function open(role, search, view, parts) {
-  const assigned = [], reads = [];
+  const assigned = [], reads = [], replaced = [];
   const root = {
     tx: (s) => s, esc: String, shopDay: (d) => 'D' + d, URLSearchParams, Promise, Date, JSON, Math, Object, Array, String, Number, RegExp, Error, setTimeout,
-    document: { getElementById: () => null, addEventListener() {} }, history: {}, location: { search, pathname: '/network.html', hash: '', assign: (u) => assigned.push(u) },
+    document: { getElementById: () => null, addEventListener() {} }, history: {}, location: { search, pathname: '/network.html', hash: '', assign: (u) => assigned.push(u), replace: (u) => { assigned.push(u); replaced.push(u); } },
     CBPeriodPick: { toAddress: () => '', same: () => true, filled: (p) => p }, CBShell: {},
     CBBooksActing: { enter() {}, onClear: () => () => {}, current: () => ({ store: { id: 's1', name: 'Acme Pty' } }), headers: () => ({}), setCurrency() {}, css() {}, banner: () => '', crumbs: () => '', periodSlot: () => '', figure: String, auditAddressOf: (store, tab, carry, r) => '/accounts.html?acting=' + store.id + '&role=' + r + (carry || '') + '#/' + tab },
     CBBooksGrantApi: { run: (call, key) => { reads.push(key); return Promise.resolve({ periods: [], entries: [] }); } }
@@ -25,12 +25,16 @@ function open(role, search, view, parts) {
   (parts || PARTS).forEach((f) => vm.runInContext(typeof f === 'string' && f.startsWith('public/') ? read(f) : f.src, context, { filename: f.name || f }));
   const host = { innerHTML: '', querySelectorAll: () => [], isConnected: true };
   const handle = root.CBBooksGrantView.mount(host, { member: { id: 's1', name: 'Acme Pty', role }, view, call: () => Promise.resolve({}), mountList() {}, stores: [] });
-  return { assigned, reads, root, handle, host };
+  return { assigned, replaced, reads, root, handle, host };
 }
 (async () => {
   await ok('LANDING: a fresh open goes straight to the owner Day book, auditor and adviser; view=dues rides back so Back never bounces', () => {
     assert.deepStrictEqual(open('auditor', '', '').assigned, ['/accounts.html?acting=s1&role=auditor&view=dues#/daybook']);
     assert.deepStrictEqual(open('adviser', '', '').assigned, ['/accounts.html?acting=s1&role=adviser&view=dues#/daybook']);
+  });
+  await ok('BACK: the landing REPLACES the history entry (location.replace), a Months row pushes one (assign)', () => {
+    assert.strictEqual(open('auditor', '', '').replaced.length, 1);
+    const r = open('auditor', '', 'periods'); r.root.CBBooksGrantKit.openMonth('2026-07-01', '2026-07-31'); assert.strictEqual(r.replaced.length, 0);
   });
   await ok('an old address (view=daybook) is no known read: it lands on the door too; a return with view=dues opens no door and reads the dues', () => {
     assert.strictEqual(open('auditor', '', 'daybook').assigned.length, 1);
@@ -78,7 +82,7 @@ function open(role, search, view, parts) {
     assert.ok(offenders(mutate('books-grant-list.js', (s) => s + '\n root.CBBooksGrantFilters.filtersFor()')).length > 0);
   });
   await ok('MUTATION 4: dropping the landing door (fresh open reads the view again) is caught', () => {
-    const src = real['books-grant-view.js'].replace("if (fresh) openDoor('daybook');", 'if (false) openDoor(\'daybook\');');
+    const src = real['books-grant-view.js'].replace("if (fresh) openDoor('daybook', '', true);", 'if (false) openDoor(1);');
     const r = open('auditor', '', '', PARTS.map((f) => f.endsWith('view.js') ? { src, name: f } : f));
     assert.deepStrictEqual(r.assigned, []);
   });

@@ -200,10 +200,10 @@
   /** W15-71: the auditor's way to the client's Bank (home, kept statements, a month's lines, who matched, the sign-off) and Month lock: the books page in the auditor's seat, read only */
   /** ONEP-2: the trial balance is the OWNER's screen (accounts.html, tab tb) opened in this seat: this view reads no trial balance of its own. The period rides in the address (E10 carry) */
   /** ONEP-2: the P&L is the OWNER's screen too. The window rides as from= and to= (a financial year is given by toAddress as fy= only, so its own dates ride too) */
-  function openDoor(tab, window) {
+  function openDoor(tab, window, replace) {
     var report = grantKit.viewState.report;
     var carry = (report ? '&view=' + encodeURIComponent(report) : '') + (window || periodWords(grantKit.viewState.period)) + asked(); /* the bell's own words (a Query or a note to open) ride to the owner's Day book */
-    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, tab, carry, isAdviser() ? 'adviser' : 'auditor'));
+    root.location[replace ? 'replace' : 'assign'](root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, tab, carry, isAdviser() ? 'adviser' : 'auditor')); /* the landing REPLACES the entry: Back from the owner screen then goes to where the person was, never to a view that opens the door again */
   }
   /** the period in force as address words; a year is carried as fy= and, for the owner screen, its own dates */
   function periodWords(period) {
@@ -367,7 +367,7 @@
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
     stopForgetting = root.CBBooksActing.onClear(forget);
-    if (fresh) openDoor('daybook'); /* a client opens on the owner's Day book: the door. The way back carries view=<the first read>, so it is never opened twice */
+    if (fresh) openDoor('daybook', '', true); /* a client opens on the owner's Day book: the door. The way back carries view=<the first read>, so it is never opened twice */
     else Promise.resolve(reload()).then(focusHeading, focusHeading);
     return {
       /** Back or Forward to another screen of this client's books */
