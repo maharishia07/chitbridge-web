@@ -466,12 +466,12 @@ function bkRefused(e, what) {
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
 var BK = { dues: null, duesAt: 0, stmt: {}, owed: {}, tab: 'daybook' };
 /** the /dues answer becomes the party map (party_id → no · name · balance) every screen reads — one place stores it */
-function bkDuesStore(r) {
-  BK.duesRaw = r; /* the answer as the server sent it: the Day book's to-do counts read it when it lands */
+function bkDuesStore(answer) {
+  BK.duesRaw = answer; /* the answer as the server sent it: the Day book's to-do counts read it when it lands */
   BK.dues = {};
-  BK.duesCur = (r && r.currency) || null;
-  BK.duesAt = Date.now();
-  ((r && r.parties) || []).forEach(function (item) {
+  BK.duesCur = (answer && answer.currency) || null;
+  BK.duesAt = Date.now(); if (typeof window !== 'undefined' && typeof window.cbDuesNav === 'function') window.cbDuesNav(); /* UX-211: the menu may fold Dues into its one side */
+  ((answer && answer.parties) || []).forEach(function (item) {
     BK.dues[item.party_id] = item;
   });
   return BK.dues;
@@ -1934,7 +1934,7 @@ function bkTodoCounts(dues, cheques, health) {
   });
   var overdue = ((dues && dues.parties) || []).filter(function (item) {
     if (bkDuesSide(item) !== 'rcv') return false;
-    return !!(item.follow_up && item.follow_up.worst); /* W15-94: the one ageing — the same word Receivables and Collections show */
+    return !!(item.needs && Number(item.needs.overdue) > 0); /* ACC-412: the api's overdue count (a no-terms bill sits in an ageing band but is not overdue) */
   });
   var chq = ((cheques && cheques.cheques) || []).filter(function (x) {
     return bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0;
@@ -5509,7 +5509,7 @@ function bkPbTableHTML(pid, pbState, answer, currency) {
     { k: 'bill', label: 'Bill', w: 104, sort: sortable, ln: 1, /* FW-43: a floor, so Date and Bill never print on one another when the side panel narrows the grid */ cell: function (row, index) { return bkBillPart({ ref: row.bill_no || row.ref, chit_id: row.chit_id }, 'bills-' + pid + '-' + index, true); } },
     { k: 'status', label: on === 'needs' ? 'Why' : 'Status', w: 200, ln: 1, cell: function (row) { return bkBillStatus(row, on); } },
     { k: 'due', label: 'Due date', w: 104, sort: sortable, ln: 2, cell: function (row) { return row.no_terms && row.status !== 'paid' ? '<span data-b="no-due-date" style="color:var(--grey)">' + esc(tx('No due date')) + '</span>' : row.due_date ? esc(bkDate(row.due_date)) : '—'; } },
-    { k: 'days', label: 'Days overdue', w: 96, r: true, sort: sortable, ln: 2, cell: function (row) { return row.status === 'paid' ? '—' : row.days_overdue == null ? esc(tx('not due')) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue)); } },
+    { k: 'days', label: 'Days overdue', w: 96, r: true, sort: sortable, ln: 2, cell: function (row) { return row.status === 'paid' ? '—' : row.days_overdue == null ? (row.no_terms ? '—' : esc(tx('not due'))) : row.days_overdue === 0 ? esc(tx('due today')) : esc(String(row.days_overdue)); } },
     { k: 'amount', label: 'Amount', w: 100, r: true, sort: sortable, ln: 0, only: 'all', cell: function (row) { return moneyOf(row.amount_minor); } },
     { k: 'owed', label: 'Still owed', w: 104, r: true, sort: sortable, ln: 2, end: true, cell: function (row) { return row.owed_minor == null ? '<span style="' + grey + '">—</span>' : '<b data-b="owed">' + moneyOf(row.owed_minor) + '</b>'; } },
     {
@@ -5643,7 +5643,7 @@ function bkBillStatus(row, onTab) {
     parts.push('<button type="button" class="optchip" data-cbsid="' + chipCode + '" data-mk="open" data-id="' + esc(row.entry_id) + '" data-class="hold" data-b="mark-hold" ' + warn + ' title="' + esc(heldBy) + '" aria-label="' + esc(tx('On hold') + ' · ' + tx('No tax invoice')) + '">‖ ' + esc(tx('On hold')) + ' · ' + esc(tx('no tax invoice')) + '</button>');
   } else {
     reasons.forEach(function (reason) {
-      if (reason === 'overdue' && onTab !== 'needs') return; /* the Days overdue column already says it */
+      if (reason === 'overdue' && (!row.overdue || onTab !== 'needs')) return; /* ACC-412: the api's one overdue flag (billBands.overdue; false for a no-terms bill); else the Days overdue column says it */ /* the Days overdue column already says it */
       if (reason === 'no_terms' && onTab !== 'needs') return; /* the Due date cell says it, with the link that fixes it */
       var word = { disputed: 'In dispute', query: '? Open query', held: '‖ On hold', no_tax_invoice: '⚠ No tax invoice', no_terms: 'No terms', overdue: 'Overdue' }[reason];
       parts.push('<span class="optchip" data-b="why-' + reason + '" ' + warn + '>' + esc(tx(word)) + '</span>');
