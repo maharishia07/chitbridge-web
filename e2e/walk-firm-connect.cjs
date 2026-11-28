@@ -62,7 +62,7 @@ W.run('firm-connect', async (w) => {
   await w.step('F1', 'Requests opens from the #asks door; each request shows the firm, its bridge id and country', async () => {
     await page.waitForSelector(T('ba-list'), { timeout: 15000 });
     const list = await txt(T('ba-list')), pressed = await page.getAttribute(T('bg-seg-asks'), 'aria-pressed');
-    return { ok: pressed === 'true' && /Waiting for your answer/.test(list) && /Acme Books Pty Ltd/.test(list) && /CB0ACME001/.test(list) && /AU/.test(list) && /Waiting for their answer/.test(list) && /Cedar Partners/.test(list) && !/network parent/i.test(list), saw: list.slice(0, 200) };
+    return { ok: pressed === 'true' && /Waiting for your answer/i.test(list) && /Acme Books Pty Ltd/.test(list) && /CB0ACME001/.test(list) && /AU/.test(list) && /Waiting for their answer/i.test(list) && /Cedar Partners/.test(list) && !/network parent/i.test(list), saw: list.slice(0, 200) };
   });
   await w.step('F2', 'Accept asks first (names the firm), sends the one approve, and says Accept alone gives no access', async () => {
     await pickRow('ba-ask-me', 'ba-accept');
@@ -84,14 +84,14 @@ W.run('firm-connect', async (w) => {
     const held = await page.getAttribute(T('ba-send'), 'aria-disabled');
     await page.fill(T('ba-q'), 'acme'); await page.click(T('ba-find')); await page.waitForSelector(T('ba-pick'), { timeout: 5000 });
     await page.click(T('ba-pick')); await page.click(T('ba-send')); await confirmYes();
-    const sent = wrote(/POST \/api\/network\/connections$/)[0] || '';
+    const sent = wrote(/POST \/api\/network\/connections [{]/)[0] || '';
     return { ok: held === 'true' && /"parentHandle":"acme"/.test(sent) && /"type":"agency"/.test(sent) && !/childBridgeId/.test(sent), saw: sent };
   });
   await w.step('F6', 'a firm asking a shop sends the child end by bridge id', async () => {
     await page.click(T('ba-ask')); await page.waitForSelector(T('ba-form'), { timeout: 5000 });
     await page.selectOption(T('ba-dir'), 'firm'); await page.fill(T('ba-q'), 'acme'); await page.click(T('ba-find')); await page.waitForSelector(T('ba-pick'), { timeout: 5000 });
     await page.click(T('ba-pick')); await page.click(T('ba-send')); await confirmYes();
-    const sent = wrote(/POST \/api\/network\/connections$/)[1] || '';
+    const sent = wrote(/POST \/api\/network\/connections [{]/)[1] || '';
     return { ok: /"childBridgeId":"CB0ACME001"/.test(sent) && !/parentHandle/.test(sent), saw: sent };
   });
   await w.step('F7', 'a refusal is a plain sentence, the sheet stays open and nothing is promised (EXISTS, ASK_COOLING_OFF)', async () => {
@@ -135,13 +135,13 @@ W.run('firm-connect', async (w) => {
     return { ok: /Year-end books/.test(d) && /Hidden/.test(d) && /You approve each post/.test(d) && /Accountant/.test(d) && /Until/.test(d), saw: d };
   });
   await w.step('F12', 'a RISE in costs asks in the server\'s words first and sends consent:true; a 503 says it is not switched on yet', async () => {
-    await page.click(T('bg-change')); await page.waitForSelector(T('bg-costs2'), { timeout: 5000 });
+    await pickRow('bg-grant-firm-' + FIRM, 'bg-change'); await page.waitForSelector(T('bg-costs2'), { timeout: 5000 });
     await page.check(T('bg-costs2')); await page.click(T('bg-save'));
     const said = await confirmYes();
     const patch = wrote(/PATCH \/api\/books-grants\//)[0] || '';
     const first = /"can_see_costs":true/.test(patch) && /"consent":true/.test(patch) && /see your costs and margins/i.test(said);
     S.costs503 = true;
-    await page.click(T('bg-change')); await page.waitForSelector(T('bg-costs2'), { timeout: 5000 });
+    await pickRow('bg-grant-firm-' + FIRM, 'bg-change'); await page.waitForSelector(T('bg-costs2'), { timeout: 5000 });
     await page.check(T('bg-costs2')); await page.click(T('bg-save')); await confirmYes(); await page.waitForTimeout(400);
     const out = await txt(T('bg-out2')) + ' ' + await txt(T('confirm'));
     S.costs503 = false;
@@ -164,7 +164,8 @@ W.run('firm-connect', async (w) => {
   });
   await w.step('F15', 'the Home card names the waiting requests and its door opens the Requests', async () => {
     await page.goto(base + '/'); await page.waitForSelector(T('cbshell'), { timeout: 20000 });
-    await page.evaluate(() => window.SHELL && window.SHELL.ready); await page.waitForTimeout(800);
+    await page.evaluate(() => window.SHELL && window.SHELL.ready);
+    await page.waitForSelector('[data-testid="shell-sheet-full"]', { state: 'attached', timeout: 20000 }); await page.waitForTimeout(1500);
     const card = await page.evaluate(() => { const el = document.querySelector('[data-testid="shell-facts-network"]'); return el ? el.innerText.replace(/\s+/g, ' ').trim() : ''; });
     return { ok: /2 requests to connect/.test(card), saw: card };
   });

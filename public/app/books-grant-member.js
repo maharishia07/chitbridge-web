@@ -39,7 +39,8 @@
     var found = allParents().filter(function (item) {
       return String(item.id) === String(entity);
     })[0];
-    return found ? found.name : words('Your firm');
+    var named = (panel.given || []).filter(function (g) { return String(g.grantee_entity) === String(entity) && g.grantee_name; })[0]; /* the name the server keeps with the grant */
+    return found ? found.name : named ? named.grantee_name : words('Your firm');
   }
   /** a day as a person reads it, from the server's moment */
   function dayWords(value) {
