@@ -34,9 +34,9 @@ of file each thing is; this says what already does the job.
 | 89 | `pack` | `books-store-packs.js` |  |
 | 87 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
 | 86 | `register` | `regulation.js` | register(pack) → the pack — |
-| 85 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 85 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
 | 85 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
+| 84 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 83 | `rows` | `books-grant-asks.js` | var GROUP = { me: |
 | 83 | `read` | `books-grant-asks.js` |  |
 | 82 | `count` | `money-check.js` | the count /health reads |
@@ -67,11 +67,12 @@ of file each thing is; this says what already does the job.
 | 64 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
 | 63 | `facts` | `bill-steps.js` | MY state_log — |
 | 63 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
+| 60 | `name` | `role-names.js` | the one word for the role |
 | 59 | `note` | `dbwatch.js` |  |
 | 59 | `live` | `receivables.js` | the allocations that still count: |
-| 58 | `lines` | `cart.js` |  |
 | 58 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
 | 57 | `sheet` | `cap-employees.js` |  |
+| 57 | `lines` | `cart.js` |  |
 | 57 | `account` | `home-facts.js` | OMITTED: |
 | 56 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 55 | `refuse` | `bank-rec-log.js` | a refusal in words (422); `code` names the kind when it is not the general one |
@@ -102,7 +103,7 @@ of file each thing is; this says what already does the job.
 | 45 | `mine` | `crm.js` | `opt.removedOk`: |
 | 44 | `load` | `books-grant-view.js` |  |
 | 43 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
-| 42 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
+| 43 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 42 | `changes` | `books-store.js` |  |
 | 42 | `counter` | `repeat-supply.js` | the customer COUNTERS: |
 | 41 | `opts` | `books-grant-filters.js` |  |
@@ -123,7 +124,6 @@ of file each thing is; this says what already does the job.
 | 37 | `note` | `device-id.js` | note(where, problem) — |
 | 37 | `names` | `shortcuts.js` |  |
 | 37 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
-| 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 35 | `bkMoney` | `cap-books.js` |  |
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |
 | 35 | `reason` | `lab-kit.js` | W9: |
@@ -148,13 +148,13 @@ of file each thing is; this says what already does the job.
 | 31 | `group` | `identity.js` | again in a different costume. |
 | 31 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 30 | `options` | `bank-lines.js` | cfg.extra { columns, actions, head, wrapStatus(row, iconHtml) } what a page adds (the owner's page: |
-| 30 | `head` | `list-ctl.js` |  |
 | 30 | `field` | `ui-field.js` | the part: |
 | 30 | `post` | `books-manual.js` | POST /events — |
 | 30 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 30 | `move` | `rail.js` | Order = the order the server refused in: |
 | 29 | `card` | `cap-shop.js` |  |
 | 29 | `step` | `cart.js` |  |
+| 29 | `head` | `list-ctl.js` |  |
 | 29 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 29 | `setting` | `books-store.js` | FROM books_setting s LEFT JOIN identities i ON i.identity_id = s.entity_id WHERE s.entity_id = $1`; |
 | 29 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
@@ -162,7 +162,6 @@ of file each thing is; this says what already does the job.
 | 29 | `allowed` | `trips.js` | let _idsFrom = null, |
 | 29 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 29 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
-| 28 | `figures` | `bank-demo.js` |  |
 | 28 | `cblog` | `core.js` | const __cblog = []; |
 | 28 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 28 | `chart` | `fx-rates.js` |  |
@@ -170,7 +169,7 @@ of file each thing is; this says what already does the job.
 | 27 | `refusalOf` | `bill-number-taken.js` | the refusal thrown as data: |
 | 27 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
 | 27 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
-| 26 | `side` | `books-grant-reports.js` |  |
+| 26 | `figures` | `bank-demo.js` |  |
 | 26 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 26 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 26 | `more` | `lab-kit.js` | idKey: |
@@ -180,6 +179,7 @@ of file each thing is; this says what already does the job.
 | 26 | `payment` | `books-store.js` |  |
 | 26 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 26 | `match` | `itemmatch.js` | actually state. |
+| 25 | `side` | `books-grant-reports.js` |  |
 | 25 | `dialog` | `ui.js` | ui.dialog({ mount, title · titleText, titleId, titleTestid, subText, subClass, subId, footId, pop, testid, bod |
 | 25 | `reply` | `private-flag.js` | Refused in words: |
 | 25 | `base` | `qty.js` | handing it over keeps this file free of a dependency that would have to be vendored in a fixed order. |
@@ -208,5 +208,4 @@ of file each thing is; this says what already does the job.
 | 23 | `close` | `person-session.js` | When device_id is null the jti is looked for under every device (an owner revoking a jti from the list). |
 | 23 | `told` | `signin-switched-off.js` | const words = (shop) => 'This account is switched off, so you cannot sign in. |
 | 22 | `figure` | `books-acting.js` | a figure the way the books screens paint it: |
-| 22 | `show` | `books-grant-drill.js` |  |
-| 22 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
+| 22 | `refusal` | `books-grant-asks.js` | the failure with its message said in words when its code is known |
