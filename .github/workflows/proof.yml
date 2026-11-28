@@ -15,10 +15,10 @@ on:
     inputs:
       web_ref:
         description: chitbridge-web branch, tag or sha
-        default: main
+        default: develop
       api_ref:
         description: chitbridge-api branch, tag or sha
-        default: main
+        default: develop
       packs:
         description: 'comma list: a11y, keyboard, walks, or one e2e file (walk-x-o2c.cjs)'
         default: a11y,keyboard
@@ -26,7 +26,7 @@ on:
         description: viewport widths (1366 = 1366x768, 390 = 390x844)
         default: '1366,390'
 concurrency:
-  group: proof-${{ inputs.web_ref || 'main' }}
+  group: proof-${{ inputs.web_ref || 'develop' }}
   cancel-in-progress: false
 jobs:
   proof:
@@ -44,22 +44,22 @@ jobs:
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 12
     env:
       # inputs reach shell steps through env, never spliced into the script text
-      PROOF_WEB_REF: ${{ inputs.web_ref || 'main' }}
-      PROOF_API_REF: ${{ inputs.api_ref || 'main' }}
+      PROOF_WEB_REF: ${{ inputs.web_ref || 'develop' }}
+      PROOF_API_REF: ${{ inputs.api_ref || 'develop' }}
       PROOF_PACKS: ${{ inputs.packs || 'a11y,keyboard' }}
       PROOF_WIDTHS: ${{ inputs.widths || '1366,390' }}
       SIM_DB: postgres://postgres:pw@127.0.0.1:5432/cb_local
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.web_ref || 'main' }}
+          ref: ${{ inputs.web_ref || 'develop' }}
           fetch-depth: 0
       # a web_ref cut before the packs landed has no e2e/proof (nor the lay-api action): take both from main, the file this workflow itself runs from
       - name: Packs and stack step from main
-        run: git fetch --depth 1 origin main && git checkout FETCH_HEAD -- .github/actions && { [ -d e2e/proof ] || git checkout FETCH_HEAD -- e2e/proof; }   # SEC-113: a branch that has its own e2e/proof keeps it (the packs hand the device id to the page)
+        run: git fetch --depth 1 origin develop && git checkout FETCH_HEAD -- .github/actions && { [ -d e2e/proof ] || git checkout FETCH_HEAD -- e2e/proof; }   # SEC-113: a branch that has its own e2e/proof keeps it (the packs hand the device id to the page)
       - uses: ./.github/actions/lay-api
         with:
-          ref: ${{ inputs.api_ref || 'main' }}
+          ref: ${{ inputs.api_ref || 'develop' }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

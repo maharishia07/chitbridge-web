@@ -4,7 +4,7 @@ name: walks
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 concurrency:
   group: walks-${{ github.ref }}
@@ -33,7 +33,7 @@ jobs:
             # 21 Nov: a web batch whose api twin has another name (batch/web-X vs batch/api-X) walked api MAIN, which lacks the batch's api half
             # (red1128walks: ~45 Home-card timeouts). A batch/* branch walks the api commit vendor.lock.json pins.
             PIN=$(node -p "require('./vendor.lock.json').api.sha"); echo "ref=$PIN" >> "$GITHUB_OUTPUT"; echo "batch branch: walking against the vendor.lock api pin $PIN"
-          else echo "ref=main" >> "$GITHUB_OUTPUT"; echo "no twin: chitbridge-api main"; fi
+          else echo "ref=develop" >> "$GITHUB_OUTPUT"; echo "no twin: chitbridge-api main"; fi
       # 14 Oct: a twin cut BEFORE another api change landed on main walked against a stale api (GOV-SPIN's spin-country failed on
       # #218/#219 while main passed). Walk the twin AS IT WILL LAND: api main merged in (local only, never pushed). A conflict = say so.
       - uses: ./.github/actions/lay-api   # api at the twin/main ref, api main merged into a twin, linked as ../chitbridge-api, npm ci
@@ -76,7 +76,7 @@ jobs:
             # 21 Nov: a web batch whose api twin has another name (batch/web-X vs batch/api-X) walked api MAIN, which lacks the batch's api half
             # (red1128walks: ~45 Home-card timeouts). A batch/* branch walks the api commit vendor.lock.json pins.
             PIN=$(node -p "require('./vendor.lock.json').api.sha"); echo "ref=$PIN" >> "$GITHUB_OUTPUT"; echo "batch branch: walking against the vendor.lock api pin $PIN"
-          else echo "ref=main" >> "$GITHUB_OUTPUT"; echo "no twin: chitbridge-api main"; fi
+          else echo "ref=develop" >> "$GITHUB_OUTPUT"; echo "no twin: chitbridge-api main"; fi
       - uses: ./.github/actions/lay-api
         with:
           ref: ${{ steps.twin.outputs.ref }}

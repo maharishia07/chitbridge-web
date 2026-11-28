@@ -17,7 +17,7 @@ on:
     inputs:
       api_ref:
         description: chitbridge-api branch to run against
-        default: main
+        default: develop
       clicks:
         description: most boxes clicked per page (signed out)
         default: '40'
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: maharishia07/chitbridge-api
-          ref: ${{ inputs.api_ref || 'main' }}
+          ref: ${{ inputs.api_ref || 'develop' }}
           path: chitbridge-api
       - name: Lay the api beside the web repo, as on the dev PC
         run: ln -s "$GITHUB_WORKSPACE/chitbridge-api" "$GITHUB_WORKSPACE/../chitbridge-api" && (cd chitbridge-api && npm ci --omit=dev --ignore-scripts)

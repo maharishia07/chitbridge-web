@@ -6,7 +6,7 @@ description: >
 inputs:
   ref:
     description: the chitbridge-api branch, tag or sha
-    default: main
+    default: develop
   merge-main:
     description: "'true' = merge api main into a non-main ref first (local only, never pushed): a twin branch is walked AS IT WILL LAND (14 Oct)"
     default: 'false'
@@ -20,12 +20,12 @@ runs:
         path: chitbridge-api
         fetch-depth: 0
     - name: Twin merged with api main (as it will land)
-      if: inputs.merge-main == 'true' && inputs.ref != 'main'
+      if: inputs.merge-main == 'true' && inputs.ref != 'develop'
       shell: bash
       working-directory: chitbridge-api
       run: |
         git config user.name walks && git config user.email noreply@anthropic.com
-        git merge --no-edit origin/main || { echo "::warning::twin api branch conflicts with api main — walking the twin as is"; git merge --abort; }
+        git merge --no-edit origin/develop || { echo "::warning::twin api branch conflicts with api main — walking the twin as is"; git merge --abort; }
     - name: Link it beside the web repo and install
       shell: bash
       run: ln -s "$GITHUB_WORKSPACE/chitbridge-api" "$GITHUB_WORKSPACE/../chitbridge-api" && (cd chitbridge-api && npm ci --omit=dev --ignore-scripts)

@@ -89,7 +89,7 @@ check('search words must all appear; the phrase does not have to', () => {
   assert.ok(!seams.matchesWords(shared[0], ['shared', 'invoice']));
 });
 
-/** a stand-in for the shared C:/dev folder: an api checkout whose origin/main has one function used twice and whose working copy is stale-different */
+/** a stand-in for the shared C:/dev folder: an api checkout whose origin/develop has one function used twice and whose working copy is stale-different */
 function makeSharedDir() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'seams-shared-'));
   const api = path.join(dir, 'chitbridge-api');
@@ -101,18 +101,18 @@ function makeSharedDir() {
   const git = (args) => execFileSync('git', ['-C', api].concat(args), { stdio: 'ignore' });
   git(['init', '-q']); git(['add', 'lib']);
   git(['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'x']);
-  git(['update-ref', 'refs/remotes/origin/main', 'HEAD']);
+  git(['update-ref', 'refs/remotes/origin/develop', 'HEAD']);
   fs.writeFileSync(path.join(api, 'lib', 'a.js'), 'function staleWorkingCopyThing() { return 1; }\n');
   return { dir, api };
 }
 
-check('--write writes only the docs/SEAMS.md of the repo it runs from, and reads the sibling from origin/main, not its working copy', () => {
+check('--write writes only the docs/SEAMS.md of the repo it runs from, and reads the sibling from origin/develop, not its working copy', () => {
   const { dir, api } = makeSharedDir();
   const before = fs.readdirSync(dir, { recursive: true }).filter((name) => !/(^|[\/]).git/.test(name)).map((name) => name + ':' + fs.statSync(path.join(dir, name)).mtimeMs).join('|');
   const done = spawnSync(process.execPath, [seamsPath, '--write'], { cwd: root, encoding: 'utf8', env: Object.assign({}, process.env, { SEAMS_SHARED_DIR: dir }) });
   assert.strictEqual(done.status, 0, done.stderr);
   const written = fs.readFileSync(path.join(root, 'docs', 'SEAMS.md'), 'utf8');
-  assert.ok(written.includes('apiOriginMainThing') && !written.includes('staleWorkingCopyThing'), 'sibling must come from origin/main');
+  assert.ok(written.includes('apiOriginMainThing') && !written.includes('staleWorkingCopyThing'), 'sibling must come from origin/develop');
   assert.strictEqual(fs.readFileSync(path.join(api, 'docs', 'SEAMS.md'), 'utf8'), 'SENTINEL\n');
   assert.strictEqual(fs.readdirSync(dir, { recursive: true }).filter((name) => !/(^|[\/]).git/.test(name)).map((name) => name + ':' + fs.statSync(path.join(dir, name)).mtimeMs).join('|'), before, 'the shared folder changed');
   fs.rmSync(dir, { recursive: true, force: true });

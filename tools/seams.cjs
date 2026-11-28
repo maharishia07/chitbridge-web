@@ -20,7 +20,7 @@
  *   node tools/seams.cjs --check --repo web|api|engines   exit 1 and print the stale lines of the docs/SEAMS.md in the current folder
  *
  * Roots: --check reads the checkout it runs in plus (override) SEAMS_ROOT_<WEB|API|ENGINES>. --write writes ONLY the docs/SEAMS.md of the repo it runs
- * from; the other side is read from SEAMS_ROOT_<SIDE> if set, else from a temp `git archive origin/main` export of the shared C:/dev checkout
+ * from; the other side is read from SEAMS_ROOT_<SIDE> if set, else from a temp `git archive origin/develop` export of the shared C:/dev checkout
  * (SEAMS_SHARED_DIR moves that folder), because the shared checkouts are commits behind and nobody may write into them.
  */
 const { execFileSync, spawnSync } = require('child_process');
@@ -51,7 +51,7 @@ function sideOfFolder(folder, named) {
   return fs.existsSync(path.join(folder, 'src')) ? 'engines' : '';
 }
 
-/** a throw-away `git archive origin/main` export of one shared checkout (only the folders the scan reads) */
+/** a throw-away `git archive origin/develop` export of one shared checkout (only the folders the scan reads) */
 function exportOriginMain(side) {
   const shared = path.join(process.env.SEAMS_SHARED_DIR || 'C:/dev', 'chitbridge-' + side);
   const into = fs.mkdtempSync(path.join(os.tmpdir(), 'seams-' + side + '-'));
@@ -60,20 +60,20 @@ function exportOriginMain(side) {
   try {
     execFileSync('git', ['-C', shared, 'fetch', '-q', '--no-write-fetch-head', 'origin'], { stdio: 'ignore' });
   } catch (error) {
-    console.log('  (could not fetch ' + side + ' origin; reading its last fetched origin/main)');
+    console.log('  (could not fetch ' + side + ' origin; reading its last fetched origin/develop)');
   }
   const present = paths.filter((folder) => {
-    const found = spawnSync('git', ['-C', shared, 'cat-file', '-e', 'origin/main:' + folder], { stdio: 'ignore' });
+    const found = spawnSync('git', ['-C', shared, 'cat-file', '-e', 'origin/develop:' + folder], { stdio: 'ignore' });
     return found.status === 0;
   });
   if (present.length) {
-    execFileSync('git', ['-C', shared, 'archive', '--format=tar', '-o', tarFile, 'origin/main'].concat(present));
+    execFileSync('git', ['-C', shared, 'archive', '--format=tar', '-o', tarFile, 'origin/develop'].concat(present));
     execFileSync('tar', ['-xf', 'export.tar'], { cwd: into }); // relative, because GNU tar reads C: as a host
   }
   return into;
 }
 
-/** the folder --write reads for one side: the override, else the repo we run in, else an origin/main export (never the shared working copy) */
+/** the folder --write reads for one side: the override, else the repo we run in, else an origin/develop export (never the shared working copy) */
 function writeRoot(side, here) {
   return process.env['SEAMS_ROOT_' + side.toUpperCase()] || (side === here ? process.cwd() : exportOriginMain(side));
 }

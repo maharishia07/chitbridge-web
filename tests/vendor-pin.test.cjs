@@ -25,7 +25,7 @@ const check = (what, run) => {
   try { run(); passed++; console.log('  ok  ' + what); } catch (err) { console.log('  FAIL ' + what + '\n      ' + err.message); process.exitCode = 1; }
 };
 
-check('bump refuses a commit that is not on origin/main (a branch head can vanish)', () => {
+check('bump refuses a commit that is not on origin/develop (a branch head can vanish)', () => {
   assert.throws(() => pinTool.bump(tmp), /not on api origin\/main|origin\/main/);
 });
 check('bump refuses an unclean checkout', () => {
