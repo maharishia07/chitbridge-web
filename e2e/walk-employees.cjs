@@ -37,10 +37,10 @@ W.run('employees', async (w) => {
     : S.mode === 'notready' ? J(r, 503, { error: 'Showing a code is not ready', code: 'CODE_SHOW_NOT_READY', message: 'This environment cannot show a first code yet, so none was made. Add their e-mail, or try again later. Nothing was changed.' }) : null;
   const may = (o) => Object.assign({ access: { ok: true }, email: { ok: true }, reset_pin: { ok: true }, switch: { ok: true, to: 'off' }, cover: { ok: true } }, o || {});
   S.people = [
-    { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: TD.nowIso(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
-    { id: 'p2', name: 'Ravi Nair', user_id: 'ravi02@walk-shop.br', role: 'Manager', phone: '9840000002', state: 'on', jobs: 2, last_at: null, access: CHOICES[1],
+    { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', sign_in_as: 'asha01@walk-shop', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: TD.nowIso(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
+    { id: 'p2', name: 'Ravi Nair', user_id: 'ravi02@walk-shop.br', sign_in_as: 'ravi02@walk-shop', role: 'Manager', phone: '9840000002', state: 'on', jobs: 2, last_at: null, access: CHOICES[1],
       may: may({ reset_pin: { ok: false, why: "Only the owner can reset a manager's code." } }), cover: null, cover_options: [{ id: 'p1', name: 'Asha Kumar' }] },
-    { id: 'p3', name: 'Meena Iyer', user_id: 'meena03@walk-shop.br', role: 'Helper', phone: '', state: 'off', jobs: 0, last_at: null, access: CHOICES[0], may: may({ switch: { ok: true, to: 'on' } }), cover: null, cover_options: [] },
+    { id: 'p3', name: 'Meena Iyer', user_id: 'meena03@walk-shop.br', sign_in_as: 'meena03@walk-shop', role: 'Helper', phone: '', state: 'off', jobs: 0, last_at: null, access: CHOICES[0], may: may({ switch: { ok: true, to: 'on' } }), cover: null, cover_options: [] },
   ];
   const counts = () => ({ on: S.people.filter((p) => p.state !== 'off').length, off: S.people.filter((p) => p.state === 'off').length });
   const find = (id) => S.people.find((p) => p.id === id);
@@ -58,16 +58,16 @@ W.run('employees', async (w) => {
     }
     if (p === '/api/actors/suggest-key' && m === 'POST') {
       const k = String(body && body.display_name || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 6) + '04';
-      return J(r, 200, { suggested_key: k, login_format: k + '@walk-shop.br' });
+      return J(r, 200, { suggested_key: k, login_format: k + '@walk-shop' });
     }
     if (p === '/api/actors' && m === 'POST') {
       if (S.mode === 'limit' || S.mode === 'notready') return refusal(r);
       const id = 'p' + (S.nextId++), key = body.actor_key;
       const c = CHOICES.find((x) => x.level === body.access_level && !!x.whole_entity === !!body.whole_entity) || CHOICES[0];
-      S.people.push({ id, name: body.display_name, user_id: key + '@walk-shop.br', role: body.actor_role || '', phone: body.phone || '', state: 'on', jobs: 0, last_at: null, access: c, may: may(), cover: null, cover_options: [] });
+      S.people.push({ id, name: body.display_name, user_id: key + '@walk-shop.br', sign_in_as: key + '@walk-shop', role: body.actor_role || '', phone: body.phone || '', state: 'on', jobs: 0, last_at: null, access: c, may: may(), cover: null, cover_options: [] });
       /* SEC2: the server never answers the code — it says where it went (lib/employee-code.deliver delivery_note) */
-      if (S.mode === 'show') return J(r, 200, Object.assign({ actor: { identity_id: id, display_name: body.display_name, login_format: key + '@walk-shop.br' } }, shownAnswer(body.display_name)));
-      return J(r, 200, { actor: { identity_id: id, display_name: body.display_name, login_format: key + '@walk-shop.br' }, delivery: 'sent', sent_to: 'k***@walk.test', delivery_note: 'The code went to k***@walk.test.' });
+      if (S.mode === 'show') return J(r, 200, Object.assign({ actor: { identity_id: id, display_name: body.display_name, login_format: key + '@walk-shop' } }, shownAnswer(body.display_name)));
+      return J(r, 200, { actor: { identity_id: id, display_name: body.display_name, login_format: key + '@walk-shop' }, delivery: 'sent', sent_to: 'k***@walk.test', delivery_note: 'The code went to k***@walk.test.' });
     }
     let mm = /^\/api\/actors\/([^/]+)\/pin$/.exec(p);
     if (mm && m === 'DELETE' && S.mode !== 'mail') {
@@ -89,6 +89,8 @@ W.run('employees', async (w) => {
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const open = async () => { await page.goto(base + '/employees.html'); await page.waitForSelector('[data-testid="emp-bar"], [data-testid="emp-fail"]', { timeout: 20000 }); await page.waitForTimeout(300); };
+  /* O4: a stored staff/customer handle (…@shop.br / …@shop.cr) must never be on a screen - only the typed form (…@shop) */
+  const HANDLE = /@[^@.\s]+\.(br|cr)\b/i;
   const rows = () => page.locator('[data-testid^="emp-row-"]').count();
   const closeSheet = async () => { await page.click('#emp_x').catch(() => {}); await page.waitForTimeout(200); };
   const confirmYes = async () => { await page.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 }); await page.click('[data-testid="confirm-ok"]'); await page.waitForTimeout(500); };
@@ -98,7 +100,7 @@ W.run('employees', async (w) => {
 
   await w.step('E1', 'Employees -> the list has one line per person, the count says 2 on · 1 off, and the sign-in name is the short one', async () => {
     const n = await rows(), cnt = await txt('[data-testid="emp-count"]'), list = await txt('[data-testid="emp-list"]');
-    return { ok: n === 3 && /2\s*people/.test(cnt) && /1\s*off/.test(cnt) && /asha01@walk-shop.br/.test(list), saw: n + ' rows; "' + cnt + '"; ' + (/@walk-shop/.test(list) ? 'the whole sign-in name is showing' : 'the sign-in name is cut') };
+    return { ok: n === 3 && /2\s*people/.test(cnt) && /1\s*off/.test(cnt) && /asha01@walk-shop/.test(list) && !HANDLE.test(list), saw: n + ' rows; "' + cnt + '"; ' + (/@walk-shop/.test(list) ? 'the whole sign-in name is showing' : 'the sign-in name is cut') };
   });
   await w.step('E2', 'Employees -> type "ravi" in the search box -> only Ravi Nair is left', async () => {
     await page.fill('[data-testid="listctl-search-employees"]', 'ravi'); await page.waitForTimeout(400);
@@ -158,7 +160,7 @@ W.run('employees', async (w) => {
     await page.click('#emp_add'); await page.waitForSelector('[data-testid="emp-add-name"]', { timeout: 6000 });
     await page.fill('[data-testid="emp-add-name"]', 'Kavya Rao'); await page.waitForTimeout(900);
     const key = await page.inputValue('[data-testid="emp-add-key"]'), note = await txt('[data-testid="emp-add-keynote"]');
-    return { ok: /^kavya/.test(key) && /They sign in as/.test(note) && /4 to 12 letters or numbers/.test(await txt('[data-testid="emp-add-keyhint"]')), saw: 'suggested "' + key + '"; "' + note + '"' };
+    return { ok: /^kavya/.test(key) && /They sign in as kavya\w*@walk-shop$/.test(note) && !HANDLE.test(note) && /4 to 12 letters or numbers/.test(await txt('[data-testid="emp-add-keyhint"]')), saw: 'suggested "' + key + '"; "' + note + '"' };
   });
   await w.step('E12', 'Add a person -> a sign-in name that is too short -> told in words, nothing sent', async () => {
     await page.fill('[data-testid="emp-add-key"]', 'kr'); await page.click('[data-testid="emp-add-go"]'); await page.waitForTimeout(300);
@@ -170,7 +172,7 @@ W.run('employees', async (w) => {
     const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]'); const copyN = await page.locator('[data-testid="emp-copy"]').count(); await page.screenshot({ path: 'e2e/shots/smallfix-employee-added-laptop.png' }).catch(() => {}); await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); const fit390 = await page.evaluate(() => { const b = document.querySelector('[data-testid="emp-copy"]').getBoundingClientRect(); return b.right <= window.innerWidth && document.documentElement.scrollWidth <= document.documentElement.clientWidth; }); await page.screenshot({ path: 'e2e/shots/smallfix-employee-added-phone.png' }).catch(() => {}); await page.setViewportSize({ width: 1366, height: 800 });
     await page.click('[data-testid="emp-done"]'); await page.waitForTimeout(400);
     const n = await rows();
-    return { ok: id === 'kavya04@walk-shop.br' && copyN === 1 && fit390 && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
+    return { ok: id === 'kavya04@walk-shop' && !HANDLE.test(id) && copyN === 1 && fit390 && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
   });
   await w.step('E18', 'SEC2 · Asha -> E-mail -> type her address -> Save -> "Saved." and the sheet shows it (codes go there, never on screen)', async () => {
     await page.click('[data-testid="emp-row-p1"]'); await page.waitForSelector('#emp_email', { timeout: 6000 });
