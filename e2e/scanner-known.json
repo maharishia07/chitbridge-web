@@ -19,10 +19,11 @@
   ]
  },
  "bridge-id-audit": {
-  "count": 1,
+  "count": 2,
   "owner": "network",
   "keys": [
-   "app/cap-connector.js  esc(item.bridge_id) +"
+   "app/cap-connector.js  esc(item.bridge_id) +",
+   "app/books-grant-asks.js  col('bridge', words('Bridge id'), 1, 150, function (a) { return a.bridge_id; }),"
   ]
  },
  "cb-build-guard": {

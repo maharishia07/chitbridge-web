@@ -18,16 +18,6 @@
   var panel = { host: null, o: {}, firms: [], node: null, given: [], parents: [], looks: [], view: 'given', why: null, notice: [], posted: [], seeThem: false };
   var ROLE = { auditor: 'Auditor: reads only', adviser: 'Accountant: acts for you' };
   var ROLE_NAME = { adviser: 'Accountant', auditor: 'Auditor' };
-  var LOOKED = {
-    allowed: 'Looked',
-    no_grant: 'Refused: no access',
-    revoked: 'Refused: ended',
-    expired: 'Refused: ran out',
-    edge_off: 'Refused: not connected',
-    not_listed: 'Refused: not open to an auditor',
-    read_only: 'Refused: tried to change'
-  };
-
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
@@ -53,7 +43,8 @@
     var found = allParents().filter(function (item) {
       return String(item.id) === String(entity);
     })[0];
-    return found ? found.name : words('Your network parent');
+    var named = (panel.given || []).filter(function (g) { return String(g.grantee_entity) === String(entity) && g.grantee_name; })[0]; /* the name the server keeps with the grant */
+    return found ? found.name : named ? named.grantee_name : words('Your firm');
   }
   /** a day as a person reads it, from the server's moment */
   function dayWords(value) {
@@ -92,12 +83,12 @@
   function readView() {
     panel.notice = [];
     panel.seeThem = false;
-    if (panel.view === 'accept') return Promise.resolve(); /* the queue reads itself, as the owner */
+    if (panel.view === 'accept' || panel.view === 'asks') return Promise.resolve(); /* the queue and the requests read themselves, as the owner */
     var read = panel.view === 'looks' ? api('grantsLog', { query: { limit: 100 } }) : api('grantsList');
     return read.then(
       function (answer) {
         panel.why = null;
-        if (panel.view === 'looks') panel.looks = (answer && answer.looks) || [];
+        if (panel.view === 'looks') panel.looks = root.CBBooksGrantVisits.rows(answer);
         else { panel.given = (answer && answer.given) || []; panel.parents = (answer && answer.parents) || []; }
         return root.CBBooksGrantFirms.asking(firmsCtx()).then(weekly);
       },
@@ -124,7 +115,8 @@
     return [
       ['given', words('Access I gave'), 'NET004-B01'],
       ['looks', words('Who looked'), 'NET004-B02'],
-      ['accept', words('To accept'), 'NET004-B10']
+      ['accept', words('Work to approve'), 'NET004-B10'],
+      ['asks', words('Requests'), 'NET004-B19']
     ]
       .map(function (item) {
         return (
@@ -158,7 +150,7 @@
     $('bg_invite').onclick = function () { root.CBBooksGrantFirms.invite(firmsCtx()); };
     Array.prototype.forEach.call(panel.host.querySelectorAll('[data-firm]'), function (button) { button.onclick = function () { root.CBBooksGrantFirms.answer(firmsCtx(), button); }; });
     if ($('bg_seethem')) $('bg_seethem').onclick = function () { panel.view = 'posted'; panel.seeThem = false; reload(); };
-    ({ looks: paintLooks, given: paintGiven, accept: paintAccept, posted: paintPosted })[panel.view]($('bg_list'));
+    ({ looks: paintLooks, given: paintGiven, accept: paintAccept, posted: paintPosted, asks: paintAsks })[panel.view]($('bg_list'));
   }
   /** what the server said beside its answer (a warning on a new grant, the actions a revoke withdrew), kept until the next read */
   function noticeHtml() {
@@ -168,6 +160,10 @@
   function paintAccept(host) {
     root.CBBooksActing.enter(panel.o.ownStore, 'owner');
     root.CBBooksActionsView.mount(host, { call: panel.o.call, mode: 'owner', mountList: panel.o.mountList, sheet: panel.o.sheet, closeSheet: panel.o.closeSheet });
+  }
+  /** the requests to connect, as the owner: the asks card owns its own reads and answers */
+  function paintAsks(host) {
+    root.CBBooksGrantAsks.mount(host, { call: panel.o.call, sheet: panel.o.sheet, closeSheet: panel.o.closeSheet, mountList: panel.o.mountList });
   }
   /** what the firm posted for the owner this week: the delegated list, the same answer the weekly line read */
   function paintPosted() {
@@ -215,40 +211,18 @@
         { id: 'change', tid: 'bg-change', label: words('Change date'), when: isOpen, run: function (g) { pickOpen(g, 'Change date', openChange); } },
         { id: 'end', tid: 'bg-end', label: words('End access'), when: isOpen, run: function (g) { pickOpen(g, 'End access', askEnd); } }
       ],
+      next: function (g) { return root.CBBooksGrantEdit.detail(g, { who: nameOf(g.grantee_entity), role: g.presets.length > 1 ? g.presets.map(function (p) { return words(ROLE_NAME[p]); }).join(' + ') : words(ROLE[g.preset] || ROLE.auditor), until: dayWords(g.expires_at), posting: g.preset === 'adviser' ? words(POSTING[g.posting] || 'Not chosen: you approve') : '' }); },
       search: function (g) {
         return [nameOf(g.grantee_entity), g.purpose].join(' ');
       },
       empty: panel.why
         ? { title: words('Only the owner sees this'), body: panel.why }
-        : { title: words('Nobody can see your books'), body: words('Give access to your network parent when an audit needs it.') }
+        : { title: words('Nobody can see your books yet'), body: words('Connect your bookkeeper or auditor, then give access.') }
     });
   }
-  /** who looked at these books, when and at what, newest first */
+  /** who looked at these books: one row per visit, newest first (the pages in the row's detail) */
   function paintLooks(host) {
-    panel.o.mountList(host, {
-      key: 'books-grants-looks',
-      rows: function () {
-        return panel.looks;
-      },
-      id: function (look) {
-        return look.at + '|' + look.route_pattern + '|' + look.outcome;
-      },
-      rowTid: function (look) {
-        return 'bg-look-' + look.outcome;
-      },
-      columns: [
-        col('at', words('When'), 1, 170, function (look) { return whenWords(look.at); }, function (look) { return look.at || ''; }),
-        col('who', words('Who'), 3, 200, function (look) { return nameOf(look.grantee_entity); }),
-        col('what', words('What they did'), 1, 220, function (look) { return whatWords(look.route_pattern); }),
-        col('out', words('Result'), 1, 220, function (look) { return words(LOOKED[look.outcome] || look.outcome || ''); })
-      ],
-      search: function (look) {
-        return [nameOf(look.grantee_entity), whatWords(look.route_pattern), look.outcome].join(' ');
-      },
-      empty: panel.why
-        ? { title: words('Only the owner sees this'), body: panel.why }
-        : { title: words('Nobody has looked yet'), body: words('Each look at your books will be listed here.') }
-    });
+    panel.o.mountList(host, root.CBBooksGrantVisits.config({ nameOf: nameOf, route: whatWords, when: whenWords, col: col, why: panel.why }, panel.looks));
   }
 
   /* ── Give access: the consent, then a confirm that names the reach ── */
@@ -275,7 +249,7 @@
   function openGive() {
     var parents = allParents();
     if (!parents.length) {
-      panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('No firm is connected yet. Invite a firm first, or accept a request from one.')) + '</p>');
+      noFirm();
       return;
     }
     panel.o.sheet(giveForm(parents));
@@ -286,6 +260,15 @@
     $('bg_go').onclick = askGive;
     readConsent();
     $('bg_who').focus();
+  }
+  /** no firm is connected: say so, and the way to find one (the Requests view, its Ask to connect sheet open) */
+  function noFirm() {
+    panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('Connect your bookkeeper or auditor first.')) + '</p><div class="nw-acts"><button data-cbsid="NET004-B28" type="button" class="act" id="bg_findfirm" data-testid="bg-findfirm">' + esc(words('Find your firm')) + '</button></div>');
+    $('bg_findfirm').onclick = function () {
+      panel.o.closeSheet();
+      panel.view = 'asks';
+      reload().then(root.CBBooksGrantAsks.openAsk);
+    };
   }
   /** Give access is held until yes is ticked */
   function tickYes() {
@@ -399,34 +382,45 @@
   /** the sheet that changes the end date of one open access */
   function openChange(grant) {
     panel.o.sheet(
-      '<h2>' + esc(words('Change the end date')) + '</h2><div class="bg-form" data-testid="bg-change-form"><div class="sub">' + esc(nameOf(grant.grantee_entity)) + '</div>' +
+      '<h2>' + esc(words('Change the end date')) + '</h2><div class="bg-form" data-testid="bg-change-form"><div class="sub">' + esc(nameOf(grant.grantee_entity)) + ' · ' + esc(words(ROLE_NAME[grant.preset] || ROLE_NAME.auditor)) + '</div>' + /* the change is to THIS role's grant */
         '<label class="sub" for="bg_until2">' + esc(words('Until')) + '</label><input data-cbsid="NET004-I05" id="bg_until2" class="inp" type="date" value="' + esc(dayValue(new Date(grant.expires_at))) + '" data-testid="bg-until2">' +
+        root.CBBooksGrantEdit.costsBox(grant) +
         (grant.preset === 'adviser' ? '<div class="bg-consent" role="group" data-testid="bg-post2">' + postingHtml([{ value: 'adviser_posts', words: words(POSTING.adviser_posts) }, { value: 'owner_approves', words: words(POSTING.owner_approves) }], 'bg_post2', grant.posting) + '</div>' : '') +
         '<div class="nw-out" id="bg_out2" data-testid="bg-out2" role="status"></div>' +
         '<div class="nw-acts"><button data-cbsid="NET004-B06" type="button" class="act" id="bg_save" data-testid="bg-save">' + esc(words('Save')) + '</button>' +
         '<button data-cbsid="NET004-B07" type="button" class="act quiet" id="bg_cancel2" data-testid="bg-cancel2">' + esc(words('Cancel')) + '</button></div></div>'
     );
     $('bg_cancel2').onclick = panel.o.closeSheet;
-    /** Save sends the new end day once; the sheet closes and the list is read again */
+    /** Save sends what moved once; a rise in costs is read back in the server's words and confirmed first */
     $('bg_save').onclick = function () {
-      var switching = pickedPosting('bg_post2') === 'adviser_posts' && grant.posting !== 'adviser_posts'; /* switching to "your adviser posts" removes your approval: the same question as giving it */
-      root.CBAction.run(
-        $('bg_save'),
-        function () {
-          return api('grantsChange', { params: { id: grant.grant_id }, body: { expires_at: $('bg_until2').value, posting: pickedPosting('bg_post2') || undefined } });
-        },
-        {
-          key: 'bg-change-' + grant.grant_id,
-          confirm: switching ? { title: words('Let this firm act in your books?'), body: giveQuestion(nameOf(grant.grantee_entity), true, $('bg_until2').value, 'adviser_posts'), yes: words('Save') } : undefined,
-          failed: words("Couldn't save the change"),
-          out: 'bg_out2',
-          outcome: function () {
-            panel.o.closeSheet();
-            reload();
-          }
-        }
+      var ids = { until: $('bg_until2').value, posting: pickedPosting('bg_post2'), costs: $('bg_costs2').checked };
+      var switching = ids.posting === 'adviser_posts' && grant.posting !== 'adviser_posts'; /* switching to "your adviser posts" removes your approval: the same question as giving it */
+      if (!root.CBBooksGrantEdit.rising(grant, ids.costs)) return saveChange(grant, ids, switching ? giveQuestion(nameOf(grant.grantee_entity), true, ids.until, 'adviser_posts') : '');
+      api('grantsConsent', { query: { can_see_costs: 'true', preset: grant.preset } }).then(
+        function (consent) { saveChange(grant, ids, (switching ? giveQuestion(nameOf(grant.grantee_entity), true, ids.until, 'adviser_posts') : '') + root.CBBooksGrantEdit.riseWords(consent, nameOf(grant.grantee_entity))); },
+        function (failure) { $('bg_out2').textContent = failure.message || words("Couldn't load the words. Try again."); }
       );
     };
+  }
+  /** one PATCH of the grant, after the confirm (when there is one to say) */
+  function saveChange(grant, ids, confirmBody) {
+    root.CBAction.run(
+      $('bg_save'),
+      function () {
+        return api('grantsChange', { params: { id: grant.grant_id }, body: root.CBBooksGrantEdit.body(grant, ids) }).catch(function (failure) { throw root.CBBooksGrantEdit.wording(failure); });
+      },
+      {
+        key: 'bg-change-' + grant.grant_id,
+        confirm: confirmBody ? { title: words('Save this change?'), body: confirmBody, yes: words('Save') } : undefined,
+        failed: words("Couldn't save the change"),
+        out: 'bg_out2',
+        onFail: function (said, failure) { var out = $('bg_out2'); out.textContent = root.CBBooksGrantEdit.failSaid(said, failure); out.setAttribute('data-tone', 'error'); },
+        outcome: function () {
+          panel.o.closeSheet();
+          reload();
+        }
+      }
+    );
   }
   /** what ending an access did to the actions still waiting under it (the server counts them) */
   function withdrawnWords(ended) {
@@ -475,8 +469,8 @@
   function mount(host, o) {
     panel.host = host;
     panel.o = o || {};
-    panel.view = 'given';
-    return reload().then(function () {
+    panel.view = o && o.view === 'add' ? 'asks' : (o && o.view) || 'given'; /* 'add': the firm's Add a client door opens the finder at once */
+    return reload().then(function (done) { if (o && o.view === 'add') root.CBBooksGrantAsks.openAsk('firm'); return done; }).then(function () {
       return { reload: reload };
     });
   }

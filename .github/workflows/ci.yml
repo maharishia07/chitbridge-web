@@ -67,6 +67,8 @@ jobs:
           node scripts/check-adoption.js
       - name: Retest 1130 proofs (inline-handler XSS, ?api= allow-list, cart basis, refused save)
         run: npm run check:retest1130
+      - name: Firm-connect web 1138 (UX-215/216/220; every mutant must be killed)
+        run: node tests/firm-connect-web.test.cjs --mutants
       - name: One answer to what trade is this shop (vertical-box; REL-7)
         run: node tests/vertical-box.test.cjs
       - name: Misfix 1121 (F-54 menu fits 1366x768, F-67 P&L head to today)

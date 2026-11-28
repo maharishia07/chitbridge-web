@@ -40,7 +40,7 @@ if (/identity_type|hat ===|role ===|isOwner|parent_entity_id/.test(na)) bad('net
 
 /* the door and the lab */
 const door = man.entries.filter((e) => e.id === 'network')[0], nl = man.entries.filter((e) => e.id === 'network-lab')[0];
-if (!door || door.route !== '/network.html' || door.state !== 'built') bad('the Network door must open /network.html as built');
+if (!door || door.route.split('#')[0] !== '/network.html' || door.state !== 'built') bad('the Network door must open /network.html as built');
 if (!nl || nl.route !== '/network-design.html' || nl.area !== 'labs' || nl.state !== 'built') bad('the Network Lab must be on the Labs row, built');
 /* comments are not calls: strip HTML, block and line comments (a line comment starts at // not after a colon) before looking for a call to build or a PUT */
 const code = (t) => t.replace(/<!--[^]*?-->/g, '').replace(/\/\*[^]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');

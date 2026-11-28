@@ -1,7 +1,7 @@
 /* public/app/books-practice-mine.js — 'Your books today: <client> · <country>': the first line of a firm seat's Home
    ID        HOM001
    OWNER     cb-ux-locale
-   OWNS      the one line; CBPracticeKit.mineLine() returns its markup ('' when the seat holds no client). Decides nothing: the held clients are the server's holders on GET /api/books-grants/practice; CBAssign.heldFilter is the one 'mine' matcher
+   OWNS      the Add a client door (UX-215) and the one line; CBPracticeKit.mineLine() returns its markup ('' when the seat holds no client). Decides nothing: the held clients are the server's holders on GET /api/books-grants/practice; CBAssign.heldFilter is the one 'mine' matcher
    FLOW      books-practice.js sectionHTML -> CBPracticeKit.mineLine -> practiceState.data.clients -> heldFilter mine -> the line
    CARD      04-network/ACC-176-AUDITOR-GRANT
    RISK      plain
@@ -13,6 +13,10 @@
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
+  /** UX-215 B2: the firm adds a client: the same find-and-ask sheet as the owner's, opened on the Network page (the firm is the parent of the edge) */
+  practiceKit.addClient = function () {
+    return '<p style="margin:0 0 6px"><a class="act quiet" data-cbsid="NET004-B29" href="/network.html#add" data-testid="practice-add-client">' + root.esc(words('Add a client')) + '</a></p>';
+  };
   practiceKit.mineLine = function () {
     var data = practiceKit.practiceState && practiceKit.practiceState.data, A = root.CBAssign;
     if (!data || !A || !A.meId()) return '';
