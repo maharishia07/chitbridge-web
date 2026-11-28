@@ -129,6 +129,11 @@ const ids = (w, key, v) => ENTRIES.filter((e) => w.root.__jet().filter((f) => f.
     const own = guardOf('owner'); assert.ok(own('/api/marks', 'POST') && own('/api/chits', 'GET'));
     assert.ok(guardOf(null)('/api/marks', 'POST'));
   });
+  await ok('the mark endpoints join the page register BEFORE the mark control is made (accounts.html keeps EP in a const cap-mark cannot reach): the bar read and a mark set need them', () => {
+    assert.ok(/function bkMarkEndpoints\(\) \{[\s\S]*?EP\[key\] = CB_MARK_EP\[key\]/.test(cap) && /if \(!BK\.mk\) \{[\s\S]{0,6}bkMarkEndpoints\(\);[\s\S]{0,6}BK\.mk = CBMark\.use/.test(cap));
+    const w = world('auditor', ''); const EPS = {}; vm.runInContext('var EP = {}; var CB_MARK_EP = { marksRead: { m: "GET", p: "/api/marks" }, marksSet: { m: "POST", p: "/api/marks" } };' + grab(cap, 'bkMarkEndpoints') + ';globalThis.__ep = bkMarkEndpoints; globalThis.__EP = EP;', w.root);
+    w.root.__ep(); assert.ok(w.root.__EP.marksRead && w.root.__EP.marksSet);
+  });
   /* ---- the guard on the source ---- */
   const tools = read('public/app/books-audit-tools.js'), acting = read('public/app/books-acting.js');
   await ok('GUARD: the one seat test is firmSeat (auditor | adviser) and every tool mounts behind bkAudit / bkSinceOn', () => {

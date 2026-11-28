@@ -2929,10 +2929,18 @@ function bkMarksIngest(r, list) {
   if (!bkMarkControl()) return;
   BK.mk.ingest(list || r.entries, r);
 }
+/** the two mark endpoints (cap-mark.js CB_MARK_EP) join this page's register: accounts.html keeps its register in a const, which cap-mark cannot reach, and the bar, the Query thread and a mark set go through api() */
+function bkMarkEndpoints() {
+  if (typeof CB_MARK_EP === 'undefined') return;
+  Object.keys(CB_MARK_EP).forEach(function (key) {
+    if (!EP[key]) EP[key] = CB_MARK_EP[key];
+  });
+}
 /** the ONE mark control (adopter acc.audit): the Day book and the Receivables / Payables bill list read the same marks through it — null on a page that loads no cap-mark.js */
 function bkMarkControl() {
   if (typeof CBMark === 'undefined') return null;
   if (!BK.mk) {
+    bkMarkEndpoints();
     BK.mk = CBMark.use({ adopter: 'acc.audit', call: api, period: function () { return BK.dv && BK.dv.range; } }); /* the Checked n of m counts the range the list shows */
     BK.mk.onChange(function () {
       if (BK.dv && BK.dv.api) BK.dv.api.refresh();
