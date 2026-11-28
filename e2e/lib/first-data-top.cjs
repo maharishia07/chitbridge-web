@@ -1,9 +1,9 @@
 /**
  * first-data-top.cjs — THE FIRST-DATA GUARD (w19-first-data-top, Athi's rule 4: data by 20% of a 1366x768 screen, 30% of a 390x844 phone), ONE guard for BOTH seats.
- * OWNS     the measurement: for every client view (Trial balance, Profit and loss, Balance sheet, Day book, Who owes whom, Months) at both sizes, the VISIBLE top of the first data row, measured from y = 0 of the page at scroll 0, nothing subtracted
+ * OWNS     the measurement: for every client view the firm view still paints (Who owes whom, Months; the trial balance, P&L, balance sheet and Day book are the owner's screens, doors) at both sizes, the VISIBLE top of the first data row, measured from y = 0 of the page at scroll 0, nothing subtracted
  *          (the shell bar, a wrapped crumb, a search box all count: the person sees them). A view with no rows measures its empty state's top. Sideways scroll and a search box on fewer than ten rows fail too.
  * CALLED BY e2e/walk-books-grant.cjs (the auditor seat, step W19) and e2e/walk-books-adviser.cjs (the accountant seat). Needs the walk's page on an open client with the tabs drawn.
- * PHONE the six tabs are ONE select (bv-tab-select), no tab buttons.
+ * PHONE the tabs are ONE select (bv-tab-select), no tab buttons.
  * CEILINGS TARGET.wide 0.20 · TARGET.narrow 0.30 for every view. A view that cannot meet it yet is listed in e2e/first-data-ceilings.json under "<seat>.<view>.<width>" with its MEASURED fraction; that number may only fall, never be raised (a PR that raises one is refused in review).
  *          The walk prints each view's figure; nothing is loosened silently.
  */
@@ -11,7 +11,7 @@
 const fs = require('fs'), path = require('path');
 const TARGET = { wide: 0.20, narrow: 0.30 };
 const SLACK_PX = 2;
-const VIEWS = ['tb', 'pl', 'bs', 'daybook', 'dues', 'periods'];
+const VIEWS = ['dues', 'periods']; /* ONEP-2: the trial balance, the P&L, the balance sheet and the Day book are the OWNER's screens (doors) now; this guard measures the reads the firm view still paints */
 function overrides() { try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'first-data-ceilings.json'), 'utf8')).ceilings || {}; } catch (_) { return {}; } }
 /** one measurement of the open view, in the page: the first visible data row (or the empty state) and the sideways overflow */
 const measure = () => document && (() => {
