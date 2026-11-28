@@ -58,7 +58,7 @@ assert.deepStrictEqual(['IN', 'AU', 'AE'].map(hint), ['15 characters', '', '']);
 /* 3 - cap-country: the tax row, the id check, the year, the scheme fallback */
 const cc = read('app/cap-country.js');
 const stubs = 'var CSU = { p: null, edit: null }; function csuPackOf() { return null; } function csuCountryName(c) { return c; } function csuRow() { return Array.prototype.join.call(arguments, "|"); } function csuSel(id) { return "SEL:" + id; } function csuSchemeInfo() { return ""; } function csuTaxIdHint() { return ""; } var CSU_SCHEME_WHY = {}; function csuScheme() { return "GST"; } function esc(s) { return s; }';
-const taxParts = stubs + ['csuPack', 'csuTaxRow', 'csuTaxSummary', 'csuTaxRowHTML', 'csuYearFromPack', 'csuGstinWhy', 'csuTaxIdWhy'].map((n) => part(cc, n)).join('\n');
+const taxParts = stubs + ['csuPack', 'csuTaxRow', 'csuTaxSummary', 'csuTaxRowHTML', 'csuYearFromPack', 'csuGstinWhy', 'csuTaxIdWhy', 'csuTodayISO'].map((n) => part(cc, n)).join('\n');
 const row = (c, scheme) => run(form[c], taxParts, 'csuTaxRow({ country: SESSION.country, registered: true, scheme: ' + JSON.stringify(scheme) + ', number: "N" }, {})');
 assert.ok(row('IN', 'composition').includes('SEL:cs-tax-scheme') && row('IN', 'composition').includes('Composition')); ok('tax row IN: the scheme picker and "Composition"');
 for (const c of ['AU', 'AE']) assert.ok(!row(c, 'regular').includes('cs-tax-scheme') && row(c, 'regular').includes('Registered'), c);
