@@ -104,5 +104,10 @@ const DAY = 'booksBS{"asOf":"2026-06-30"}', TODAY = 'booksBS{"kind":"today","ste
     const has = (src) => /ok = reply\.balanced != null \? !!reply\.balanced/.test(src);
     assert.ok(has(cap)); assert.ok(!has(cap.replace('reply.balanced != null ? !!reply.balanced', 'true')));
   });
+  await ok('GUARD (web #824 finding): paint() ends its markup, wirePainted(report) is its OWN statement, never an operand of the markup (the bug left stray text in the list)', () => {
+    const view = real['books-grant-view.js'];
+    assert.ok(new RegExp('wirePainted' + String.fromCharCode(92) + '(report' + String.fromCharCode(92) + ');').test(view));
+    assert.ok(!new RegExp(String.fromCharCode(92) + '+' + String.fromCharCode(92) + 's*' + String.fromCharCode(92) + 'n' + String.fromCharCode(92) + 's*wirePainted' + String.fromCharCode(92) + '(report' + String.fromCharCode(92) + ');').test(view));
+  });
   console.log('\n' + n + ' checks');
 })().catch((e) => { console.error(e); process.exit(1); });
