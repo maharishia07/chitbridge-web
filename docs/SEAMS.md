@@ -52,9 +52,9 @@ of file each thing is; this says what already does the job.
 | 71 | `host` | `chit-sheet.js` |  |
 | 70 | `shape` | `books-practice.js` | a client's practice row: |
 | 70 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
+| 69 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 69 | `page` | `books-grant-drill.js` | one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) |
 | 69 | `open` | `bank-statement-file.js` | The event is written in the same request unless the request is read only (an auditor: |
-| 68 | `button` | `bank-preview-ui-parts.js` | var escapeHtml = ctx.escapeHtml; |
 | 68 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
 | 67 | `holds` | `assign-register.js` | ONE statement; the switch rides in it: |
 | 67 | `view` | `books-payables.js` | group: |
@@ -137,11 +137,11 @@ of file each thing is; this says what already does the job.
 | 33 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
 | 32 | `form` | `accounts-shell-unsaved.js` |  |
+| 32 | `chip` | `screen-id.js` | var S = { app: |
 | 32 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 32 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 31 | `bkDate` | `cap-books.js` |  |
 | 31 | `model` | `chit-sheet.js` |  |
-| 31 | `chip` | `screen-id.js` | var S = { app: |
 | 31 | `panel` | `sides.js` |  |
 | 31 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 31 | `group` | `identity.js` | again in a different costume. |
@@ -183,6 +183,7 @@ of file each thing is; this says what already does the job.
 | 25 | `reply` | `private-flag.js` | Refused in words: |
 | 25 | `base` | `qty.js` | handing it over keeps this file free of a dependency that would have to be vendored in a fixed order. |
 | 24 | `done` | `attach-ui.js` |  |
+| 24 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
 | 24 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |
 | 24 | `receipt` | `books-events-batch.js` | the receipt: |
 | 24 | `parties` | `books-store-parties.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
@@ -198,7 +199,6 @@ of file each thing is; this says what already does the job.
 | 24 | `keep` | `signin.js` | see. |
 | 24 | `mark` | `auth.js` | res.locals.<k> = v for the request log (server.js) — |
 | 23 | `held` | `books-grant-api.js` |  |
-| 23 | `counts` | `cap-flag.js` | function list(call, o) { return askFlag(call, 'flagsList', { query: |
 | 23 | `send` | `cap-quotes.js` |  |
 | 23 | `account` | `cap-settings.js` |  |
 | 23 | `said` | `cap-shop.js` |  |
