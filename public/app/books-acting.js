@@ -164,6 +164,10 @@
   function posts() {
     return !!context && context.role === 'adviser' && context.posting === 'adviser_posts';
   }
+  /** BB-P1-2: this store's grant is owner_approves: the firm's bank lines are PROPOSED (the server holds them for the owner), never posted; the grant row decides, the page only says it first */
+  function proposes() {
+    return !!context && context.role === 'adviser' && context.posting === 'owner_approves';
+  }
   /** the acting page shows only what is read and written through /api/books*: the tabs that call anything else are taken out of the menu, so no request outside it carries the store's header */
   var OWNER_SENTENCE = 'Only the owner may record this.';
   var TABS = ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'dues', 'lock'];
@@ -403,5 +407,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an accountant.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { carriedOf: carriedOf, clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: headerCss, isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, tokenHeader: tokenHeader, authHeaders: authHeaders, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore, grantCall: grantCall };
+  root.CBBooksActing = { carriedOf: carriedOf, clientAddress: clientAddress, setScreen: setScreen, crumbs: crumbs, periodSlot: periodSlot, css: headerCss, isAdviser: isAdviser, posts: posts, proposes: proposes, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, postedByWords: postedByWords, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, tokenHeader: tokenHeader, authHeaders: authHeaders, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, auditAddressOf: auditAddressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore, grantCall: grantCall };
 })(typeof window !== 'undefined' ? window : globalThis);

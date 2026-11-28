@@ -87,7 +87,7 @@ function bkshTaxRegisteredFor(answer) {
 }
 /** who is signed in, as the post adapter reads it: the shop's own login is the owner */
 function bkshSignedIn() {
-  if (typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser()) return { role: 'adviser', posts: CBBooksActing.posts() }; /* the grant's posting, known up front; the server decides */
+  if (typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser()) return { role: 'adviser', posts: CBBooksActing.posts(), proposes: typeof CBBooksActing.proposes === 'function' && CBBooksActing.proposes() }; /* the grant's posting, known up front; the server decides */
   if (bkshIsOwner()) return { role: 'owner' };
   return { role: typeof bkIsBookkeeper === 'function' && bkIsBookkeeper() && BK_SEAT.post ? 'bookkeeper' : 'other' }; /* W26: may record entries (the server's may.post), not lock or reopen */
 }
@@ -252,7 +252,8 @@ async function bkshAdd(btn) {
     bkshAcceptAdded(); /* the owner's own adds read as accepted at once, whichever way the sheet is closed later */
     /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
     BKSH.ctl.answer('ledger_read', Date.now()); /* projects again over the books just read */
-    const said = done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added });
+    const sent = done.held ? ' ' + txf('{h} sent to the owner to approve: they join your books when the owner accepts.', { h: done.held }) : ''; /* BB-P1-2: owner_approves */
+    const said = (done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added })) + sent;
     const figures = typeof bankFigures === 'function' ? bankFigures() : null;
     if (!done.failed && figures && figures.nil) {
       /* nothing is left: the books agree with the statement, so the sheet closes itself and the Bank view offers the sign-off */
@@ -297,7 +298,7 @@ function bkshKeepTaught(items, results) {
   BKSH.ruleOf = BKSH.ruleOf || {};
   const taught = (BKSH.ctl && BKSH.ctl.view().taught) || {};
   items.forEach((item) => {
-    if (!(results[item.key] && results[item.key].ok)) return;
+    if (!(results[item.key] && results[item.key].ok) || results[item.key].held) return; /* BB-P1-2: a line held for the owner is not posted: nothing is remembered or accepted for it yet */
     if (taught[item.key]) bkbKeepRule(taught[item.key]); /* the line posted, so the answer is remembered: the next one like it is proposed from the rule */
     if (item.rule === 'learned' && item.learned_id) BKSH.ruleOf[item.key] = item.learned_id; /* the audit: this line was decided by a rule */
   });
@@ -317,7 +318,7 @@ function bkshNoteAdded() {
   bkshBook().postedLocal = bkshBook().postedLocal || {};
   bkshKeepTaught(items, results);
   Object.keys(results).forEach((ref) => {
-    if (results[ref] && results[ref].ok) {
+    if (results[ref] && results[ref].ok && !results[ref].held) {
       BKSH.added[ref] = true;
       if (results[ref].entry_no) bkshBook().postedLocal[ref] = results[ref].entry_no;
     }
