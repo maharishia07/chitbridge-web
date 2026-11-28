@@ -23,8 +23,6 @@
   grantKit.flagLabel = flagLabel;
   grantKit.newMarks = newMarks;
   grantKit.mountQueues = mountQueues;
-  grantKit.bankTbLine = bankTbLine;
-  grantKit.wireBankTbLine = wireBankTbLine;
   /* ── rank 10: changed since my last check. The Day book can be read as "the entries posted since THIS person last pressed Mark as checked on this client" (api: GET /daybook?since=mine; the server holds the check point and
      the count, this page adds nothing up). Mark as checked sends back the watermark the list carried (seen_to), never a moment of its own. The act is the person's own (POST /api/books-grants/practice/baseline), never the client's. ── */
   grantKit.SINCE_LIMIT = 500;
@@ -159,27 +157,5 @@
   /** the firm's queues, inside the list area, under the same banner */
   function mountQueues() {
     root.CBBooksActionsView.mount(grantKit.$('bv_list'), { call: grantKit.viewState.o.call, mode: 'firm', mountList: grantKit.viewState.o.mountList, sheet: grantKit.viewState.o.sheet, closeSheet: grantKit.viewState.o.closeSheet });
-  }
-  /** RANK 9: the bank agreement under the trial balance: the api's `bank` block drawn by the ONE function (CBBankTbLine, shared with the owner's tab); the sign-off is the client's own, read, never redone */
-  function bankTbOptions() {
-    var answer = grantKit.viewState.answer || {};
-    return {
-      money: function (minor, cur) { return root.CBBooksActing.figure(minor, cur || answer.currency); }, day: function (iso) { return root.shopDay(iso); }, tx: grantKit.words,
-      txf: function (english, vars) { return grantKit.words(english).replace(/\{(\w+)\}/g, function (whole, key) { return Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : whole; }); },
-      codes: { note: 'NET005-P01', open: 'NET005-B06', at: 'NET005-B07' }, ids: 'bv_tb_bank_',
-      onDay: function (day) { grantKit.viewState.day = day; grantKit.reload(); },
-      onOpen: function () {
-        var from = answer.fy_from || '', to = answer.asOf || '', carry = '&view=tb' + (from && to ? '&fy=' + encodeURIComponent(from.slice(0, 4)) + '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to) : '');
-        root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry));
-      }
-    };
-  }
-  function bankTbLine() {
-    var a = grantKit.viewState.answer;
-    return a && a.bank && root.CBBankTbLine ? root.CBBankTbLine.html(a.bank, bankTbOptions()) : '';
-  }
-  function wireBankTbLine() {
-    var host = grantKit.$('bv_bank_tb'), a = grantKit.viewState.answer;
-    if (host && a && a.bank && root.CBBankTbLine) root.CBBankTbLine.wire(host, a.bank, bankTbOptions());
   }
 })(typeof window !== 'undefined' ? window : globalThis);
