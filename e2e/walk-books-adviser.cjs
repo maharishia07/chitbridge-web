@@ -155,7 +155,7 @@ W.run('books-adviser', async (w) => {
     const FDT = require('./lib/first-data-top.cjs');
     const r = await FDT.firstDataTop(page, { T, has, WIDE, NARROW, seat: 'accountant' });
     /* the three statements are doors: their first data row is measured on the OWNER's screen the door opens in this seat, against the same ceilings */
-    const o = await FDT.ownerFirstDataTop(page, { T, WIDE, NARROW, seat: 'accountant', openFirm: async () => { await openNetwork(); await openStore(S1); } });
+    const o = await FDT.ownerFirstDataTop(page, { T, WIDE, NARROW, seat: 'accountant', openFirm: async () => { await openNetwork(); await page.click(T('nw-books-' + S1)); await page.waitForSelector(T('ba-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-tab-select'), { state: 'attached', timeout: 3000 }).catch(() => page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 })); } }); /* the phone holds the screens in one select, not tab buttons */
     await page.setViewportSize(WIDE); await openNetwork(); await openStore(S1);
     await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-tabs'), { timeout: 10000 }); await page.waitForTimeout(300); /* back where F3 expects to be */
     return { ok: r.ok && o.ok, saw: r.saw + ' || owner screens: ' + o.saw };
