@@ -18,7 +18,7 @@ let n = 0;
 const ok = (name, fn) => Promise.resolve().then(fn).then(() => { n++; console.log('  ok   ' + name); });
 const cap = read('public/app/cap-books.js');
 const grab = (src, name) => { const m = new RegExp(String.raw`(?:async )?function ${name}\([^)]*\) \{[\s\S]*?\n\}\n`).exec(src); assert.ok(m, name + ' not found'); return m[0]; };
-const FN = (src) => ['bkAudit', 'bkSinceOn', 'bkDbSeed', 'bkJetRange', 'bkJetChosen', 'bkJetPreset', 'bkJetRow', 'bkJetRisk', 'bkJetFilters', 'bkDvTotal', 'bkDvOpenDay', 'bkDvAppend', 'bkDaybook', 'bkPlWindow', 'bkDbPeriod'].map((f) => grab(src, f)).join('') + (src.match(/var BK_JET_KEYS = [^\n]*\n/) || [''])[0] + (src.match(/var BK_PAGE = 100;\n/) || [''])[0];
+const FN = (src) => ['bkAudit', 'bkSinceOn', 'bkDbSeed', 'bkJetRange', 'bkJetChosen', 'bkJetPreset', 'bkJetRow', 'bkJetRisk', 'bkJetFilters', 'bkDvTotal', 'bkDvOpenDay', 'bkDvAppend', 'bkDaybook', 'bkDvReadQuery', 'bkPlWindow', 'bkDbPeriod'].map((f) => grab(src, f)).join('') + (src.match(/var BK_JET_KEYS = [^\n]*\n/) || [''])[0] + (src.match(/var BK_PAGE = 100;\n/) || [''])[0];
 const E = (id, no, posting, recorded, dr, extra) => Object.assign({ entry_id: id, entry_no: no, posting_date: posting, recorded_at: recorded, lines: [{ dr_minor: dr }] }, extra || {});
 const ENTRIES = [
   E('e1', 'J-1', '2026-07-10', '2026-07-10T10:00:00Z', 15000),
@@ -41,7 +41,7 @@ function world(seat, search, replyOver) {
     CBMoney: { decimals: () => 2 }, CBLocale: { weekInfo: () => null }, dayBookKind: () => 'Sale',
     bkRange: () => ({ from: '2026-07-01', to: '2026-07-31' }), bkToday: () => '2026-11-28', bkFyFrom: () => '2025-07-01',
     bkChequesLoad: async () => [], bkHealthLoad: async () => ({}), bkTodoCounts: () => ({}), bkDuesStore() {}, bkQuiet() {}, bkErr: (e) => 'ERR ' + e, bkMarksIngest() {}, bkEvidenceIngest() {}, bkFlagsIngest() {},
-    bkDvMount: () => ({ refresh() {}, destroy() {} }), bkPagerPaint() {}, bkDvCountsHook() {}, bkDvLoadAll() { return Promise.resolve(); }, bkAuditPaint() {}, bkJetWatch() {}, bkTab() {}, bkDvOlder() {}
+    bkDvMount: () => ({ refresh() {}, destroy() {} }), bkPagerPaint() {}, bkDvCountsHook() {}, bkDvLoadAll() { return Promise.resolve(); }, bkDvDraw() {}, bkAuditPaint() {}, bkJetWatch() {}, bkTab() {}, bkDvOlder() {}
   };
   vm.createContext(root);
   vm.runInContext(['books-grant-api.js', 'books-acting.js', 'books-grant-filters.js', 'books-audit-tools.js'].map((f) => read('public/app/' + f)).join('\n'), root);

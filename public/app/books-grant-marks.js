@@ -25,23 +25,23 @@
   grantKit.mountQueues = mountQueues;
   /* ── rank 10: changed since my last check. The Day book can be read as "the entries posted since THIS person last pressed Mark as checked on this client" (api: GET /daybook?since=mine; the server holds the check point and
      the count, this page adds nothing up). Mark as checked sends back the watermark the list carried (seen_to), never a moment of its own. The act is the person's own (POST /api/books-grants/practice/baseline), never the client's. ── */
-  var T = root.CBBooksAuditTools; /* ONEP-2 PR7a: the since bar, Mark as checked and the Risk bits are ONE module (books-audit-tools.js), shared with the owner's Day book */
-  grantKit.SINCE_LIMIT = T.SINCE_LIMIT;
-  function sinceAsked() { return T.sinceAsked(); }
+  var auditTools = root.CBBooksAuditTools; /* ONEP-2 PR7a: the since bar, Mark as checked and the Risk bits are ONE module (books-audit-tools.js), shared with the owner's Day book */
+  grantKit.SINCE_LIMIT = auditTools.SINCE_LIMIT;
+  function sinceAsked() { return auditTools.sinceAsked(); }
   function sinceBar() {
-    return T.sinceBar({ on: grantKit.viewState.since, seen: grantKit.viewState.seen, shown: ((grantKit.viewState.answer && grantKit.viewState.answer.entries) || []).length });
+    return auditTools.sinceBar({ on: grantKit.viewState.since, seen: grantKit.viewState.seen, shown: ((grantKit.viewState.answer && grantKit.viewState.answer.entries) || []).length });
   }
-  grantKit.TABROW_CSS = T.TABROW_CSS;
+  grantKit.TABROW_CSS = auditTools.TABROW_CSS;
   function setSince(on) {
     grantKit.viewState.since = on;
     grantKit.viewState.seen = null;
-    T.writeSince(on);
+    auditTools.writeSince(on);
     grantKit.reload().then(function () { var b = grantKit.$('bv_since'); if (b) b.focus(); });
   }
   /** Mark as checked: the shared module asks, names the client and sends the grant route's own call (practiceBaseline) */
   function markChecked() {
     var member = grantKit.viewState.o.member;
-    T.markChecked({ seen: grantKit.viewState.seen, name: member && member.name, client: member && member.id, call: grantKit.viewState.o.call, done: function () { grantKit.reload().then(function () { var b = grantKit.$('bv_since'); if (b) b.focus(); }); } });
+    auditTools.markChecked({ seen: grantKit.viewState.seen, name: member && member.name, client: member && member.id, call: grantKit.viewState.o.call, done: function () { grantKit.reload().then(function () { var b = grantKit.$('bv_since'); if (b) b.focus(); }); } });
   }
   function wireSince() {
     if (grantKit.$('bv_since')) grantKit.$('bv_since').onclick = function () { setSince(!grantKit.viewState.since); };

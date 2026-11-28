@@ -2719,8 +2719,8 @@ function bkDvFilters(entries) {
   return filters;
 }
 /** the Day book's columns: the base set, then Evidence · Mark · Saved when those are on */
-function bkDvColumns(c) {
-  var cols = bkDvCols(c);
+function bkDvColumns(currency) {
+  var cols = bkDvCols(currency);
   if (BK.ev)
     cols.splice(cols.length - 1, 0, { key: 'evidence', sort: 'evidence', label: tx('Evidence'), prio: 2, w: 170, keep: true, html: true, cell: function (e) { return BK.ev.chip(e); }, value: function (e) { var s = bkDvEvState(e); return s ? s.word : ''; } }); /* CMP062: never cut to make room; every posted entry carries the chip (S1: attach to ANY entry); No source reads Attach receipt / No receipt, quiet, never a fault */
   if (BK.mk && BK.mk.state().may)
@@ -3011,8 +3011,8 @@ async function bkDaybook(body) {
     /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
     /* the Day book does NOT wait for /dues (growth5y: it reads every party's balance and was the slow one): the list paints from its own read; the names and the overdue count arrive after */
     /* 5-YEAR GROWTH (l16-scale): one page at a time, newest first */
-    var ask = since ? { since: 'mine', limit: CBBooksAuditTools.SINCE_LIMIT } : Object.assign({ limit: BK_PAGE, order: 'desc' }, q); /* ONE since read (the server holds the check point), else one page, newest first */
-    var rr = await Promise.all([api('booksDaybook', { query: ask }), bkChequesLoad(), bkHealthLoad()]);
+    var readQuery = bkDvReadQuery(since, q);
+    var rr = await Promise.all([api('booksDaybook', { query: readQuery }), bkChequesLoad(), bkHealthLoad()]);
     var r = rr[0];
     BK.dv = { r: r, range: q, period: period, since: since, seen: since ? { to: r.seen_to, total: r.total, since: r.since } : null, todo: bkTodoCounts(BK.duesRaw || null, rr[1], rr[2]) };
     api('booksDues').then(
@@ -3033,21 +3033,25 @@ async function bkDaybook(body) {
     bkMarksIngest(r);
     bkEvidenceIngest(r.entries); /* CMP062: what stands behind each entry */
     bkFlagsIngest(r.entries); /* CMP066: and my bookmarks of them (one read; the list is drawn again when it answers) */
-    /* W15-102: the Needs attention strip, the server's counts over the range — never counted here */
-    body.innerHTML = '<div id="bk_audit" data-testid="db-audit"></div><div class="attn-col"><div id="bk_attn_db"></div><div id="bk_dvlist" data-testid="db-list"></div></div><div id="bk_audit_note"></div><div id="bk_dvpager" data-testid="db-pager"></div>';
-    bkAuditPaint();
-    BK.dv.api = bkDvMount(document.getElementById('bk_dvlist'));
-    bkJetWatch(document.getElementById('bk_dvlist'));
-    if (!since) bkPagerPaint('bk_dvpager', 'db', r, 'Older', 'newest first', bkDvOlder);
-    if (bkAudit() && !since) bkDvLoadAll(); /* the filters judge the whole range, never the one page held (a capped or failed read is said by bkDvLoadAll) */
-    bkDvCountsHook(r, q);
-    if (typeof CBAttention !== 'undefined')
-      CBAttention.mount(document.getElementById('bk_attn_db'), q, function () {
-        if (BK.dv && BK.dv.api) BK.dv.api.refresh(); /* the count of ⚑ Needs you arrives with the strip's own read */
-      });
+    bkDvDraw(body, r, q, since);
   } catch (e) {
     body.innerHTML = bkErr(e);
   }
+}
+/** the Day book's screen once its pages are in: the firm bar, the list, the pager, the Needs attention strip (W15-102: the server's counts over the range, never counted here) */
+function bkDvDraw(body, reply, range, since) {
+  /* W15-102: the Needs attention strip, the server's counts over the range — never counted here */
+  body.innerHTML = '<div id="bk_audit" data-testid="db-audit"></div><div class="attn-col"><div id="bk_attn_db"></div><div id="bk_dvlist" data-testid="db-list"></div></div><div id="bk_audit_note"></div><div id="bk_dvpager" data-testid="db-pager"></div>';
+  bkAuditPaint();
+  BK.dv.api = bkDvMount(document.getElementById('bk_dvlist'));
+  bkJetWatch(document.getElementById('bk_dvlist'));
+  if (!since) bkPagerPaint('bk_dvpager', 'db', reply, 'Older', 'newest first', bkDvOlder);
+  if (bkAudit() && !since) bkDvLoadAll(); /* the filters judge the whole range, never the one page held (a capped or failed read is said by bkDvLoadAll) */
+  bkDvCountsHook(reply, range);
+  if (typeof CBAttention !== 'undefined')
+    CBAttention.mount(document.getElementById('bk_attn_db'), range, function () {
+      if (BK.dv && BK.dv.api) BK.dv.api.refresh(); /* the count of ⚑ Needs you arrives with the strip's own read */
+    });
 }
 /**
  * ONEP-2 PR7 — the firm seat's tools on this Day book (books-audit-tools.js, books-grant-filters.js): ONE module, mounted only in an auditor or adviser seat
@@ -3062,6 +3066,11 @@ function bkSinceOn() {
   if (BK.dvSince === undefined) BK.dvSince = CBBooksAuditTools.sinceAsked();
   return !!BK.dvSince;
 }
+/** the Day book's read: ONE since call (the server holds the check point, no range), else one page, newest first */
+function bkDvReadQuery(since, range) {
+  return since ? { since: 'mine', limit: CBBooksAuditTools.SINCE_LIMIT } : Object.assign({ limit: BK_PAGE, order: 'desc' }, range);
+}
+/** the since toggle pressed: the choice is kept, the address records it, the Day book is read again */
 function bkSinceSet(on) {
   BK.dvSince = on;
   CBBooksAuditTools.writeSince(on);
@@ -3069,14 +3078,14 @@ function bkSinceSet(on) {
 }
 /** Mark as checked: the person's own act on the grant route (token only, never X-Books-For), then the screen is read again */
 function bkSinceMarkChecked() {
-  var seat = CBBooksActing.current(), d = BK.dv;
-  CBBooksAuditTools.markChecked({ seen: d && d.seen, name: seat.store.name, client: seat.store.id, call: bkFlagCall, done: function () { bkTab('daybook', true); } });
+  var seat = CBBooksActing.current(), book = BK.dv;
+  CBBooksAuditTools.markChecked({ seen: book && book.seen, name: seat.store.name, client: seat.store.id, call: bkFlagCall, done: function () { bkTab('daybook', true); } });
 }
 /** the window the Day book opens at when the address carries one (from= and to=, the firm's door), read ONCE per page; a bad pair is no pick and the owner's default stays */
 function bkDbSeed() {
   if (BK.dbSeeded) return;
   BK.dbSeeded = true;
-  var q = new URLSearchParams(location.search || ''), win = bkPlWindow(q.get('from') || '', q.get('to') || '');
+  var address = new URLSearchParams(location.search || ''), win = bkPlWindow(address.get('from') || '', address.get('to') || '');
   if (win && !BK.dbp) BK.dbp = bkDbPeriod('custom', { from: win[0], to: win[1] });
 }
 /** JET (ASA 560) Year end "Dated after it" is a different read: the days after the period (period.to + 1 day for a year), through the same route and pager */
@@ -3097,6 +3106,7 @@ function bkJetChosen() {
   }
   return BK.dvDbf;
 }
+/** the filter choices in force as the list's preset (only the keys this page owns) */
 function bkJetPreset() {
   var kept = {}, chosen = bkJetChosen();
   BK_JET_KEYS.forEach(function (k) { if (chosen[k]) kept[k] = chosen[k]; });
@@ -3106,56 +3116,65 @@ function bkJetPreset() {
 function bkJetRow(e) {
   return Object.assign({ amount_minor: bkDvTotal(e) }, e);
 }
+/** the rules this entry trips, as words (the Risk count is its length) */
 function bkJetRisk(e) {
-  var d = BK.dv;
-  return CBBooksGrantFilters.riskOf(bkJetRow(e), d.period, d.r.currency, d.r.country);
+  var book = BK.dv;
+  return CBBooksGrantFilters.riskOf(bkJetRow(e), book.period, book.r.currency, book.r.country);
 }
+/** when and by whom an entry was posted (the since view's Posted column) */
 function bkAuditPosted(e) {
   return e && e.recorded_at ? shopDay(e.recorded_at) + (e.recorded_by ? ' · ' + e.recorded_by : '') : '';
 }
 /** the review-by-exception filters, each answered by the ONE definition in books-grant-filters.js; Evidence · Kind · Person · Saved are the owner's own and not repeated */
 function bkJetFilters() {
-  var F = CBBooksGrantFilters, d = BK.dv;
-  var all = F.filtersFor(BK.mk, { period: function () { return d.period; }, currency: function () { return d.r.currency; }, region: function () { return d.r.country; }, rows: function () { return d.r.entries || []; } });
-  return all.map(function (f) { return f.key === 'by' ? Object.assign({}, f, { key: 'madeby' }) : f; }).filter(function (f) { return BK_JET_KEYS.indexOf(f.key) >= 0; }).map(function (f) {
-    var judge = f.match;
-    return Object.assign({}, f, { match: function (e, v) { return judge(bkJetRow(e), v); } });
+  var book = BK.dv;
+  var all = CBBooksGrantFilters.filtersFor(BK.mk, { period: function () { return book.period; }, currency: function () { return book.r.currency; }, region: function () { return book.r.country; }, rows: function () { return book.r.entries || []; } });
+  return all.map(function (filter) { return filter.key === 'by' ? Object.assign({}, filter, { key: 'madeby' }) : filter; }).filter(function (filter) { return BK_JET_KEYS.indexOf(filter.key) >= 0; }).map(function (filter) {
+    var judge = filter.match;
+    return Object.assign({}, filter, { match: function (e, v) { return judge(bkJetRow(e), v); } });
   });
 }
-/** after any press in the list: remember the narrowing, write it to the address, and read again when Year end changed which days are read */
+/** after a press in the list: remember the narrowing, write it to the address, and read again when Year end changed which days are read */
+function bkJetSettle(host) {
+  var inst = host.__cbl;
+  if (!inst || !inst.r) return;
+  var chosen = JSON.parse(JSON.stringify(inst.r.filt || {}));
+  BK.dvDbf = chosen;
+  var shown = Object.assign({}, chosen);
+  if (shown.madeby) { shown.by = shown.madeby; delete shown.madeby; }
+  CBBooksAuditTools.narrowAddress(shown, ['mark', 'risk', 'rec', 'time', 'round', 'narr', 'ye', 'by']);
+  if ((chosen.ye === 'dated') !== !!BK.dvYeRead && !BK.dvSince) bkTab('daybook', true);
+}
+/** the list's narrowing is watched once per list (the Filters pop-up sits outside it, so the page listens), and the c / q row keys are wired */
 function bkJetWatch(host) {
   if (!host || !bkAudit() || BK.dvWatching === host) return;
   BK.dvWatching = host;
   var settle = function () {
     if (!host.isConnected) { document.removeEventListener('change', settle); document.removeEventListener('click', settle); return; }
-    setTimeout(function () {
-      var inst = host.__cbl;
-      if (!inst || !inst.r) return;
-      var filt = JSON.parse(JSON.stringify(inst.r.filt || {}));
-      BK.dvDbf = filt;
-      var shown = Object.assign({}, filt);
-      if (shown.madeby) { shown.by = shown.madeby; delete shown.madeby; }
-      CBBooksAuditTools.narrowAddress(shown, ['mark', 'risk', 'rec', 'time', 'round', 'narr', 'ye', 'by']);
-      if ((filt.ye === 'dated') !== !!BK.dvYeRead && !BK.dvSince) bkTab('daybook', true);
-    }, 0);
+    setTimeout(function () { bkJetSettle(host); }, 0);
   };
   document.addEventListener('change', settle);
   document.addEventListener('click', settle);
-  CBBooksAuditTools.keys(host, {
-    mark: function () { return BK.mk; },
-    on: bkAudit,
-    entryAt: function (rowEl) { var n = rowEl.getAttribute('data-no'); return ((BK.dv && BK.dv.r.entries) || []).filter(function (e) { return String(e.entry_no) === String(n); })[0]; }
-  });
+  CBBooksAuditTools.keys(host, { mark: function () { return BK.mk; }, on: bkAudit, entryAt: bkJetEntryAt });
+}
+/** every page is in: the firm seat's filters judge every entry now held */
+function bkJetRefresh(book) {
+  if (book.api && bkAudit()) book.api.refresh();
+}
+/** the entry a Day book row shows (its entry number is on the row) */
+function bkJetEntryAt(rowEl) {
+  var number = rowEl.getAttribute('data-no');
+  return ((BK.dv && BK.dv.r.entries) || []).filter(function (e) { return String(e.entry_no) === String(number); })[0];
 }
 /** the bar over the list: Checked n of m and All queries, then the since toggle (and in that view its count and Mark as checked), then the Risk note */
 function bkAuditPaint() {
-  var el = document.getElementById('bk_audit'), note = document.getElementById('bk_audit_note'), d = BK.dv;
-  if (!el || !d) return;
+  var el = document.getElementById('bk_audit'), note = document.getElementById('bk_audit_note'), book = BK.dv;
+  if (!el || !book) return;
   if (!bkAudit()) { el.innerHTML = ''; return; }
-  var T = CBBooksAuditTools;
-  el.innerHTML = '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><div id="bk_marks" data-testid="db-marks"></div><div id="bk_since" data-testid="db-since">' + T.sinceBar({ on: d.since, seen: d.seen, shown: (d.r.entries || []).length }) + '</div></div>';
-  T.wireSince({ on: d.since, toggle: bkSinceSet, markChecked: bkSinceMarkChecked });
-  if (note) note.innerHTML = d.since ? '' : T.riskNote();
+  var tools = CBBooksAuditTools;
+  el.innerHTML = '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><div id="bk_marks" data-testid="db-marks"></div><div id="bk_since" data-testid="db-since">' + tools.sinceBar({ on: book.since, seen: book.seen, shown: (book.r.entries || []).length }) + '</div></div>';
+  tools.wireSince({ on: book.since, toggle: bkSinceSet, markChecked: bkSinceMarkChecked });
+  if (note) note.innerHTML = book.since ? '' : tools.riskNote();
   BK.dvQ = false;
   BK.mk.bar(document.getElementById('bk_marks'), { onFilter: function (on) { BK.dvQ = on; if (on) bkQueriesPaint(); else bkQueriesBack(); } }).then(function (handle) { BK.dvBar = handle; });
 }
@@ -3168,6 +3187,7 @@ function bkQueriesPaint() {
     b.onclick = function () { BK.mk.sheet(b.getAttribute('data-mk-q'), { title: (b.querySelector('b') || {}).textContent, opener: b }); };
   });
 }
+/** All queries closed: the Day book list is drawn again */
 function bkQueriesBack() {
   var host = document.getElementById('bk_dvlist');
   if (!host || !BK.dv) return;
@@ -3219,7 +3239,7 @@ function bkDvLoadAll() {
         var note = bkDvPartialNote(book);
         if (note && typeof toast === 'function') toast(note);
         bkPagerPaint('bk_dvpager', 'db', book.r, 'Older', 'newest first', bkDvOlder);
-        if (book.api && bkAudit()) book.api.refresh(); /* the filters judge every entry now held */
+        bkJetRefresh(book);
       }
     }
   })();
