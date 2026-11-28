@@ -191,7 +191,7 @@
   }
   /** the Mark column is drawn only when the server says marking is on */
   function shownCols(report) {
-    var last = ['pl', 'bs'].indexOf(report.k) >= 0 && !grantKit.compareDrawn(report) ? grantKit.CMP_COLS : [];
+    var last = report.k === 'bs' && !grantKit.compareDrawn(report) ? grantKit.CMP_COLS : [];
     var cols = report.cols.filter(function (column) { return (column[2] !== 'mark' || grantKit.markable(report)) && (column[2] !== 'flag' || grantKit.flagsOn()) && (column[2] !== 'explain' || grantKit.explainOn()) && last.indexOf(column[0]) < 0; });
     return report.k === 'daybook' && grantKit.viewState.since ? cols.concat([['recorded_text', 'Posted']]) : cols; /* rank 10: the changed list says when and by whom each entry was posted */
   }

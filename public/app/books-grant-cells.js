@@ -21,7 +21,6 @@
   function compareDrawn(report) {
     var a = grantKit.viewState.answer;
     if (!a) return false;
-    if (report.k === 'pl') return !!a.compare;
     return report.k === 'bs' && [].concat(a.assets || [], a.liabilities || [], a.equity || []).some(function (row) { return row.change_minor != null; });
   }
   /** ASA 520: the one line that says what is highlighted, from the server's rule (nothing when last year was not read or the figures are hidden) */

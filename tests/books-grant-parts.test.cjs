@@ -52,14 +52,13 @@ const state = (over) => { kit.viewState = Object.assign({ host: null, o: { membe
 const report = (k) => kit.REPORTS.filter((r) => r.k === k)[0];
 
 t('the view exposes mount and duesVoice only', () => assert.deepStrictEqual(Object.keys(world.CBBooksGrantView).sort(), ['duesVoice', 'mount']));
-t('five reads, each with its endpoint and columns', () => {
-  assert.strictEqual(kit.REPORTS.map((r) => r.k).join(), 'pl,bs,daybook,dues,periods,bas');
+t('the firm view reads five; the trial balance and the P&L are the owner screen, a door', () => {
+  assert.strictEqual(kit.REPORTS.map((r) => r.k).join(), 'bs,daybook,dues,periods,bas');
   kit.REPORTS.forEach((r) => assert.ok(r.ep && r.cols.length, r.k));
 });
-t('queryOf: as at the end of the period for tb, from-to for the p&l, one day for both ends of the day book', () => {
+t('queryOf: as at the end of the period for tb, one day for both ends of the day book', () => {
   state({ period: { from: '2026-07-01', to: '2026-09-30' } });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('bs')))), { asOf: '2026-09-30' });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('pl')))), { from: '2026-07-01', to: '2026-09-30' });
   state({ day: '2026-08-02', period: { from: '2026-07-01', to: '2026-09-30' } });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('daybook')))), { from: '2026-08-02', to: '2026-08-02', limit: 100 });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('bs')))), { asOf: '2026-08-02' });
@@ -144,23 +143,19 @@ t('the risk cell is a labelled image, never colour alone; no risk is a dash (con
   assert.strictEqual(kit.figure({ risk_list: [] }, ['risk', 'Risk', 'risk']), '—');
 });
 t('every word goes through the string layer T(: the marking tx shows on the headings and notes', () => {
-  state({ answer: { currency: 'AUD', compare: true, over_rule: { pct_bp: 1000, min_minor: 50000 } } });
-  const note = kit.cmpNote(report('pl'));
+  state({ answer: { currency: 'AUD', assets: [{ change_minor: 5 }], over_rule: { pct_bp: 1000, min_minor: 50000 } } });
+  const note = kit.cmpNote(report('bs'));
   assert.ok(/«Highlighted»/.test(note) && /«and»/.test(note));
   assert.ok(/«Risk counts one point/.test(kit.riskNote(report('daybook'))));
 });
 t('the notes draw colours from the page theme variables (dark and the 390 phone follow the page)', () => {
-  state({ answer: { currency: 'AUD', compare: true, over_rule: { pct_bp: 1000, min_minor: 50000 } } });
-  const css = kit.cmpNote(report('pl')) + kit.riskNote(report('daybook'));
+  state({ answer: { currency: 'AUD', assets: [{ change_minor: 5 }], over_rule: { pct_bp: 1000, min_minor: 50000 } } });
+  const css = kit.cmpNote(report('bs')) + kit.riskNote(report('daybook'));
   const colours = css.match(/#[0-9a-fA-F]{3,6}\b/g) || [];
   assert.deepStrictEqual(colours, [], 'no hard-coded colour in the notes');
   assert.ok(/var\(--/.test(css));
 });
 t('the last-year columns are drawn only when the server read last year (fail closed)', () => {
-  state({ answer: { currency: 'AUD' } });
-  assert.strictEqual(kit.compareDrawn(report('pl')), false);
-  state({ answer: { currency: 'AUD', compare: {} } });
-  assert.strictEqual(kit.compareDrawn(report('pl')), true);
   state({ answer: { currency: 'AUD', assets: [{ change_minor: null }] } });
   assert.strictEqual(kit.compareDrawn(report('bs')), false);
 });

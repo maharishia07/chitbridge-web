@@ -27,12 +27,5 @@ ctx.window.innerHeight = 768; store.cb_acc_navfold = JSON.stringify({ 'Period en
 vm.runInContext("navPaint('overview')", ctx);
 assert.strictEqual(shutGroups(), 2, 'a group the owner opened stays open on a short window');
 
-/* F-67 */
-const g = read('app/books-grant-reports.js');
-const c2 = { esc: (x) => String(x), grantKit: { words: (x) => x }, root: { shopDay: (d) => 'D' + d } };
-vm.createContext(c2);
-vm.runInContext(cut(g, 'function forTag(a)', '/** the "As at'), c2);
-const tag = (a) => vm.runInContext('forTag(' + JSON.stringify(a) + ')', c2);
-assert.ok(/D2026-07-01 – D2026-11-21 · year to date/.test(tag({ from: '2026-07-01', to: '2027-06-30', period: { through: '2026-11-21' } })), 'a range past today is headed to today');
-assert.ok(/D2026-07-01 – D2026-09-30<\/span>/.test(tag({ from: '2026-07-01', to: '2026-09-30', period: {} })), 'a finished range keeps its own end');
-console.log('misfix-1121-web: 5 ok');
+/* F-67 (the P&L heading names the day a running range is read to) moved with the P&L to the owner's screen: tests/onep2-pl-one-path.test.cjs */
+console.log('misfix-1121-web: ok');
