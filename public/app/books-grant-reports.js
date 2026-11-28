@@ -93,9 +93,14 @@
   /** no day typed: the read is for the period (as at its end for tb, bs and dues; from – to for the p&l and the day book) */
   function periodQuery(report, period) {
     if (!period || !period.from || !report.day) return {};
-    if (report.day === 'asOf') return { asOf: period.to }; /* tb, bs, dues: as at the end of the period */
+    if (report.day === 'asOf') return { asOf: notAfterToday(period.to) }; /* tb, bs, dues: as at the end of the period */
     if (report.day === 'on') return { on: period.kind === 'year' ? period.to : dayHeld(period.to) }; /* the return: the period that holds the end of the period asked */
     return { from: period.from, to: period.to }; /* p&l, day book: for the period */
+  }
+  /** AUDBS: an as-at day that has not happened is asked as today (the owner's own default), so the firm's read and the owner's read ask one day; the server's E1 rule says the same for the ageing */
+  function notAfterToday(day) {
+    var today = root.CBShopTime && root.CBShopTime.today ? root.CBShopTime.today() : '';
+    return today && day > today ? today : day;
   }
   /** FW2-01: the return reads the period that holds the day it is asked, and the server ignores a day still to come (AT-03: a year's end still to come is no pick, so a year keeps the server's own default); a quarter or month that has begun but not ended (the quarter we are in) is asked at its last day that has happened */
   function dayHeld(end) {
