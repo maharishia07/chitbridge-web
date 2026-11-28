@@ -119,7 +119,7 @@ const ids = (w, key, v) => ENTRIES.filter((e) => w.root.__jet().filter((f) => f.
   /* ---- the acting guard: ONE allowance, exactly /api/marks, firm seats only ---- */
   const guardOf = (role) => { const w = world(role, ''); return (p, m) => { try { w.root.CBBooksActing.guard({ p, m }); return true; } catch (e) { return false; } }; };
   await ok('GUARD: auditor and adviser may call /api/marks (GET and POST); every other /api path is still refused; owner and no seat unchanged', () => {
-    for (const role of ['auditor', 'adviser']) { const g = guardOf(role); assert.ok(g('/api/marks', 'GET') && g('/api/marks', 'POST') && g('/api/books/daybook', 'GET')); assert.ok(!g('/api/marks/:id/messages', 'POST') && !g('/api/chits', 'GET')); }
+    for (const role of ['auditor', 'adviser']) { const g = guardOf(role); assert.ok(g('/api/marks', 'GET') && g('/api/marks', 'POST') && g('/api/books/daybook', 'GET')); assert.ok(g('/api/marks/:id/messages', 'GET') && g('/api/marks/:id/messages', 'POST')); assert.ok(!g('/api/marks/:id/messages/x', 'POST') && !g('/api/marks/:id', 'GET') && !g('/api/marks/x/messages', 'GET') && !g('/api/chits', 'GET')); }
     const own = guardOf('owner'); assert.ok(own('/api/marks', 'POST') && own('/api/chits', 'GET'));
     assert.ok(guardOf(null)('/api/marks', 'POST'));
   });
@@ -144,10 +144,10 @@ const ids = (w, key, v) => ENTRIES.filter((e) => w.root.__jet().filter((f) => f.
     assert.strictEqual(world(null, '').root.__bkAudit(), false);
   });
   await ok('MUTATION 2: widen the marks allowance to every role -> the owner-less seat check goes red; widen to every /api/marks* path -> red', () => {
-    const wide = acting.replace("if (path === MARKS_PATH) return context.role === 'auditor' || context.role === 'adviser';", "if (path === MARKS_PATH) return true;");
+    const wide = acting.replace("if (MARKS_PATHS.indexOf(path) >= 0) return context.role === 'auditor' || context.role === 'adviser';", "if (MARKS_PATHS.indexOf(path) >= 0) return true;");
     assert.notStrictEqual(wide, acting); assert.ok(!/context\.role === 'auditor' \|\| context\.role === 'adviser'; \/\*/.test(wide));
-    const prefix = acting.replace("path === MARKS_PATH", "path.indexOf(MARKS_PATH) === 0"); assert.notStrictEqual(prefix, acting);
-    assert.ok(/path === MARKS_PATH\) return context\.role === 'auditor' \|\| context\.role === 'adviser'/.test(acting));
+    const prefix = acting.replace('MARKS_PATHS.indexOf(path) >= 0', 'path.indexOf("/api/marks") === 0'); assert.notStrictEqual(prefix, acting);
+    assert.ok(/MARKS_PATHS\.indexOf\(path\) >= 0\) return context\.role === 'auditor' \|\| context\.role === 'adviser'/.test(acting) && /MARKS_PATHS = \['\/api\/marks', '\/api\/marks\/:id\/messages'\]/.test(acting));
   });
   await ok('MUTATION 3: Mark as checked through api() -> red', () => assert.ok(/api\('practiceBaseline'/.test(cap.replace('call: bkFlagCall', "x: api('practiceBaseline')"))));
   await ok('MUTATION 4: a tool drawn for a seat with no firm grant (firmSeat dropped) -> red', async () => {

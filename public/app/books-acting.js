@@ -175,10 +175,10 @@
   }
   /** CON-165: a firm seat reads the client's party list and one record (exactly these GETs: the CRM list and record and the two relationships picker lists, never the prefix /api/crm); the server decides, this only keeps the other CRM tabs from sending the header to routes that are closed */
   var PARTY_READS = [/^\/api\/crm\/parties\/?(\?.*)?$/, /^\/api\/crm\/parties\/(:id|[0-9a-f-]{36})\/?(\?.*)?$/i, /^\/api\/relationships\/(customers|suppliers)\/?(\?.*)?$/];
-  var MARKS_PATH = '/api/marks';
+  var MARKS_PATHS = ['/api/marks', '/api/marks/:id/messages']; /* the marks and a mark's thread (read and reply): exactly these two register paths */
   function mayCall(path, method) {
     if (!context || context.role === 'owner' || path.indexOf('/api/books') === 0) return true;
-    if (path === MARKS_PATH) return context.role === 'auditor' || context.role === 'adviser'; /* ONEP-2 PR7: the marks of the owner's Day book, in a firm seat only (exactly this path, any method; the adopter and the right to set ride the call and the server's grant decide) */
+    if (MARKS_PATHS.indexOf(path) >= 0) return context.role === 'auditor' || context.role === 'adviser'; /* ONEP-2 PR7: the marks of the owner's Day book, in a firm seat only (exactly these two paths, any method; the adopter and the right to set ride the call and the server's grant decide) */
     return (!method || String(method).toUpperCase() === 'GET') && PARTY_READS.some(function (test) { return test.test(path); });
   }
   /** no live grant for the store the address names: one sentence where the page is, the way back, nothing read */
