@@ -192,8 +192,8 @@
       var bill = result.bill || {};
       return (
         '<span class="bd-ask">' + escapeHtml('Same amount as an open bill (' + bill.ref + ', ' + amountText({ amount_minor: bill.open_minor }) + '). Use it?') + '</span> ' +
-        '<button data-cbsid="BKS017-B33" type="button" class="bd-btn" data-act="billuse"' + dataKey(item) + '>Yes, settle that bill</button> ' +
-        '<button data-cbsid="BKS017-B34" type="button" class="bd-btn" data-act="billno"' + dataKey(item) + '>No, pick an account</button>'
+        '<button data-cbsid="BKS017-B36" type="button" class="bd-btn" data-act="billuse"' + dataKey(item) + '>Yes, settle that bill</button> ' +
+        '<button data-cbsid="BKS017-B37" type="button" class="bd-btn" data-act="billno"' + dataKey(item) + '>No, pick an account</button>'
       );
     }
     /** whether the question a held-back line asks is one of these needs */

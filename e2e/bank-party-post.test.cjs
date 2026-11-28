@@ -19,6 +19,7 @@ let ran = 0;
 const ok = (name) => console.log('ok  ' + name) || ran++;
 const money = (minor) => ({ amount_minor: minor, currency: 'AUD' });
 const SUPPLIER = '11111111-1111-4111-8111-111111111111';
+const MODE = { untaxed: false };
 const LINE = { date: '2026-11-05', narration: 'Origin Energy', debit_minor: 33000, credit_minor: 0 };
 
 /** stand-in engines: the bank's words name the supplier (payment_made, no bill unless `against`); an account answer is an expense with the party and the engine's own split (330.00 = 300.00 + 30.00) */
@@ -32,7 +33,10 @@ function engines(against) {
       suggest: (line) => ({ event: { type: 'payment_made', date: line.date, amount: 330, party: SUPPLIER }, against: against || [] })
     },
     entry: {
-      resolve: (line, answers) => ({ ok: true, event: { type: 'expense', class: answers.account, paid_from: 'bank', date: line.date, amount: 300, party: answers.party }, tax: { tax_minor: 3000, direction: 'input', invoice_answer: 'held' } })
+      /* no account: the party alone (a payment); an account: the expense, taxed (330.00 = 300.00 + 30.00) or with no tax invoice (the whole figure, no tax) */
+      resolve: (line, answers) => (!answers.account ? { ok: true, event: { type: 'payment_made', date: line.date, amount: line.debit_minor / 100, party: answers.party } } : MODE.untaxed
+        ? { ok: true, event: { type: 'expense', class: answers.account, paid_from: 'bank', date: line.date, amount: line.debit_minor / 100, party: answers.party } }
+        : { ok: true, event: { type: 'expense', class: answers.account, paid_from: 'bank', date: line.date, amount: 300, party: answers.party }, tax: { tax_minor: 3000, direction: 'input', invoice_answer: 'held' } })
     },
     project: {
       refsOf: () => ['bank:' + 'a'.repeat(23) + '0-1'],
@@ -118,5 +122,47 @@ const refusal = (code, data) => Object.assign(new Error('refused'), { code, data
   ctl.resolveLine(only(ctl).key, { account: 'utilities', tax_kind: 'gst' });
   assert.strictEqual(ctl.view().results[only(ctl).key], undefined, 'a new answer lets the line be tried again');
   ok('NEEDS_WHICH_ACCOUNT: the line asks again, never Added');
+
+  /* 6 - the api asks on the ENTRY door: an open bill of this supplier is for exactly this amount */
+  calls = [];
+  const bill9 = { ref: 'B-9', open_minor: 33000 };
+  const eventAsk = async (key, o) => {
+    calls.push([key, o.body]);
+    if (key === 'booksEventPost' && !o.body.not_this_bill) throw refusal('NEEDS_WHICH_BILL', { needs: 'which_bill', bill: bill9 });
+    return key === 'booksPayRecord' ? { payment: {}, posted: { entry_no: 'PV-1' } } : { entry_no: 'MJ-2' };
+  };
+  const answered = () => { ctl.resolveLine(only(ctl).key, { account: 'utilities', tax_kind: 'gst' }); return ctl.postReady(); };
+  ctl = ctlOf(eventAsk);
+  run = await answered();
+  let q = ctl.view().results[only(ctl).key];
+  assert.deepStrictEqual([run.added, q.ok, q.needs, q.via, q.bill.ref], [0, false, 'which_bill', 'event', 'B-9'], 'asked, never Added');
+  assert.strictEqual(calls.length, 1, 'nothing else was sent behind the question');
+  ctl.useBill(only(ctl).key, false); /* no: a new expense */
+  run = await ctl.postReady();
+  assert.strictEqual(run.added, 1);
+  assert.deepStrictEqual([calls[1][0], calls[1][1].kind, calls[1][1].not_this_bill], ['booksEventPost', 'bank_expense_supplier', true], '"no" resends with not_this_bill');
+  ok('NEEDS_WHICH_BILL on the entry door: asked; "no" resends the same expense with not_this_bill');
+
+  calls = [];
+  ctl = ctlOf(eventAsk);
+  await answered();
+  ctl.useBill(only(ctl).key, true); /* yes: the payment of that bill */
+  assert.strictEqual(only(ctl).ready, true);
+  run = await ctl.postReady();
+  assert.strictEqual(run.added, 1);
+  assert.deepStrictEqual([calls[1][0], calls[1][1].allocations, calls[1][1].bank_line], ['booksPayRecord', [{ against_ref: 'B-9', amount_minor: 33000 }], true], '"yes" pays that bill, no expense');
+  assert.ok(!calls.slice(1).some((call) => call[0] === 'booksEventPost'), 'no second expense behind the yes');
+  ok('NEEDS_WHICH_BILL on the entry door: "yes" becomes the payment of that bill, never a second expense');
+
+  /* 7 - Bunnings: 96.80, no tax invoice: the whole figure is the expense, no GST, the party kept */
+  calls = [];
+  MODE.untaxed = true;
+  LINE.debit_minor = 9680; LINE.narration = 'Bunnings';
+  ctl = ctlOf(quiet);
+  ctl.resolveLine(only(ctl).key, { account: 'repairs', tax_kind: 'none' });
+  await ctl.postReady();
+  const bun = calls[0][1];
+  assert.deepStrictEqual([bun.kind, bun.supplier, bun.amount, 'input_tax_minor' in bun, 'tax_invoice' in bun], ['bank_expense_supplier', SUPPLIER, 96.8, false, false]);
+  ok('Bunnings 96.80, no tax invoice: one supplier expense of the gross, no GST keys, party kept');
   console.log('ran ' + ran);
 })().catch((e) => { console.error(e); process.exit(1); });

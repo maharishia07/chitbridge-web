@@ -204,13 +204,13 @@
   }
   /** the line as the adapter takes it: the item with what the owner ticked, typed and picked for it */
   function itemForPost_(preview, item) {
-    var billed = preview.billPick[item.key] ? { against: [preview.billPick[item.key]] } : {}; /* BB-P1-3: the open bill the owner said yes to */
+    var billed = Object.assign(preview.billPick[item.key] ? { against: [preview.billPick[item.key]] } : {}, preview.notBill[item.key] ? { notThisBill: true } : {}); /* BB-P1-3: the open bill the owner said yes to */
     return Object.assign({}, item, billed, { ticked: !!preview.ticks[item.key], interestMinor: preview.interest[item.key], loanRef: preview.loan[item.key] });
   }
   /** the adapter's reply as the preview keeps it */
   function resultOf_(reply) {
     if (reply && reply.ok) return { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null, posting_date: reply.posting_date || null };
-    return Object.assign({ ok: false, why: (reply && reply.why) || 'Not added.' }, reply && reply.needs ? { needs: reply.needs, bill: reply.bill || null } : {}); /* needs: the api's own question (which_account | which_bill), not a failure to report */
+    return Object.assign({ ok: false, why: (reply && reply.why) || 'Not added.' }, reply && reply.needs ? { needs: reply.needs, bill: reply.bill || null, via: reply.via || null } : {}); /* needs: the api's own question (which_account | which_bill), not a failure to report */
   }
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
@@ -302,7 +302,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, billPick: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, billPick: {}, notBill: {}, moved: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -438,7 +438,7 @@
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, billPick: {}, moved: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, taught: {}, ticks: {}, invoice: {}, feeTax: {}, interest: {}, loan: {}, pairs: {}, notMatch: {}, billPick: {}, notBill: {}, moved: {} };
     return Object.assign(answerMethods(opts, preview), monthMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
@@ -465,8 +465,12 @@
         if (!asked || asked.needs !== 'which_bill' || !asked.bill) return { ok: false, why: 'This line is not asking about a bill.' };
         if (yes) {
           preview.billPick[key] = { against_ref: asked.bill.ref, amount_minor: asked.bill.open_minor };
+          if (asked.via === 'event' && preview.resolved[key]) preview.resolved[key] = { party: preview.resolved[key].party }; /* the line was an expense with this supplier: it is now the payment of that bill, the party alone */
           delete preview.results[key];
           projectAgain(opts, preview);
+        } else if (asked.via === 'event') {
+          preview.notBill[key] = true; /* "no, it is a new expense": the next Add sends not_this_bill and the api posts it, noting it */
+          delete preview.results[key];
         } else preview.results[key] = { ok: false, why: 'Which account is this for?', needs: 'which_account', bill: null };
         return { ok: true };
       },

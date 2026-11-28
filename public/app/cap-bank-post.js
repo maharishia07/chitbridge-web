@@ -80,7 +80,10 @@
       if (event[key] != null) body[key] = event[key];
     });
     Object.assign(body, taxKeysOf(event, item));
-    if (body.kind === SUPPLIER_EXPENSE) body.supplier = partyId || namedPartyId(event); /* the party's id, made first when new */
+    if (body.kind === SUPPLIER_EXPENSE) {
+      body.supplier = partyId || namedPartyId(event); /* the party's id, made first when new */
+      if (item.notThisBill) body.not_this_bill = true; /* the owner said it is a new expense, not the open bill the api found */
+    }
     if (event.type === 'tax_payment') Object.assign(body, { paid_from: 'bank' }); /* the whole figure, the statement account's mode (modeOf below); the api puts it on the pack's one tax head */
     if (item.moveTo) body.if_locked = 'next_open'; /* W15-85: the person chose to post this locked month's line in the next open month; the api adds the "<Month> locked" note (W15-85a, one wording) */
     return modeOf ? modeOf(body) : body;
@@ -212,9 +215,16 @@
     var reply = await deps.api('booksLoanEmi', { params: { ref: item.loanRef }, body: loanEmiBody(item, deps.modeOf) });
     return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
   }
-  /** one entry through POST /events */
+  /** one entry through POST /events; the api (BB-P1-3) asks, with nothing posted, when this supplier has ONE open bill of exactly this amount: the answer is the line's question, never a failure */
   async function postEntry(deps, item, partyId) {
-    var reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
+    var reply;
+    try {
+      reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
+    } catch (failure) {
+      var asked = needsOf(failure);
+      if (!asked || asked.needs !== 'which_bill' || !asked.bill) throw failure;
+      return { ok: false, why: 'Same amount as an open bill. Use it?', needs: 'which_bill', bill: asked.bill, via: 'event' };
+    }
     return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null, posting_date: (reply && reply.posting_date) || null };
   }
   /** the question the api's 422 asks of a bank line (BB-P1-3): { needs: 'which_account' } or { needs: 'which_bill', bill: { ref, open_minor } }, read from the code and the body's own keys, never the sentence; null for any other refusal */
