@@ -22,7 +22,7 @@ const ask = (k, period, day) => { kit.viewState.period = period; kit.viewState.d
 assert.strictEqual(JSON.stringify(ask('bas', q2)), JSON.stringify({ on: '2026-11-27' }), 'FW2-01: the quarter in progress is asked at the last day that has happened');
 assert.strictEqual(JSON.stringify(ask('bas', q1)), JSON.stringify({ on: '2026-09-30' }), 'a past quarter is asked at its own end');
 assert.strictEqual(JSON.stringify(ask('bas', year)), JSON.stringify({ on: '2027-06-30' }), 'a year keeps its end (the server ignores it: its own default stays)');
-assert.strictEqual(JSON.stringify(ask('bs', q2, '2026-11-15')), JSON.stringify({ asOf: '2026-11-15' }), 'the balance sheet is as at the day: unchanged');
+assert.strictEqual(JSON.stringify(ask('dues', q2, '2026-11-15')), JSON.stringify({ asOf: '2026-11-15', control: '1' }), 'who owes whom is as at the day: unchanged');
 console.log('fw2-p1-period-1132: ok');
 
 /* FW2-03 (web half): the Day book's Attach receipt goes through the books door with the acting headers (X-Books-For), so an adviser's file lands in the CLIENT's books; the old POST /api/attachments carried the token alone and looked in the firm's own books */

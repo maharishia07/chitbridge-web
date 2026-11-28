@@ -199,7 +199,7 @@
       return { k: r.k, label: labelOf(r) };
     });
     if (isAdviser()) all.push({ k: grantKit.ACTIONS, label: 'Actions' });
-    if (!grantKit.viewState.why) all.push({ door: 'tb', id: 'bv_tb', testid: 'bv-tb-open', label: 'Trial balance' }, { door: 'pl', id: 'bv_pl', testid: 'bv-pl-open', label: 'Profit and loss' }); /* ONEP-2: owner screens opened in this seat, not read here */
+    if (!grantKit.viewState.why) all.push({ door: 'tb', id: 'bv_tb', testid: 'bv-tb-open', label: 'Trial balance' }, { door: 'pl', id: 'bv_pl', testid: 'bv-pl-open', label: 'Profit and loss' }, { door: 'bs', id: 'bv_bs', testid: 'bv-bs-open', label: 'Balance sheet' }); /* ONEP-2: owner screens opened in this seat, not read here */
     return all.map(tabButton).join('') + prepareButton() + bankButton();
   }
   /** ONE tab button definition: a read of this view (data-report) or a door to the owner's screen (a press opens it in the seat) */
@@ -211,7 +211,7 @@
   function tabSelect() {
     if (!phone() || grantKit.viewState.why || !root.ui || typeof root.ui.select !== 'function') return '';
     var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(labelOf(r)) }; });
-    options.push({ value: '_tb', label: words('Trial balance') }, { value: '_pl', label: words('Profit and loss') });
+    options.push({ value: '_tb', label: words('Trial balance') }, { value: '_pl', label: words('Profit and loss') }, { value: '_bs', label: words('Balance sheet') });
     if (isAdviser()) options.push({ value: grantKit.ACTIONS, label: words('Actions') }, { value: '_prepare', label: words('Prepare a journal') });
     else options.push({ value: '_bank', label: words('Bank') });
     return '<span class="bv-tabsel" data-testid="bv-tabsel">' + root.ui.select({
@@ -221,6 +221,7 @@
         if (value === '_bank') return openBank();
         if (value === '_tb') return openDoor('tb');
         if (value === '_pl') return openDoor('pl');
+        if (value === '_bs') return openDoor('bs');
         grantKit.viewState.report = value;
         tell();
         reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
@@ -294,7 +295,7 @@
       (grantKit.viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' + pagerSlot(report) +
       (grantKit.markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes; fd1117: the marks bar (count and All queries) sits UNDER the list with the notes, so the first data row stays where the ceiling holds it */ +
-      (grantKit.viewState.why ? '' : grantKit.riskNote(report) + grantKit.cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
+      (grantKit.viewState.why ? '' : grantKit.riskNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
     wirePainted(report);
   }
   /** the failure frame: a 403 the server named by a code says why and what to do and the way back to his queue (W19); anything else is the one frame as before */
@@ -312,6 +313,7 @@
     if ($('bv_bank')) $('bv_bank').onclick = openBank;
     if ($('bv_tb')) $('bv_tb').onclick = function () { openDoor('tb'); };
     if ($('bv_pl')) $('bv_pl').onclick = function () { openDoor('pl'); };
+    if ($('bv_bs')) $('bv_bs').onclick = function () { openDoor('bs'); };
     wireTabButtons();
     grantKit.wireSince();
     if (onActions()) grantKit.mountQueues();

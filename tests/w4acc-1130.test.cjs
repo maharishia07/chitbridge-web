@@ -21,12 +21,7 @@ ok('W4-14 the Switch client list drops a test shop, shows each country, one orde
   assert.strictEqual(out[0].country, 'NZ');
   assert.deepStrictEqual(cs(stores, held, 'a').map((o) => o.id), ['a', 'c', 'd', 'b'].sort((x, y) => ({ a: 'Wattle', c: 'Harbour', d: 'Mid', b: 'Zeta' }[x] < { a: 'Wattle', c: 'Harbour', d: 'Mid', b: 'Zeta' }[y] ? -1 : 1)), 'the open client stays even when it is a test shop');
 });
-ok('W4-16 the balance sheet profit line runs to the heading day (shown_as_at), not the year end still to come', () => {
-  const at2 = src.indexOf('function profitRow(row, a)');
-  const profitRow = new Function('grantKit', 'root', src.slice(at2, src.indexOf(String.fromCharCode(10) + "  }" + String.fromCharCode(10), at2) + 4) + '; return profitRow;')({ words: (w) => w }, { shopDay: (d) => d });
-  const row = profitRow({ role: 'profit_to_date', name: 'x' }, { fy_from: '2026-07-01', asOf: '2027-06-30', shown_as_at: '2026-11-26' });
-  assert.strictEqual(row.name, 'Profit 2026-07-01 – 2026-11-26');
-});
+/* ONEP-2 PR 3: the W4-16 profit line running to the heading day (shown_as_at) moved with the balance sheet to the owner's screen: tests/onep2-bs-one-path.test.cjs */
 ok('W4-06 an empty column is not drawn (Year end and Held by), and the strip says N of M', () => {
   const pr = read('public/app/books-practice.js'), band = read('public/app/books-practice-band.js');
   assert.ok(pr.includes("return key !== 'yend'") && pr.includes('r.holders.length'));

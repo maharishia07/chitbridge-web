@@ -152,7 +152,7 @@ const YEAR = '?from=2025-07-01&to=2026-06-30', WANT = 'booksPL{"compare":"year",
   await ok('GUARD: the door opens tab pl in the seat; the auditor may open it; one seed helper, called from the query', () => {
     const view = real['books-grant-view.js'], acting = read('public/app/books-acting.js');
     assert.ok(/door: 'pl', id: 'bv_pl'/.test(view) && /value: '_pl'/.test(view) && /auditAddressOf\(/.test(view));
-    assert.ok(/tab === 'tb' \|\| tab === 'pl'/.test(acting));
+    assert.ok(/AUDITOR_TABS = \[[^\]]*'tb', 'pl'/.test(acting));
     assert.ok(/function bkPlQuery\(\) \{\n  bkPlSeed\(\);/.test(cap));
   });
   const mutate = (file, fn) => Object.assign({}, real, { [file]: fn(real[file]) });

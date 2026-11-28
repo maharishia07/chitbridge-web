@@ -4559,8 +4559,12 @@ function bkTbTotalRowHTML(reply, currency, comparison) {
 }
 /** ONEP-2: the day the trial balance opens at when the address carries one (to=YYYY-MM-DD, the firm's door and the Bank way back): read ONCE per page, a bad or empty value is no pick (today stays). Owner and seat call this same function */
 function bkTbSeedDay() {
-  if (BK.tbSeeded) return '';
-  BK.tbSeeded = true;
+  return bkCarriedDay('tbSeeded');
+}
+/** ONEP-2: the ONE reader of the day the firm's door carries (to=YYYY-MM-DD). Read ONCE per page per screen (flag BK[key]); a bad day is no pick (''). Owner and seat call it; it writes nothing */
+function bkCarriedDay(key) {
+  if (BK[key]) return '';
+  BK[key] = true;
   var day = new URLSearchParams(location.search || '').get('to') || '';
   return /^\d{4}-\d{2}-\d{2}$/.test(day) && !isNaN(Date.parse(day)) ? day : '';
 }
@@ -4919,6 +4923,23 @@ async function bkPL(body) {
     body.innerHTML = bkRefused(e, 'Profit and loss');
   }
 }
+/** ONEP-2: the as-at day the balance sheet opens at when the address carries one (to=), read once; the owner's default (today) stays when it carries none */
+function bkBsSeed() {
+  var day = bkCarriedDay('bsSeeded');
+  if (!day) return;
+  BK_BS.kind = 'custom';
+  BK_BS.asOf = day;
+}
+/** the day a heading may say: the server's shown_as_at (the earlier of the day asked and the shop's today, P1-3), else the day asked */
+function bkBsShownDay(reply) {
+  return reply.shown_as_at || reply.asOf;
+}
+/** W20: the year's profit line carries its period: the server's own name (Net profit / Net loss) then fy_from to the heading day; no fy_from, no change */
+function bkBsLineName(x, reply) {
+  var to = bkBsShownDay(reply);
+  if (x.role !== 'profit_to_date' || !reply.fy_from || !to) return x.name;
+  return x.name + ' ' + bkSpan(reply.fy_from, to);
+}
 function bkBsPick(v) {
   BK_BS.kind = v;
   BK_BS.step = 0;
@@ -4934,7 +4955,7 @@ function bkBsDate() {
   bkTab('bs');
 }
 /** a side of the balance sheet: the pack's own chart heads, each with its ledgers and a subtotal, then the side's carried total */
-function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, change) {
+function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, change, reply) {
   /* leader-compare #2: `change` (the server read last year) adds Change and % after the year-ago column; a head or total, which carries none, stays blank */
   var cells = function (x) {
     var row = [{ v: bkFig(x.amount_minor, c) }, { v: bkFig(x.prior_month_minor, c), wide: true }, { v: bkFig(x.prior_year_minor, c) }];
@@ -4949,19 +4970,19 @@ function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, ch
     mine.forEach(function (x) {
       var pair = x.net_of && x.net_of.length === 2 ? x.net_of : null;
       var note = pair ? '<span class="bk-note" data-testid="st-netof" title="' + esc(tx('Net of') + ' ' + pair[0].name + ' ' + pair[0].code + ' ' + tx('less') + ' ' + pair[1].name + ' ' + pair[1].code) + '">' + esc(tx('net of') + ' ' + pair[0].name + ' ' + tx('less') + ' ' + pair[1].name) + '</span>' : '';
-      out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + note + '</span>', cells(x));
+      out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(bkBsLineName(x, reply || {}))) + note + '</span>', cells(x));
     });
     if (!same) out += bkStRow('bk-sub', esc(tx('Total') + ' ' + headGroup.name), cells(headGroup));
   });
   var known = (heads || []).map(function (headGroup) { return headGroup.code; });
   (items || []).filter(function (x) { return known.indexOf(x.group ? x.group.code : null) < 0; }).forEach(function (x) { /* a ledger on no listed head still shows: the lines must foot to the total the server carries (GF-05 M5) */
-    out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(x.name)) + '</span>', cells(x));
+    out += bkStRow(change && x.change_over ? 'bk-over' : '', '<span class="bk-ind">' + (x.code ? bkDrillLink(x.code, x.name, 'bs', fyFrom, asOf, 'bs', tx('Balance sheet')) : esc(bkBsLineName(x, reply || {}))) + '</span>', cells(x));
   });
   return out + bkStRow('bk-tot', esc(tx('Total') + ' ' + title.toLowerCase()), [{ v: bkFig(total, c), tid: tid }, { v: bkFig(totalWas && totalWas.month, c), wide: true }, { v: bkFig(totalWas && totalWas.year, c) }].concat(change ? [{ v: '' }, { v: '' }] : []));
 }
 /** the period bar's range text: the day, then the month-ago and year-ago days when compared */
 function bkBsRange(reply, compare) {
-  return tx('as at') + ' ' + bkDate(reply.asOf) + (compare.month ? ' · ' + bkDate(compare.month.as_at) + ' · ' + bkDate(compare.year && compare.year.as_at) : '');
+  return tx('as at') + ' ' + bkDate(bkBsShownDay(reply)) + (reply.shown_as_at && reply.shown_as_at < reply.asOf ? ' · ' + tx('year to date') : '') + (compare.month ? ' · ' + bkDate(compare.month.as_at) + ' · ' + bkDate(compare.year && compare.year.as_at) : '');
 }
 /** the chip beside the period bar: ✓ balances, or a warning when assets and liabilities + equity differ (or the net assets do not agree) */
 function bkBsBalancedChip(balanced, reply) {
@@ -4985,6 +5006,7 @@ function bkBsLeadHTML(reply, cmp, c) {
 }
 /* the Balance sheet tab: net assets first, "as at" a day with ‹ ›, this date beside a month ago and a year ago, by the pack's own chart heads */
 async function bkBS(body) {
+  bkBsSeed();
   var asked = BK_BS.kind === 'custom' ? { asOf: BK_BS.asOf || bkToday() } : { kind: BK_BS.kind, step: BK_BS.step };
   try {
     var reply = await api('booksBS', { query: asked });
@@ -4992,12 +5014,12 @@ async function bkBS(body) {
       asAt = reply.as_at || {},
       comparison = reply.compare || {},
       custom = BK_BS.kind === 'custom',
-      ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor),
+      ok = reply.balanced != null ? !!reply.balanced : Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor) /* the server's own verdict (routes/books.js balanced); the compare only for an older reply */,
       groups = reply.groups || {},
       fyFrom = reply.fy_from || bkFyFrom(),
       change = bkBsHasChange(reply);
     var opts = [['today', 'Today'], ['month', 'Last month end'], ['year', 'Last year end'], ['custom', 'Pick a date']];
-    var dates = custom ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' + esc(reply.asOf) + '" onchange="bkBsDate()">' : '';
+    var dates = custom ? '<input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' + esc(bkBsShownDay(reply)) + '" onchange="bkBsDate()">' : '';
     var wasOf = function (side) {
       return bkBsWas(comparison, side);
     };
@@ -5008,9 +5030,9 @@ async function bkBS(body) {
         extra: bkBsBalancedChip(ok, reply) }) +
       lead +
       '<div class="bk-scroll"><table class="bk-st" data-testid="bs-table"><thead><tr><th>' + esc(tx('Ledger')) + '</th><th class="num">' + esc(tx('This date')) + '</th><th class="num bk-wide">' + esc(tx('A month ago')) + '</th><th class="num">' + esc(tx('A year ago')) + '</th>' + (change ? '<th class="num">' + esc(tx('Change')) + '</th><th class="num">%</th>' : '') + '</tr></thead><tbody>' +
-      bkBsSide(tx('Assets'), reply.assets, groups.assets, currency, reply.total_assets_minor, wasOf('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom, change) +
-      bkBsSide(tx('Liabilities'), reply.liabilities, groups.liabilities, currency, reply.total_liabilities_minor, wasOf('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom, change) +
-      bkBsSide(tx('Equity'), reply.equity, groups.equity, currency, reply.total_equity_minor, wasOf('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom, change) +
+      bkBsSide(tx('Assets'), reply.assets, groups.assets, currency, reply.total_assets_minor, wasOf('total_assets_minor'), 'bs-total-assets', reply.asOf, fyFrom, change, reply) +
+      bkBsSide(tx('Liabilities'), reply.liabilities, groups.liabilities, currency, reply.total_liabilities_minor, wasOf('total_liabilities_minor'), 'bs-total-liabilities', reply.asOf, fyFrom, change, reply) +
+      bkBsSide(tx('Equity'), reply.equity, groups.equity, currency, reply.total_equity_minor, wasOf('total_equity_minor'), 'bs-total-equity', reply.asOf, fyFrom, change, reply) +
       bkStRow('bk-tot', esc(tx('Total liabilities and equity')), [{ v: bkFig(reply.total_liab_equity_minor, currency), tid: 'bs-total-le' }, { v: '', wide: true }, { v: '' }].concat(change ? [{ v: '' }, { v: '' }] : [])) +
       '</tbody></table></div>' + (change ? bkOverNote(reply.over_rule, currency, 'BKS006-P02', 'bs-over-note') : ''); /* the note sits UNDER the table */
   } catch (e) {

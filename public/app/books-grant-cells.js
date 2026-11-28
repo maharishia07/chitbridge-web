@@ -11,25 +11,10 @@
 (function (root) {
   'use strict';
   var grantKit = root.CBBooksGrantKit; /* created by books-grant-reports.js, which loads first */
-  grantKit.compareDrawn = compareDrawn;
-  grantKit.cmpNote = cmpNote;
   grantKit.riskNote = riskNote;
   grantKit.minorWords = minorWords;
   grantKit.riskWords = riskWords;
   grantKit.figure = figure;
-  /** leader-compare #2: are the Last year · Change · % columns drawn for this read? Only when the SERVER read last year: the P&L and the trial balance say so in `compare`, the balance sheet by a change on its lines (a year before the books began carries none) */
-  function compareDrawn(report) {
-    var a = grantKit.viewState.answer;
-    if (!a) return false;
-    return report.k === 'bs' && [].concat(a.assets || [], a.liabilities || [], a.equity || []).some(function (row) { return row.change_minor != null; });
-  }
-  /** ASA 520: the one line that says what is highlighted, from the server's rule (nothing when last year was not read or the figures are hidden) */
-  function cmpNote(report) {
-    var a = grantKit.viewState.answer, rule = a && a.over_rule;
-    if (!a || !compareDrawn(report) || !rule || rule.pct_bp == null || rule.min_minor == null) return '';
-    var amount = minorWords(rule.min_minor).replace(/[.,]0+$/, '');
-    return '<style>.bv-over,.bv-over>*{background:var(--amber-t)}.bv-over-dot{color:var(--amber-i)}.bv-cmpnote{margin:6px 0;color:var(--muted);font-size:var(--fs-1,13px)}</style><div class="bv-cmpnote" data-cbsid="NET005-P03" data-testid="bv-cmp-note">' + esc(grantKit.words('Highlighted') + ': ' + grantKit.words('change of') + ' ' + rule.pct_bp / 100 + '% ' + grantKit.words('and') + ' ' + amount + ' ' + grantKit.words('or more')) + '</div>';
-  }
   /** NET005-P05: under the Day book, the fixed hours and day counts the Risk column and its filters use (one sentence; not a setting) */
   function riskNote(report) {
     if (report.k !== 'daybook' || grantKit.viewState.since) return '';
