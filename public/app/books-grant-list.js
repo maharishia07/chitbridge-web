@@ -1,9 +1,8 @@
 /**
  * books-grant-list.js — ACC-176 part of books-grant-view.js: the list a read is shown in.
- *
- * OWNS      the list configuration of one read (columns, search, drill, empty state), the Day book's filters and their address, its keyboard (c checks, q asks), and the two aged tables of Who owes whom
+ * OWNS      the list configuration of one read (columns, search, drill, empty state) and the two aged tables of Who owes whom
  * CALLED BY books-grant-view.js (through root.CBBooksGrantKit)
- * FLOW      kit.paintRows(host, report) → CBList mounted in host; the narrowing is remembered and written to the address
+ * FLOW      kit.paintRows(host, report) → CBList mounted in host
  * CARD      04-network/ACC-176-AUDITOR-GRANT
  *
  * Paints what the server answered and computes nothing. Loaded before books-grant-view.js (network.html).
@@ -17,80 +16,12 @@
     if (report.panels) return paintDues(host, report);
     var rows = rowsOf(report);
     var config = Object.assign({ foldHead: true } /* a phone's head folds to one chip */, listConfig(report, rows));
-    if (report.k === 'daybook') narrowDaybook(host, config);
     grantKit.viewState.o.mountList(host, config);
-    if (report.k === 'daybook') { wireDaybook(host, report); root.setTimeout(function () { rememberNarrowing(host); }, 0); }
   }
-  /** the rows of a read as the list draws them (numbered); the Day book asks again at every paint, so a page "Show more" adds is in them */
+  /** the rows of a read as the list draws them (numbered) */
   function rowsOf(report) {
     return report.rows(grantKit.viewState.answer || {}).concat(grantKit.totalRows(report.k, grantKit.viewState.answer || {})).map(function (row, n) {
       return Object.assign({ _n: n }, row);
-    });
-  }
-  /** the range's Σ Dr / Cr as the server added them (never added up here), or '' while the server sent none */
-  function pagerSums(answer) {
-    var totals = answer.totals;
-    if (!totals || totals.dr_minor == null) return '';
-    return ' · ' + grantKit.words('Total debit') + ' ' + root.CBBooksActing.figure(totals.dr_minor, answer.currency) + ' · ' + grantKit.words('Total credit') + ' ' + root.CBBooksActing.figure(totals.cr_minor, answer.currency);
-  }
-  /** the Day book's own "Show more" (its own code: the ledger drill's NET005-B05 is another element) */
-  function moreButton() {
-    return '<button data-cbsid="NET005-B11" type="button" class="act quiet" id="bv_more" data-testid="bv-more">' + esc(grantKit.words('Show more')) + '</button>';
-  }
-  /** the pager's markup: "Show more" while the server has a next page, then "held of total" and the range's sums; '' when the range is empty */
-  function pagerHtml(answer) {
-    var held = (answer.entries || []).length, total = Number(answer.total || held);
-    var heldOf = '<span class="sub" data-testid="bv-held">' + held + ' ' + esc(grantKit.words('of')) + ' ' + total + esc(pagerSums(answer)) + '</span>';
-    if (!answer.next && held >= total) return total ? '<div class="nw-acts">' + heldOf + '</div>' : '';
-    return '<div class="nw-acts">' + (answer.next ? moreButton() : '') + heldOf + '</div>';
-  }
-  /** 1132: under the Day book, how many entries are held of the range's total (the server's) with its Dr / Cr, and "Show more" while the server has a next page; the filters work on what is held, and a search or the CSV read the rest first */
-  grantKit.paintPager = function (node, report, onMore) {
-    if (!node) return;
-    var answer = grantKit.viewState.answer;
-    node.innerHTML = answer && !grantKit.viewState.since ? pagerHtml(answer) : '';
-    var button = node.querySelector('#bv_more');
-    if (button) button.onclick = function () {
-      button.disabled = true;
-      onMore(report).then(null, function () { button.disabled = false; });
-    };
-  };
-  /* ── A3C rank 3: review by exception. The Day book's Mark · Evidence · Type filters (books-grant-filters.js) on the one list control; the choice is remembered for this client and rides the address (&dbf_mark= &dbf_ev= &dbf_kind=) ── */
-  function narrowDaybook(host, config) {
-    var F = root.CBBooksGrantFilters;
-    if (!F) return;
-    var all = F.filtersFor(grantKit.viewState.mk, { fl: grantKit.flagsOn() ? grantKit.viewState.fl : null, period: function () { return grantKit.viewState.period; }, currency: function () { return grantKit.viewState.answer && grantKit.viewState.answer.currency; }, region: function () { return grantKit.viewState.answer && grantKit.viewState.answer.country; }, rows: function () { return (grantKit.viewState.answer && grantKit.viewState.answer.entries) || []; } });
-    config.filters = all.filter(function (f) { return f.key !== 'mark' || grantKit.markable({ k: 'daybook' }); });
-    if (grantKit.viewState.dbf === undefined) grantKit.viewState.dbf = F.fromAddress(root.location.search); /* the first Day book of this client reads the address; later ones, what the person chose */
-    var kept = {};
-    config.filters.forEach(function (f) { if (grantKit.viewState.dbf[f.key]) kept[f.key] = grantKit.viewState.dbf[f.key]; });
-    config.preset = { filt: kept };
-  }
-  /** after any press or change in the list: remember the narrowing and write it to the address (replace, never a new history entry) */
-  function rememberNarrowing(host) {
-    var filters = root.CBBooksGrantFilters, inst = host.__cbl;
-    if (!filters || !inst || !inst.r) return;
-    grantKit.viewState.dbf = JSON.parse(JSON.stringify(inst.r.filt || {})); /* the list's own remembered choices (api.state() also needs its column choices, which a fresh list has not made) */
-    if (grantKit.afterYearEnd() !== !!grantKit.viewState.yeRead && grantKit.current().k === 'daybook' && !grantKit.viewState.day) grantKit.reload(); /* Year end · Dated after it is a different read (the days after the period): once per change, never in a loop */
-    writeNarrowingAddress(filters);
-  }
-  /** the narrowing rides the address (replace, never a new history entry): the shared module writes it */
-  function writeNarrowingAddress(filters) {
-    root.CBBooksAuditTools.narrowAddress(grantKit.viewState.dbf, Object.keys(filters.fromAddress('?' + filters.toAddress(grantKit.viewState.dbf))));
-  }
-  /** A3C rank 8: on a focused Day book row "c" checks it and moves down, "q" opens its question; never while typing (books-audit-tools.js keys) */
-  function wireDaybook(host, report) {
-    if (host.__bvKeys) return;
-    var settle = function () {
-      if (!host.isConnected) { root.document.removeEventListener('change', settle); root.document.removeEventListener('click', settle); return; }
-      root.setTimeout(function () { rememberNarrowing(host); }, 0);
-    };
-    root.document.addEventListener('change', settle); /* the Filters pop-up sits outside the list: listen on the page */
-    root.document.addEventListener('click', settle);
-    root.CBBooksAuditTools.keys(host, {
-      mark: function () { return grantKit.viewState.mk; },
-      on: function () { return grantKit.markable(report); },
-      entryAt: function (rowEl) { return report.rows(grantKit.viewState.answer || {})[Number(rowEl.getAttribute('data-row'))]; }
     });
   }
   /** W21: the two headings in the reader's voice: a firm reads "Customers owe <client>" and "<client> owes suppliers"; the owner's own books say you (no member = the owner) */
@@ -153,51 +84,42 @@
       grantKit.viewState.o.mountList(grantKit.$(who === 'customer' ? 'bv_dues_c' : 'bv_dues_s'), Object.assign({ foldHead: true }, config));
     });
   }
-  /** the Mark column is drawn only when the server says marking is on */
+  /** the columns the read sends, as the list draws them */
   function shownCols(report) {
-    var cols = report.cols.filter(function (column) { return (column[2] !== 'mark' || grantKit.markable(report)) && (column[2] !== 'flag' || grantKit.flagsOn()) && (column[2] !== 'explain' || grantKit.explainOn()); });
-    return report.k === 'daybook' && grantKit.viewState.since ? cols.concat([['recorded_text', 'Posted']]) : cols; /* rank 10: the changed list says when and by whom each entry was posted */
+    return report.cols;
   }
-  var HTML_KINDS = ['mark', 'flag', 'evidence', 'risk', 'explain']; /* the columns whose cell is html */
   var HTML_NAMES = ['change_minor', 'party_ref', 'lock_note'];
-  var KEPT_KINDS = ['mark', 'flag', 'evidence']; /* the Mark and Evidence chips and the Party · ref are never cut to make room (list-ctl keep) */
-  /** an amount, a percent, a net balance or a risk count: right-aligned */
+  /** an amount, a percent or a net balance: right-aligned */
   function isNumberColumn(column) {
-    return [grantKit.MONEY, grantKit.PCT, grantKit.DRCR, 'risk'].indexOf(column[2]) >= 0;
+    return [grantKit.MONEY, grantKit.PCT, grantKit.DRCR].indexOf(column[2]) >= 0;
   }
   /** a cell of html (escaped where it was built) rather than text */
   function isHtmlColumn(column) {
-    return HTML_KINDS.indexOf(column[2]) >= 0 || HTML_NAMES.indexOf(column[0]) >= 0;
+    return HTML_NAMES.indexOf(column[0]) >= 0;
   }
   /** which columns stay on a narrow screen: the first, the name, the party and the amounts (1), the rest go first (2) Last year and % go first on a narrow screen: the amount and its change stay */
   function columnPriority(column, index) {
-    if (index === 0 || column[0] === 'name' || column[0] === 'party_ref' || column[2] === 'risk') return 1;
+    if (index === 0 || column[0] === 'name' || column[0] === 'party_ref') return 1;
     return column[2] === grantKit.MONEY ? 1 : 2;
   }
-  /** a column's width: its own in the Day book, else by what it holds */
+  /** a column's width: by what it holds */
   function columnWidth(column) {
-    if (grantKit.DAYBOOK_W[column[0]]) return grantKit.DAYBOOK_W[column[0]];
-    if (column[2] === 'mark') return 190;
     return column[2] === grantKit.MONEY ? 140 : 180;
   }
-  /** the Day book's phone card, in lines: entry no + amount, then day · kind · party, then the chips (evidence, mark, risk, saved); a word beside a chip says nothing the chip does not (nl) */
-  var DAYBOOK_CARD = { entry_no: { cl: 1 }, amount_minor: { cl: 1, nl: true }, posting_date: { cl: 2, nl: true }, kind: { cl: 2, nl: true }, party_ref: { cl: 2, nl: true }, evidence: { nl: true }, mark: { nl: true }, flag: { nl: true } };
   /** one column of the list: how it is headed, sized, sorted, kept and painted */
   function listColumn(column, index, all, report) {
-    return Object.assign({}, report && report.k === 'daybook' ? DAYBOOK_CARD[column[0]] : null, {
+    return Object.assign({}, {
       html: isHtmlColumn(column),
       key: column[0],
       label: grantKit.words(column[1]),
       prio: columnPriority(column, index),
       num: isNumberColumn(column),
-      sort: column[2] === 'risk' ? true : undefined, dir0: column[2] === 'risk' ? -1 : undefined, /* Risk is the one Day book column the reader sorts: most risks first (a press on the header; the page opens in book order) */
-      keep: KEPT_KINDS.indexOf(column[2]) >= 0 || column[0] === 'party_ref',
+      keep: column[0] === 'party_ref',
       w: columnWidth(column),
       cell: function (row) {
         return grantKit.figure(row, column);
       },
       value: function (row) {
-        if (column[2] === 'risk') return (row.risk_list || []).length;
         return row[column[0]] == null ? '' : String(row[column[0]]);
       }
     });
@@ -219,9 +141,8 @@
       tools: { search: rows.length >= SEARCH_FROM, bar: rows.length > BAR_FROM } /* W19: a short list is read at a glance; no search box under ten rows, no tools bar up to twelve (T6: first data by 20% / 30%) */,
       defaultCols: shownCols(report).map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
       rows: function () {
-        return report.k === 'daybook' ? rowsOf(report) : rows;
+        return rows;
       },
-      loadAll: report.k === 'daybook' && !grantKit.viewState.since ? { incomplete: function () { var a = grantKit.viewState.answer; return !!(a && a.next && !a.capped && !a.failed); }, run: function () { return grantKit.loadAllDaybook(report); } } : undefined, /* a search over 100 of 307 would say "Nothing matches" for an entry that exists */
       id: function (row) {
         return row._n;
       },
@@ -238,7 +159,7 @@
       },
       rowClass: function (row) { return row.change_over ? 'bv-over' : ''; },
       onOpen: rowOpener(report),
-      empty: waitingEmpty(report) || (report.k === 'daybook' && grantKit.viewState.since ? { title: grantKit.words('Nothing has changed since your last check'), body: grantKit.words('No entries were posted since then.') } : { title: grantKit.words('Nothing to show here'), body: grantKit.words(grantKit.viewState.day || !grantKit.viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') })
+      empty: waitingEmpty(report) || { title: grantKit.words('Nothing to show here'), body: grantKit.words(grantKit.viewState.day || !grantKit.viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
     };
   }
   /** ACC-410: a return the shop's setup still waits for says what it waits for (the server's sentence), never an empty list; null for every other read */

@@ -83,7 +83,7 @@ check(/period: grantKit\.viewState\.period/.test(view), 'the view hands its peri
 /* rank 8: focus kept, a key that marks */
 let cap = src('cap-mark.js');
 if (mutate === 'focus') cap = cap.replace('next.focus()', '0');
-let keys = src('books-grant-list.js');
+let keys = src('books-audit-tools.js');
 if (mutate === 'typing') keys = keys.replace('/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || ', '');
 check(/keepFocus\(host, button, hostControl\.ctl\.set\(id, 'clear', '', button\)\)/.test(cap) && /next\.focus\(\)/.test(cap), 'a Check hands the focus to the row new chip, not the page top');
 check(/event\.key !== 'c' && event\.key !== 'q'/.test(keys) && /\^\(INPUT\|TEXTAREA\|SELECT\)\$/.test(keys) && /ctrlKey \|\| event\.metaKey \|\| event\.altKey/.test(keys), 'c and q act only on a row, never in Search or with a modifier');

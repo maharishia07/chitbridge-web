@@ -27,7 +27,7 @@ const t = (name, fn) => {
   } catch (e) { fail(e); }
 };
 
-const PARTS = ['public/app/ui-field.js', 'public/app/ui-money.js', 'public/app/books-audit-tools.js', 'public/app/books-grant-reports.js', 'public/app/books-grant-cells.js', 'public/app/books-grant-marks.js', 'public/app/books-grant-list.js', 'public/app/books-grant-view.js'];
+const PARTS = ['public/app/ui-field.js', 'public/app/ui-money.js', 'public/app/books-grant-reports.js', 'public/app/books-grant-cells.js', 'public/app/books-grant-marks.js', 'public/app/books-grant-list.js', 'public/app/books-grant-view.js'];
 const DOOR = 'public/app/books-clients-door.js', API = 'public/app/books-grant-api.js';
 function load(extra) {
   const root = Object.assign({
@@ -52,62 +52,19 @@ const state = (over) => { kit.viewState = Object.assign({ host: null, o: { membe
 const report = (k) => kit.REPORTS.filter((r) => r.k === k)[0];
 
 t('the view exposes mount and duesVoice only', () => assert.deepStrictEqual(Object.keys(world.CBBooksGrantView).sort(), ['duesVoice', 'mount']));
-t('the firm view reads five; the trial balance, the P&L and the balance sheet are the owner screen, a door', () => {
-  assert.strictEqual(kit.REPORTS.map((r) => r.k).join(), 'daybook,dues,periods,bas');
+t('the firm view reads three; the day book, the trial balance, the P&L and the balance sheet are the owner screen, a door', () => {
+  assert.strictEqual(kit.REPORTS.map((r) => r.k).join(), 'dues,periods,bas');
   kit.REPORTS.forEach((r) => assert.ok(r.ep && r.cols.length, r.k));
 });
-t('queryOf: as at the end of the period for tb, one day for both ends of the day book', () => {
+t('queryOf: as at the end of the period for the dues, one day when a day is typed', () => {
   state({ period: { from: '2026-07-01', to: '2026-09-30' } });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('dues')))), { control: '1', asOf: '2026-09-30' });
   state({ day: '2026-08-02', period: { from: '2026-07-01', to: '2026-09-30' } });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('daybook')))), { from: '2026-08-02', to: '2026-08-02', limit: 100 });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('dues')))), { control: '1', asOf: '2026-08-02' });
-});
-/* ── batch 1132: the firm's Day book asks ONE page, "Show more" the next, the totals stay the server's ── */
-t('1132 the Day book asks ONE page in every shape of its question (period, day, after the year end, no period); the other reads ask none', () => {
-  const asks = (over) => JSON.parse(JSON.stringify(kit.queryOf(report('daybook'))));
-  state({ period: { from: '2026-07-01', to: '2026-09-30' } });
-  assert.deepStrictEqual(asks(), { from: '2026-07-01', to: '2026-09-30', limit: kit.DAYBOOK_PAGE });
-  state({ day: '2026-08-02' });
-  assert.strictEqual(asks().limit, 100);
-  state({});
-  assert.strictEqual(asks().limit, 100, 'no period typed: still one page, never the whole range');
-  state({ since: true, period: { from: '2026-07-01', to: '2026-09-30' } });
-  assert.strictEqual(asks().limit, 500, 'the since view names its own cap');
-  state({ period: { from: '2026-07-01', to: '2026-09-30' } });
-  assert.strictEqual(Object.prototype.hasOwnProperty.call(JSON.parse(JSON.stringify(kit.queryOf(report('dues')))), 'limit'), false);
-});
-t('1132 GUARD: every read of the Day book in the firm view carries a limit (fails on the whole-range read of 27 Nov)', () => {
-  ['books-grant-view.js', 'books-grant-drill.js'].forEach((name) => {
-    const text = fs.readFileSync(path.join(APP, name), 'utf8');
-    const calls = text.split(String.fromCharCode(10)).filter((line) => /'readDaybook'/.test(line) && !/^\s*(\/\/|\*)/.test(line));
-    assert.ok(calls.length, name + ' reads the Day book');
-    calls.forEach((line) => assert.ok(/limit/.test(line), name + ' reads the Day book with no limit: ' + line.trim().slice(0, 120)));
-  });
-  const reports = fs.readFileSync(path.join(APP, 'books-grant-reports.js'), 'utf8');
-  assert.ok(/report\.k === 'daybook' && !grantKit\.viewState\.since \? \{ limit: grantKit\.DAYBOOK_PAGE \}/.test(reports.replace(/\s+/g, ' ')), 'queryOf no longer adds the Day book page');
-});
-t('1132 the pager says held of total with the server Dr / Cr, offers Show more while the server has a next page, and draws nothing summed on the page', () => {
-  state({ answer: { currency: 'AUD', entries: [{ entry_id: 'a', amount_minor: 999999 }, { entry_id: 'b', amount_minor: 999999 }], total: 307, next: '2026-08-02|JV/2', totals: { dr_minor: 123456, cr_minor: 123456 } } });
-  const node = { innerHTML: '', querySelector: () => null };
-  kit.paintPager(node, report('daybook'), () => Promise.resolve());
-  assert.ok(/data-testid="bv-more"/.test(node.innerHTML) && /data-cbsid="NET005-B11"/.test(node.innerHTML));
-  assert.ok(/2 «of» 307/.test(node.innerHTML), node.innerHTML);
-  assert.ok(/AUD 123456/.test(node.innerHTML) && !/1999998/.test(node.innerHTML), 'the totals are the servers own, never the held entries added up');
-  state({ answer: { currency: 'AUD', entries: [{ entry_id: 'a' }], total: 1, next: null, totals: { dr_minor: 5, cr_minor: 5 } } });
-  kit.paintPager(node, report('daybook'), () => Promise.resolve());
-  assert.ok(!/bv-more/.test(node.innerHTML) && /1 «of» 1/.test(node.innerHTML), 'the last page: no Show more');
-  state({ since: true, answer: { entries: [{}], total: 1 } });
-  kit.paintPager(node, report('daybook'), () => Promise.resolve());
-  assert.strictEqual(node.innerHTML, '', 'the changed-since list has its own cap and no pager');
 });
 t('queryOf fails closed to the server default: no period and no day asks nothing', () => {
   state({});
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('dues')))), { control: '1' });
-});
-t('queryOf: the since view reads the person\'s own check point, no date range, capped', () => {
-  state({ since: true, period: { from: '2026-07-01', to: '2026-09-30' } });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('daybook')))), { since: 'mine', limit: 500 });
 });
 t('figure: money is the server\'s minor units in the answer\'s currency; a nil debit is blank', () => {
   state({});
@@ -136,32 +93,6 @@ t('a supplier\'s balance is what is owed (no minus); an empty aged bucket is bla
   assert.strictEqual(kit.figure({ age_d0_30: '0' }, ['age_d0_30', '1–30', kit.MONEY]), '');
   assert.strictEqual(kit.figure({}, ['age_d0_30', '1–30', kit.MONEY]), '—');
 });
-t('the risk cell is a labelled image, never colour alone; no risk is a dash (contrast)', () => {
-  state({});
-  const cell = kit.figure({ risk_list: ['a weekend', 'a round sum'] }, ['risk', 'Risk', 'risk']);
-  assert.ok(/role="img"/.test(cell) && /aria-label="/.test(cell) && />2</.test(cell));
-  assert.strictEqual(kit.figure({ risk_list: [] }, ['risk', 'Risk', 'risk']), '—');
-});
-t('every word goes through the string layer T(: the marking tx shows on the notes', () => {
-  state({ answer: { currency: 'AUD' } });
-  assert.ok(/«Risk counts one point/.test(kit.riskNote(report('daybook'))));
-});
-t('the notes draw colours from the page theme variables (dark and the 390 phone follow the page)', () => {
-  state({ answer: { currency: 'AUD' } });
-  const css = kit.riskNote(report('daybook'));
-  const colours = css.match(/#[0-9a-fA-F]{3,6}/g) || [];
-  assert.deepStrictEqual(colours, [], 'no hard-coded colour in the notes');
-  assert.ok(/var\(--/.test(css));
-});
-t('marking is off without the server\'s say-so: no mark helper, no marks bar, and the keyboard does nothing', () => {
-  state({ mk: null });
-  assert.strictEqual(kit.markable({ k: 'daybook' }), false);
-  state({ mk: { state: () => ({ may: null }) } });
-  assert.strictEqual(kit.markable({ k: 'daybook' }), false);
-  state({ mk: { state: () => ({ may: { set: { ok: true } } }) } });
-  assert.strictEqual(kit.markable({ k: 'daybook' }), true);
-  assert.strictEqual(kit.markable({ k: 'tb' }), false);
-});
 t('the list of a read: CSV is off (read only), no search under ten rows, a Months row opens its month', () => {
   const st = state({ answer: { currency: 'AUD', entries: [] } });
   let config = null;
@@ -171,13 +102,6 @@ t('the list of a read: CSV is off (read only), no search under ten rows, a Month
   assert.strictEqual(config.tools.search, false);
   assert.strictEqual(typeof config.onOpen, 'function');
   assert.ok(/«Nothing to show here»/.test(config.empty.title));
-});
-t('a failed read is a frame\'s sentence, not an empty table: the since view says what it did not find (could not read words)', () => {
-  const st = state({ since: true, answer: { currency: 'AUD', entries: [] } });
-  let config = null;
-  st.o.mountList = (host, c) => { config = c; };
-  kit.paintRows({ addEventListener() {}, querySelectorAll: () => [], isConnected: true }, report('daybook'));
-  assert.ok(/«Nothing has changed since your last check»/.test(config.empty.title));
 });
 t('the grants list: a login that may not list gets nothing extra, an unreadable list says so, the adviser grant wins (refusal path)', () => {
   const apiWorld = load({ CBBooksGrantApi: undefined });

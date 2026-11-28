@@ -23,20 +23,19 @@
   grantKit.$ = $;
   grantKit.current = current;
   grantKit.onActions = onActions;
-  grantKit.afterYearEnd = afterYearEnd;
-  grantKit.rereadChoices = rereadChoices;
   grantKit.openMonth = openMonth;
   grantKit.paintList = paintList;
   grantKit.drill = drill;
   grantKit.alive = alive;
   grantKit.reload = reload;
-  grantKit.viewState = { host: null, o: {}, report: 'daybook', day: '', answer: null, why: null, mk: null, period: null, range: null, choices: undefined };
-  /** where a reviewer lands: the auditor on the Day book (the entries are the job), the adviser on the trial balance */
+  grantKit.viewState = { host: null, o: {}, report: 'dues', day: '', answer: null, why: null, period: null, range: null, choices: undefined };
+  /** is k a read this view paints (or the Actions tab) */
   function viewKnown(k) {
     return k === grantKit.ACTIONS || grantKit.REPORTS.some(function (r) { return r.k === k; });
   }
+  /** the read this view holds when it opens (a client's first visit goes straight to the owner's Day book: mount) */
   function homeOf(options) {
-    return 'daybook'; /* ONEP-2: the trial balance is the owner's screen now (a door), so both seats land on the Day book until it is a door too */
+    return 'dues'; /* ONEP-2 PR7b: the Day book is the owner's screen (a door), so a client opens on it (mount) and, coming back, on the first read this view has */
   }
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -55,11 +54,6 @@
   }
   function isAdviser() {
     return grantKit.viewState.o.member.role === 'adviser';
-  }
-  /** JET (ASA 560): "Year end · Dated after it" is pressed (the list's choice, or the address on the first read): the Day book reads the days after the period, through the same route */
-  function afterYearEnd() {
-    var F = root.CBBooksGrantFilters, chosen = grantKit.viewState.dbf !== undefined ? grantKit.viewState.dbf : F ? F.fromAddress(root.location.search) : {};
-    return !!F && chosen.ye === 'dated';
   }
 
   /* ── the read ── */
@@ -87,16 +81,6 @@
       usePeriod(named || (review ? { kind: 'year', fy: review.fy, from: review.from, to: review.to } : null)); /* W15/W17: the year under review, never "this month" or "as at today" */
     }, function () { grantKit.viewState.choices = null; usePeriod(grantKit.viewState.period && grantKit.viewState.period.from ? grantKit.viewState.period : null); });
   }
-  /** E16: a mark changes the dropdown's "checked n/m" lines too: the choices are read again (the server's own counts, the same GET /periods?marks=1) and the slot repainted, the period kept */
-  function rereadChoices() {
-    if (!alive() || !grantKit.viewState.choices) return;
-    root.CBBooksGrantApi.run(grantKit.viewState.o.call, 'readPeriods', { query: { marks: 1 }, headers: root.CBBooksActing.headers() }).then(function (a) {
-      if (!alive() || !a) return;
-      grantKit.viewState.choices = a;
-      var report = current();
-      if (report) fillPeriodSlot(report);
-    }, function () { /* the lines stay as they were; the next open reads them fresh */ });
-  }
   /** the period control mounts into the named slot of the header line (CBBooksActing.periodSlot, W19): ONE function, ONE call in paint(); moving it is changing that call. Nothing in a refused or Actions screen. */
   function fillPeriodSlot(report) {
     var slot = $('bv_period_slot');
@@ -109,14 +93,9 @@
     tell();
     reload().then(function () { var box = $('bv_period'); if (box) box.focus(); });
   }
-  /** a Months row opens that month's Day book */
+  /** a Months row opens that month's Day book: the owner's screen in this seat, the month as from= and to= */
   function openMonth(from, to) {
-    var row = ((grantKit.viewState.choices && grantKit.viewState.choices.periods) || []).filter(function (p) { return String(p.start_date).slice(0, 10) === from; })[0];
-    usePeriod({ kind: 'month', fy: row ? row.fiscal_year : null, from: from, to: to });
-    grantKit.viewState.day = '';
-    grantKit.viewState.report = 'daybook';
-    tell();
-    reload();
+    openDoor('daybook', '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to));
   }
   /** GET /periods names no currency: a month's sales would print as a dash. The store's currency is learned once from the Day book's own answer (the period it opens on) */
   function knowCurrency() {
@@ -139,14 +118,14 @@
     grantKit.viewState.why = null;
     return Promise.resolve();
   }
-  var flagsRead = null; /* the flags read of the Day book just answered (cap-flag.js load): readReport waits for it so the Saved column and its filter paint with the rows */
+  /** one read of the client's books through the grant (the seat's headers); a failure is kept for the frame to say */
   function readReport(report) {
     return root.CBBooksGrantApi.run(grantKit.viewState.o.call, report.ep, { query: grantKit.queryOf(report), headers: root.CBBooksActing.headers() }).then(
       function (answer) { keepAnswer(report, answer); },
       function (failure) { keepFailure(failure); }
-    ).then(function () { var held = flagsRead; flagsRead = null; return held; }); /* the page paints once the flags answered (or failed: never a reason to hold the books back) */
+    );
   }
-  /** a read answered: the answer, the since watermark and the server's gross profit are kept, and the helpers are told which entries it holds */
+  /** a read answered: the answer is kept and the shop's own clock and currency are taken from it */
   /** RW3-11: the books being read are the CLIENT's: its clock (the answer's `timezone`, the audited shop's own zone) writes every time on these screens, never the firm's or the device's; the viewer's own zone returns when the books close */
   var ownZone = null;
   function useClientZone(answer) {
@@ -162,18 +141,9 @@
   function keepAnswer(report, answer) {
     useClientZone(answer);
     grantKit.viewState.answer = answer;
-    grantKit.viewState.seen = report.k === 'daybook' && grantKit.viewState.since && answer ? { to: answer.seen_to, total: answer.total, since: answer.since } : null; /* rank 10: the watermark of what this screen listed: Mark as checked sends it back */
     if (grantKit.viewState.o.onRead) grantKit.viewState.o.onRead(); /* the first books read answered 200: the seat the person chose may now be remembered */
     grantKit.viewState.why = null;
-    ingestEntries(report, answer);
     root.CBBooksActing.setCurrency(answer && answer.currency);
-  }
-  /** the Day book's entries go to the three helpers: each entry carries its mark, its evidence and my bookmark */
-  function ingestEntries(report, answer) {
-    if (report.k !== 'daybook') return;
-    if (grantKit.viewState.mk) grantKit.viewState.mk.ingest(answer && answer.entries, answer); /* ACC-358: each entry carries its mark */
-    if (grantKit.viewState.ev) grantKit.viewState.ev.ingest(answer && answer.entries); /* CMP062: and its evidence */
-    if (grantKit.viewState.fl) flagsRead = grantKit.viewState.fl.load(((answer && answer.entries) || []).map(function (e) { return e.entry_id; }).filter(Boolean)); /* CMP066: my bookmarks of these entries, ONE read per 200; a failed read draws no chip rather than saying none */
   }
   /** a read failed: a 401 goes up to the page, anything else is said by the frame (never the server's raw word) */
   function keepFailure(failure) {
@@ -195,9 +165,9 @@
   }
   function tabs() {
     if (phone()) return '';
-    var all = grantKit.REPORTS.map(function (r) {
+    var all = [{ door: 'daybook', id: 'bv_daybook', testid: 'bv-daybook-open', label: 'Day book' }].concat(grantKit.REPORTS.map(function (r) {
       return { k: r.k, label: labelOf(r) };
-    });
+    }));
     if (isAdviser()) all.push({ k: grantKit.ACTIONS, label: 'Actions' });
     if (!grantKit.viewState.why) all.push({ door: 'tb', id: 'bv_tb', testid: 'bv-tb-open', label: 'Trial balance' }, { door: 'pl', id: 'bv_pl', testid: 'bv-pl-open', label: 'Profit and loss' }, { door: 'bs', id: 'bv_bs', testid: 'bv-bs-open', label: 'Balance sheet' }); /* ONEP-2: owner screens opened in this seat, not read here */
     return all.map(tabButton).join('') + prepareButton() + bankButton();
@@ -208,9 +178,10 @@
     return '<button data-cbsid="NET005-B02" type="button" id="' + (r.door ? r.id : 'bv_tab_' + r.k) + '" class="act' + (on ? '' : ' quiet') + '"' + (r.door ? '' : ' data-report="' + r.k + '" aria-pressed="' + on + '"') + ' data-testid="' + (r.door ? r.testid : 'bv-tab-' + r.k) + '">' + esc(words(r.label)) + '</button>';
   }
   /** the phone's screen pick: the library Select (ui-select.js, as period-pick.js uses) with the same screens as the buttons, and the Bank / Prepare ways as its last lines; the address follows the pick (onView) */
+  var DOORS = { _daybook: 'daybook', _tb: 'tb', _pl: 'pl', _bs: 'bs' }; /* the phone pick's lines that open the owner's screens */
   function tabSelect() {
     if (!phone() || grantKit.viewState.why || !root.ui || typeof root.ui.select !== 'function') return '';
-    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(labelOf(r)) }; });
+    var options = [{ value: '_daybook', label: words('Day book') }].concat(grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(labelOf(r)) }; }));
     options.push({ value: '_tb', label: words('Trial balance') }, { value: '_pl', label: words('Profit and loss') }, { value: '_bs', label: words('Balance sheet') });
     if (isAdviser()) options.push({ value: grantKit.ACTIONS, label: words('Actions') }, { value: '_prepare', label: words('Prepare a journal') });
     else options.push({ value: '_bank', label: words('Bank') });
@@ -219,9 +190,7 @@
       onChange: function (value) {
         if (value === '_prepare') return openPrepare();
         if (value === '_bank') return openBank();
-        if (value === '_tb') return openDoor('tb');
-        if (value === '_pl') return openDoor('pl');
-        if (value === '_bs') return openDoor('bs');
+        if (DOORS[value]) return openDoor(DOORS[value]);
         grantKit.viewState.report = value;
         tell();
         reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
@@ -231,11 +200,16 @@
   /** W15-71: the auditor's way to the client's Bank (home, kept statements, a month's lines, who matched, the sign-off) and Month lock: the books page in the auditor's seat, read only */
   /** ONEP-2: the trial balance is the OWNER's screen (accounts.html, tab tb) opened in this seat: this view reads no trial balance of its own. The period rides in the address (E10 carry) */
   /** ONEP-2: the P&L is the OWNER's screen too. The window rides as from= and to= (a financial year is given by toAddress as fy= only, so its own dates ride too) */
-  function openDoor(tab) {
-    var report = grantKit.viewState.report, period = grantKit.viewState.period;
-    var span = period && period.kind === 'year' && period.from && period.to ? '&from=' + encodeURIComponent(period.from) + '&to=' + encodeURIComponent(period.to) : ''; /* a year is carried as fy= and, for the owner screen, its own dates */
-    var carry = (report ? '&view=' + encodeURIComponent(report) : '') + (period ? root.CBPeriodPick.toAddress(period) : '') + span;
+  function openDoor(tab, window) {
+    var report = grantKit.viewState.report;
+    var carry = (report ? '&view=' + encodeURIComponent(report) : '') + (window || periodWords(grantKit.viewState.period)) + asked(); /* the bell's own words (a Query or a note to open) ride to the owner's Day book */
     root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, tab, carry, isAdviser() ? 'adviser' : 'auditor'));
+  }
+  /** the period in force as address words; a year is carried as fy= and, for the owner screen, its own dates */
+  function periodWords(period) {
+    if (!period) return '';
+    var span = period.kind === 'year' && period.from && period.to ? '&from=' + encodeURIComponent(period.from) + '&to=' + encodeURIComponent(period.to) : '';
+    return root.CBPeriodPick.toAddress(period) + span;
   }
   function bankButton() {
     return !isAdviser() && !grantKit.viewState.why ? '<button data-cbsid="NET005-B10" type="button" class="act quiet" id="bv_bank" data-testid="bv-bank">' + esc(words('Bank')) + '</button>' : '';
@@ -253,7 +227,7 @@
   }
   /** the band: an auditor is told it is read only; an adviser gets the frozen banner naming the store and its currency, with the store switch */
   function band(report) {
-    var ctx = grantKit.viewState.why ? '' : '<span class="bv-ctx" data-testid="bv-ctx">' + grantKit.asAt(report) + (grantKit.viewState.choices ? '' : grantKit.periodLine(report)) + grantKit.dayPick(report) + '</span>' + (grantKit.viewState.why ? '' : grantKit.lockLines(report)) + tabSelect(); /* the date the figures stand at, with its Day pick: one place, the header line; the period dropdown says the period, so the Period tag is only the fallback */
+    var ctx = grantKit.viewState.why ? '' : '<span class="bv-ctx" data-testid="bv-ctx">' + grantKit.asAt(report) + grantKit.dayPick(report) + '</span>' + (grantKit.viewState.why ? '' : grantKit.lockLines(report)) + tabSelect(); /* the date the figures stand at, with its Day pick: one place, the header line; the period dropdown says the period, so the Period tag is only the fallback */
     root.CBBooksActing.css(); /* the one header line's rules, for the auditor's band too (the adviser's banner draws them itself) */
     if (isAdviser()) return root.CBBooksActing.banner(grantKit.viewState.o.stores, screenName(), false, ctx);
     return (
@@ -290,12 +264,9 @@
     grantKit.viewState.host.innerHTML =
       band(report) +
       '<div class="nw-acts bv-tabrow" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
-      (!grantKit.viewState.why && report.k === 'daybook' ? grantKit.TABROW_CSS + grantKit.sinceBar() : '') /* fd1117: the since toggle (and, in that view, its count and Mark as checked) sits IN the tab row, not on a row of its own: the first entry stays under the ceiling */ +
       (grantKit.viewState.why ? '' : '<span class="bv-totals">' + grantKit.facts(report) + '</span>') + '</div>' +
       (grantKit.viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
-      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' + pagerSlot(report) +
-      (grantKit.markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes; fd1117: the marks bar (count and All queries) sits UNDER the list with the notes, so the first data row stays where the ceiling holds it */ +
-      (grantKit.viewState.why ? '' : grantKit.riskNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
+      '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wirePainted(report);
   }
   /** the failure frame: a 403 the server named by a code says why and what to do and the way back to his queue (W19); anything else is the one frame as before */
@@ -311,13 +282,12 @@
     fillPeriodSlot(report);
     if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
     if ($('bv_bank')) $('bv_bank').onclick = openBank;
-    if ($('bv_tb')) $('bv_tb').onclick = function () { openDoor('tb'); };
-    if ($('bv_pl')) $('bv_pl').onclick = function () { openDoor('pl'); };
-    if ($('bv_bs')) $('bv_bs').onclick = function () { openDoor('bs'); };
+    ['daybook', 'tb', 'pl', 'bs'].forEach(function (tab) { /* the buttons that open the owner's screens in this seat */
+      if ($('bv_' + tab)) $('bv_' + tab).onclick = function () { openDoor(tab); };
+    });
     wireTabButtons();
-    grantKit.wireSince();
     if (onActions()) grantKit.mountQueues();
-    else if (!grantKit.viewState.why) { paintList(report); grantKit.paintMarkBar(report); }
+    else if (!grantKit.viewState.why) paintList(report);
   }
   /** a tab press opens that read and gives the tab focus */
   function wireTabButtons() {
@@ -332,47 +302,10 @@
     });
     if ($('bv_day')) $('bv_day').onchange = pickDay;
   }
-  /** the list: the day book, or (All queries pressed) every open query with its age, across periods */
+  /** the list of the read on screen */
   function paintList(report) {
-    if (grantKit.viewState.queriesOnly && grantKit.markable(report)) {
-      var host = $('bv_list');
-      host.innerHTML = grantKit.viewState.mk.queries();
-      Array.prototype.forEach.call(host.querySelectorAll('[data-mk-q]'), function (b) {
-        b.onclick = function () { grantKit.viewState.mk.sheet(b.getAttribute('data-mk-q'), { title: (b.querySelector('b') || {}).textContent, opener: b }); };
-      });
-    } else grantKit.paintRows($('bv_list'), report);
-    if (report.k === 'daybook') grantKit.paintPager($('bv_pager'), report, showMore);
+    grantKit.paintRows($('bv_list'), report);
   }
-  /** the slot under the Day book's list that holds its pager (the other reports have none) */
-  function pagerSlot(report) {
-    return report.k === 'daybook' ? '<div id="bv_pager" data-testid="bv-pager"></div>' : '';
-  }
-  /** 1132 "Show more": the next page of the Day book by the server's cursor, joined to what is held; the range's total and Dr / Cr stay the newest reply's (the server's, never added up here) */
-  function nextPage(report) {
-    var answer = grantKit.viewState.answer, mine = grantKit.viewState;
-    if (!answer || !answer.next) return Promise.resolve(false);
-    return root.CBBooksGrantApi.run(mine.o.call, report.ep, { query: Object.assign({}, grantKit.queryOf(report), { after: answer.next }), headers: root.CBBooksActing.headers() }).then(function (reply) {
-      if (!alive() || grantKit.viewState !== mine || mine.answer !== answer) return false;
-      answer.entries = (answer.entries || []).concat(reply.entries || []);
-      answer.next = reply.next || null;
-      answer.total = reply.total;
-      answer.totals = reply.totals;
-      ingestEntries(report, reply);
-      return true;
-    });
-  }
-  function showMore(report) {
-    return nextPage(report).then(function (more) { if (more) return Promise.resolve(flagsRead).then(function () { flagsRead = null; paintList(report); }); });
-  }
-  /** a search or the CSV needs every row: the rest of the range is read page after page (at most 100 pages), a failure is kept and said, never hidden */
-  grantKit.loadAllDaybook = function (report) {
-    var answer = grantKit.viewState.answer;
-    if (!answer || answer.loadingAll) return answer && answer.loadingAll;
-    answer.loadingAll = (function step(n) {
-      return !answer.next || n >= 100 ? Promise.resolve() : nextPage(report).then(function (more) { return more ? step(n + 1) : null; });
-    })(0).then(function () { if (answer.next) answer.capped = true; }, function () { answer.failed = true; }).then(function () { answer.loadingAll = null; flagsRead = null; });
-    return answer.loadingAll;
-  };
   function pickDay() {
     grantKit.viewState.day = $('bv_day').value;
     reload();
@@ -397,8 +330,7 @@
   /** the answer and the day of the store that was open are forgotten when the store changes */
   function forget() {
     backToOwnZone();
-    grantKit.viewState = { host: grantKit.viewState.host, o: grantKit.viewState.o, report: homeOf(grantKit.viewState.o), day: '', answer: null, why: null, mk: grantKit.viewState.mk, period: null, range: null, choices: undefined, since: false, seen: null };
-    grantKit.newMarks();
+    grantKit.viewState = { host: grantKit.viewState.host, o: grantKit.viewState.o, report: homeOf(grantKit.viewState.o), day: '', answer: null, why: null, period: null, range: null, choices: undefined };
   }
   /** after Open books: focus lands on the books heading (the acting band), not on a button that has gone */
   function focusHeading() {
@@ -407,64 +339,36 @@
     head.setAttribute('tabindex', '-1');
     head.focus();
   }
-  /** a firm's bell row for a colleague's reply on my note arrives as &note=<entry id>: read and forgotten from the address when this script loads (the network page rewrites its address before it mounts the Day book), the Day book then opens that entry's note sheet once (cap-flag.js, kind 'posting') */
-  function askedNote() {
-    var asked = { note: '', mark: '', day: '', label: '' };
+  var pendingAsked = askedWords(); /* read when this script loads: the bell's words ride to the owner's Day book, which opens them once */
+  /** the bell's words (a Query to open: &mark= with &mday=, a note: &note= with &nl=) as address words */
+  function askedWords() {
+    var out = '';
     try {
       var query = new root.URLSearchParams(root.location.search);
-      asked.note = query.get('note') || '';
-      asked.mark = query.get('mark') || '';
-      asked.day = (query.get('mday') || '').slice(0, 10);
-      asked.label = (query.get('nl') || '').slice(0, 80);
-      if (asked.note || asked.mark) forgetAskedAddress(query);
+      ['note', 'mark', 'mday', 'nl'].forEach(function (name) { if (query.get(name)) out += '&' + name + '=' + encodeURIComponent(query.get(name)); });
     } catch (failure) {
       if (root.cbQuiet) root.cbQuiet('books-grant:note-address', failure);
     }
-    return asked;
+    return out;
   }
-  /** the note's four words leave the address (replace, never a new history entry) */
-  function forgetAskedAddress(query) {
-    if (!root.history || !root.history.replaceState) return;
-    ['note', 'mark', 'mday', 'nl'].forEach(function (name) { query.delete(name); });
-    root.history.replaceState(root.history.state, '', root.location.pathname + (query.toString() ? '?' + query.toString() : '') + (root.location.hash || ''));
+  /** the bell's words as the door carries them (once) */
+  function asked() {
+    var held = pendingAsked;
+    pendingAsked = '';
+    return held;
   }
-  var pendingNote = askedNote();
-  /**
-   * the bell's rows arrive here (rail-bell.js): &note=<id> a colleague's reply on my note (an entry's, or the CLIENT's own: its id is the client's, the sheet then carries the client's NAME),
-   * &mark=<entry id> a Query on this client's books (its thread opens, the entry named by its own number)
-   */
-  function openAskedNote(asked) {
-    if (!asked || grantKit.viewState.report !== 'daybook') return;
-    openAskedMark(asked);
-    if (asked.note) openAskedFlag(asked, grantKit.viewState.o.member || {});
-  }
-  /** the Query thread's title from the bell: the entry's label and the client's name (at 390 the sheet shows nothing else to say whose books), never a bare "This entry" */
-  function askedTitle(asked) {
-    var member = grantKit.viewState.o.member || {};
-    return [asked.label, member.name].filter(Boolean).join(' · ') || undefined;
-  }
-  /** &mark=<entry id>: a Query on this client's books: its thread opens */
-  function openAskedMark(asked) {
-    if (!asked.mark || !grantKit.viewState.mk) return;
-      grantKit.viewState.markDay = asked.day; /* the open list answers for the CURRENT window: an older entry's thread is found by its own day */
-      grantKit.viewState.mk.load([asked.mark]).then(function () { grantKit.viewState.markDay = ''; grantKit.viewState.mk.sheet(asked.mark, { title: askedTitle(asked) }); }); /* the entry's own label from the bell (nl), when the page has not shown the entry */
-  }
-  /** &note=<id>: my note on an entry, or on the client itself (its id is the client's): the sheet opens once */
-  function openAskedFlag(asked, member) {
-    if (member.id && asked.note === String(member.id) && root.CBFlag && grantKit.viewState.o.call) {
-      var client = root.CBFlag.use({ call: grantKit.viewState.o.call, kind: 'client', entity: function () { return member.id; } });
-      if (!client.off()) client.load([asked.note]).then(function () { client.sheet(asked.note, { label: member.name }); });
-    } else if (grantKit.viewState.fl && !grantKit.viewState.fl.off()) grantKit.viewState.fl.load([asked.note]).then(function () { grantKit.viewState.fl.sheet(asked.note, { label: asked.label || undefined }); }); /* R2 17 Nov: the note is read by its OWN id (POST /flags/query is not windowed by year): an entry outside the year the Day book opened on has no chip row loaded, so the sheet said 'Nothing saved'. The entry's words (the note's own label), never its raw id */
+  /** the state of a view just opened: the read asked for, else the first one this view has */
+  function openedState(host, options, fresh) {
+    return { host: host, o: options, report: fresh ? homeOf(options) : options.view, day: '', answer: null, why: null, period: options.period || null, range: null, choices: undefined };
   }
   function mount(host, options) {
-    var asked = pendingNote;
-    pendingNote = null;
-    grantKit.viewState = { host: host, o: options, report: viewKnown(options.view) ? options.view : homeOf(options), day: '', answer: null, why: null, mk: null, period: options.period || null, range: null, choices: undefined, since: grantKit.sinceAsked(), seen: null };
-    grantKit.newMarks();
+    var fresh = !viewKnown(options.view);
+    grantKit.viewState = openedState(host, options, fresh);
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
     stopForgetting = root.CBBooksActing.onClear(forget);
-    Promise.resolve(reload()).then(focusHeading, focusHeading).then(function () { openAskedNote(asked); });
+    if (fresh) openDoor('daybook'); /* a client opens on the owner's Day book: the door. The way back carries view=<the first read>, so it is never opened twice */
+    else Promise.resolve(reload()).then(focusHeading, focusHeading);
     return {
       /** Back or Forward to another screen of this client's books */
       setView: function (report, period) {

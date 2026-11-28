@@ -1,24 +1,18 @@
 /**
  * books-grant-cells.js — ACC-176 part of books-grant-view.js: how ONE cell of a books read is painted.
  *
- * OWNS      the cell painters of the firm's books view: figure (the one switch by column kind), the money, Dr/Cr, change, party and risk cells, and the two notes under the list (what is highlighted, how risk is counted)
+ * OWNS      the cell painters of the firm's books view: figure (the one switch by column kind), the money, Dr/Cr, change and party cells
  * CALLED BY books-grant-view.js (the parts and the parent share one kit object, root.CBBooksGrantKit)
  * FLOW      kit.figure(row, column) → the cell's html or text; every number is the server's, painted in the answer's currency
  * CARD      04-network/ACC-176-AUDITOR-GRANT
  *
- * Computes nothing: a figure is the server's, a risk list is books-grant-filters.js's. Loaded before books-grant-view.js (network.html).
+ * Computes nothing: a figure is the server's. Loaded before books-grant-view.js (network.html).
  */
 (function (root) {
   'use strict';
   var grantKit = root.CBBooksGrantKit; /* created by books-grant-reports.js, which loads first */
-  grantKit.riskNote = riskNote;
   grantKit.minorWords = minorWords;
-  grantKit.riskWords = riskWords;
   grantKit.figure = figure;
-  /** NET005-P05: under the Day book, the fixed hours and day counts the Risk column and its filters use (one sentence; not a setting) */
-  function riskNote(report) {
-    return report.k !== 'daybook' || grantKit.viewState.since ? '' : root.CBBooksAuditTools.riskNote();
-  }
   /** a figure in the answer's currency, the way the books screens paint it (CBBooksActing.money) */
   function minorWords(minor) {
     return root.CBBooksActing.figure(minor, (grantKit.viewState.answer && grantKit.viewState.answer.currency) || (root.CBBooksActing.current() || {}).currency);
@@ -30,15 +24,7 @@
     var text = String(key).split('_').map(function (part) { return tax && part === tax.toLowerCase() ? tax : ACRONYMS.indexOf(part) >= 0 ? part.toUpperCase() : part; }).join(' ');
     return grantKit.words(text.charAt(0).toUpperCase() + text.slice(1));
   }
-  /** the JET rules an entry trips (the filters file's riskOf, read with the period and currency on screen) */
-  function riskWords(e) {
-    var F = root.CBBooksGrantFilters;
-    return F ? F.riskOf(e, grantKit.viewState.period, grantKit.viewState.answer && grantKit.viewState.answer.currency, grantKit.viewState.answer && grantKit.viewState.answer.country) : [];
-  }
-  function riskCell(row) {
-    return root.CBBooksAuditTools.riskCell(row);
-  }
-  /** a cell, by its column: a kind (risk, mark, money …) or a name says how it is painted; the rest is the server's value as words */
+  /** a cell, by its column: a kind (money, Dr/Cr …) or a name says how it is painted; the rest is the server's value as words */
   function figure(row, column) {
     var value = row[column[0]];
     var painted = kindCell(row, column, value);
@@ -47,8 +33,6 @@
   /** the cells a column kind decides (undefined when the kind says nothing: the column name or the value then decides) */
   function kindCell(row, column, value) {
     var kind = column[2];
-    if (kind === 'risk') return riskCell(row);
-    if (kind === 'explain') return grantKit.explainCell(row);
     if (kind === grantKit.PCT) return pctCell(value);
     if (column[0] === 'change_minor') return changeCell(row, value);
     if (kind === grantKit.DRCR) return isBlank(value) ? '—' : esc(drCrWords(value));
@@ -63,14 +47,10 @@
   function isBlank(value) {
     return value == null || value === '';
   }
-  /** the cells that are a helper's chip: my mark, my bookmark, the evidence */
+  /** the cells that need the row, not just its value: the lock note's trail and the Party · ref */
   function helperCell(row, column, value) {
-    var kind = column[2], state = grantKit.viewState;
-    if (kind === 'mark') return state.mk.chip(row.entry_id);
-    if (kind === 'flag') return state.fl ? state.fl.chip(row.entry_id, grantKit.flagLabel(row)) : ''; /* CMP066: my own bookmark; never the client's, never the mark */
     if (column[0] === 'lock_note') return value || '—'; /* html built from the server's trail, each line escaped */
     if (column[0] === 'party_ref') return partyCell(row, value); /* one painter: the party · ref, and under it who posted it when an adviser did */
-    if (kind === 'evidence') return state.ev ? state.ev.chip(row) : '—'; /* CMP062: what stands behind the row (cap-evidence.js); the same chip as the shop Day book, 'No receipt' for a no-source entry (a firm cannot attach in S1), so owner, firm and auditor read the same */
     return undefined;
   }
   /** any other value: blank or a dash when nothing, a day as the shop's day, a key as words, else the text */

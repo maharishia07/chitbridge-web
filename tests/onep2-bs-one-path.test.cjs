@@ -91,7 +91,7 @@ const DAY = 'booksBS{"asOf":"2026-06-30"}', TODAY = 'booksBS{"kind":"today","ste
   await ok('GUARD: no firm / network view file reads or paints a balance sheet of its own (' + VIEW.length + ' files)', () => assert.deepStrictEqual(offenders(real), []));
   await ok('GUARD: the door opens tab bs in the seat; the auditor and the adviser may open it; one seed helper called from bkBS', () => {
     const view = real['books-grant-view.js'], acting = read('public/app/books-acting.js');
-    assert.ok(/door: 'bs', id: 'bv_bs'/.test(view) && /value: '_bs'/.test(view) && /openDoor\('bs'\)/.test(view) && /auditAddressOf\(/.test(view));
+    assert.ok(/door: 'bs', id: 'bv_bs'/.test(view) && /_bs: 'bs'/.test(view) && /\['daybook', 'tb', 'pl', 'bs'\]\.forEach/.test(view) && /auditAddressOf\(/.test(view));
     assert.ok(/AUDITOR_TABS = \[[^\]]*'pl', 'bs'\]/.test(acting) && /var TABS = \[[^\]]*'bs'/.test(acting));
     assert.ok(/async function bkBS\(body\) \{\n  bkBsSeed\(\);/.test(cap) && /function bkBsSeed\(\) \{\n  var day = bkCarriedDay\('bsSeeded'\)/.test(cap));
   });

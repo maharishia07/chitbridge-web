@@ -12,7 +12,6 @@
   'use strict';
   var grantKit = (root.CBBooksGrantKit = root.CBBooksGrantKit || {});
   grantKit.queryOf = queryOf;
-  grantKit.periodLine = periodLine;
   grantKit.lockLines = lockLines;
   grantKit.facts = facts;
   grantKit.totalRows = totalRows;
@@ -20,19 +19,10 @@
   grantKit.dayPick = dayPick;
   grantKit.PCT = 'pct'; /* a column kind: basis points, painted as a signed percent */
   grantKit.DRCR = 'drcr'; /* a column kind: the trial balance's NET (debit positive), painted as an amount with Dr or Cr, never a minus */
-  /** AUD-RC-4: the Day book reads in book order, as Xero's journal report and MYOB's general journal do: posting date, then entry number, oldest first, whatever order the server sent (a changed-since list keeps the server's order: it is by when it was posted) */
-  function bookOrder(entries, since) {
-    if (since) return entries;
-    var byNumber = typeof Intl !== 'undefined' ? new Intl.Collator(undefined, { numeric: true }).compare : function (x, y) { return x < y ? -1 : x > y ? 1 : 0; };
-    return entries.slice().sort(function (x, y) { var dx = String(x.posting_date || ''), dy = String(y.posting_date || ''); return dx < dy ? -1 : dx > dy ? 1 : byNumber(String(x.entry_no || ''), String(y.entry_no || '')); });
-  }
   grantKit.MONEY = 'money'; /* a column kind: the server's minor units, painted in the answer's currency */
   grantKit.ACTIONS = 'actions'; /* the adviser's seventh tab: the three queues */
   /** each read: its endpoint, how the day box maps to its question, the rows it lists and the totals it shows (names are the server's own keys) */
-  /* the Day book's seven columns fit one 1366 screen beside the menu (Entry · Date · Kind · Party · ref · Amount · Evidence · Mark) */
-  grantKit.DAYBOOK_W = { entry_no: 150, posting_date: 110, kind: 100, party_ref: 250, amount_minor: 120, evidence: 150, mark: 170, flag: 70, risk: 80, explain: 120 };
   grantKit.REPORTS = [
-    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return bookOrder(a.entries || [], grantKit.viewState.since).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e), posted_by_words: root.CBBooksActing.postedByWords(e, true), party_ref: root.dayBookPartyRef(e) /* R70: the party and the document number, as the owner's Day book shows them */, recorded_text: recordedText(e), risk_list: grantKit.riskWords(Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e) }, e)) /* the same row the filters judge (the amount is the debits) */ /* JET: the rules this entry trips (books-grant-filters.js riskOf), one definition each */ }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['party_ref', 'Party · ref'], ['amount_minor', 'Amount', grantKit.MONEY], ['evidence', 'Evidence', 'evidence'], ['mark', 'Mark', 'mark'], ['risk', 'Risk', 'risk'], ['flag', 'Saved', 'flag']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', more: { control: '1' } /* FC-M10: the server also answers the trial-balance control */, rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['age_not_due', 'Current', grantKit.MONEY], ['age_d0_30', '1–30', grantKit.MONEY], ['age_d31_60', '31–60', grantKit.MONEY], ['age_d61_90', '61–90', grantKit.MONEY], ['age_d90_plus', '90+', grantKit.MONEY], ['balance_minor', 'Total', grantKit.MONEY]], facts: [], panels: true },
     { k: 'periods', label: 'Months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['lock_note', 'Locked by and when'], ['entries', 'Entries'], ['profit_minor', 'Profit', grantKit.MONEY]], facts: [] },
     /* YE-F-11: the client's tax return (BAS · VAT return), read from its posted books through GET /returns — a grant read; the box rows and the server's net, the stage in the header line (the server's one stage word) */
@@ -75,18 +65,10 @@
   }
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
-    return Object.assign({}, report.more || {}, baseQuery(report), pageOf(report));
-  }
-  /** DISCIPLINES §2 (1132): the Day book asks ONE page (the server's own default size); "Show more" asks the next by the server's cursor. The since read already names its own limit */
-  grantKit.DAYBOOK_PAGE = 100;
-  function pageOf(report) {
-    return report.k === 'daybook' && !grantKit.viewState.since ? { limit: grantKit.DAYBOOK_PAGE } : {};
+    return Object.assign({}, report.more || {}, baseQuery(report));
   }
   function baseQuery(report) {
-    var period = grantKit.viewState.period, after = report.k === 'daybook' && !grantKit.viewState.day && grantKit.afterYearEnd() && root.CBBooksGrantFilters.afterRange(period);
-    if (report.k === 'daybook' && grantKit.viewState.since) return { since: 'mine', limit: grantKit.SINCE_LIMIT }; /* rank 10: the server reads this person's check point; no date range (a back-dated entry is the finding) */
-    grantKit.viewState.yeRead = !!after; /* JET: which days the Day book was read for, so a change of the Year end filter knows whether to read again */
-    if (after) return after;
+    var period = grantKit.viewState.period;
     if (!grantKit.viewState.day) return periodQuery(report, period);
     return dayQuery(report, grantKit.viewState.day, period);
   }
@@ -109,15 +91,6 @@
     query[report.day] = day;
     if (report.day === 'to' && period && period.from && period.from <= day && day <= period.to) query.from = period.from;
     return query;
-  }
-  /** when and by whom an entry was posted (the server's recorded_at, shown in the shop day) */
-  function recordedText(e) {
-    return e && e.recorded_at ? root.shopDay(e.recorded_at) + (e.recorded_by ? ' · ' + e.recorded_by : '') : '';
-  }
-  /** the period the Day book shows when no day is typed: "1 Oct 2026 – 31 Oct 2026" */
-  function periodLine(report) {
-    if (report.k !== 'daybook' || grantKit.viewState.day || !grantKit.viewState.range) return '';
-    return '<span class="tag" data-testid="bv-period">' + esc(grantKit.words('Period')) + ' ' + esc(root.shopDay(grantKit.viewState.range.from)) + ' – ' + esc(root.shopDay(grantKit.viewState.range.to)) + '</span>';
   }
   /** W22 (fd17: ONE short tag in the header line, no row of its own): the firm's Months view, the lock as Xero's lock date reads it. The tag says the lock ("Locked to 31 Jan 2026" + the count of open gaps); the full sentence (Books start Jul 2025 · Locked to 31 Jan 2026 · Open: Feb 2026 (gap)) is its title and its aria-label. Every word and date is the server's (books_start, lock_date, gaps); months before the books start are not listed */
   function lockLines(report) {

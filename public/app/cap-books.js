@@ -2728,7 +2728,7 @@ function bkDvColumns(currency) {
   if (bkFlagsOn())
     cols.splice(cols.length - 1, 0, { key: 'flag', label: tx('Saved'), prio: 2, w: 80, keep: true, html: true, cell: function (e) { return BK.fl.chip(e.entry_id, String(e.entry_no || '') + (e.posting_date ? ' · ' + e.posting_date : '')); }, value: function (e) { return BK.fl.bookmarked(e.entry_id) ? 1 : 0; } }); /* CMP066 */
   if (bkAudit()) {
-    cols.splice(cols.length - 1, 0, { key: 'risk', label: tx('Risk'), prio: 2, w: 80, keep: true, html: true, cell: function (e) { return CBBooksAuditTools.riskCell({ risk_list: bkJetRisk(e) }); }, value: function (e) { return bkJetRisk(e).length; } }); /* JET: how many of the six rules the entry trips */
+    cols.splice(cols.length - 1, 0, { key: 'risk', sort: 'risk', label: tx('Risk'), prio: 2, w: 80, keep: true, html: true, cell: function (e) { return CBBooksAuditTools.riskCell({ risk_list: bkJetRisk(e) }); }, value: function (e) { return bkJetRisk(e).length; } }); /* JET: how many of the six rules the entry trips */
     if (BK.dv && BK.dv.since) cols.splice(cols.length - 1, 0, { key: 'posted', label: tx('Posted'), prio: 2, w: 150, html: true, cell: function (e) { return esc(bkAuditPosted(e)); }, value: function (e) { return bkAuditPosted(e); } }); /* the changed list says when and by whom each entry was posted */
   }
   return cols;
@@ -2795,7 +2795,11 @@ function bkDvSorts() {
       })
     },
     { key: 'amount', label: tx('Amount'), cmp: by(bkDvTotal, true) }
-  ].concat(BK.ev ? [{ key: 'evidence', label: tx('Evidence'), cmp: by(bkDvEvRank, true) }] : []);
+  ].concat(BK.ev ? [{ key: 'evidence', label: tx('Evidence'), cmp: by(bkDvEvRank, true) }] : [], bkAudit() ? [{ key: 'risk', label: tx('Risk'), cmp: by(bkJetRiskFirst, true) }] : []);
+}
+/** Risk sorts most risks first (a press on the header; the page opens in the owner's order) */
+function bkJetRiskFirst(e) {
+  return -bkJetRisk(e).length;
 }
 var BK_DV_GROUPS = [
   ['day', 'Day'],
@@ -2982,12 +2986,21 @@ function bkFlagCall(method, path, body) {
     });
   });
 }
+/** a firm seat's bookmarks and notes are kept against the CLIENT's id (the call carries the token only, never X-Books-For, so they live in the firm's own organisation); '' for the owner's own books */
+function bkFirmFlags() {
+  return typeof CBBooksAuditTools !== 'undefined' && CBBooksAuditTools.firmSeat() ? String(CBBooksActing.current().store.id) : '';
+}
 function bkFlagsOn() {
   return !!BK.fl && !BK.fl.off() && BK.fl.ready();
 }
 function bkFlagsIngest(list) {
-  if (typeof CBFlag === 'undefined' || !SESSION.entityId || (typeof CBBooksActing !== 'undefined' && CBBooksActing.current())) return;
-  if (!BK.fl) BK.fl = CBFlag.use({ call: bkFlagCall, kind: 'posting', entity: function () { return SESSION.entityId; } });
+  var firm = bkFirmFlags();
+  if (typeof CBFlag === 'undefined' || !SESSION.entityId || (typeof CBBooksActing !== 'undefined' && CBBooksActing.current() && !firm)) return;
+  if (BK.fl && BK.flFor !== firm) { BK.fl.destroy(); BK.fl = null; } /* another client's bookmarks are never this one's */
+  if (!BK.fl) {
+    BK.flFor = firm;
+    BK.fl = CBFlag.use({ call: bkFlagCall, kind: 'posting', entity: function () { return bkFirmFlags() || SESSION.entityId; } });
+  }
   var flags = BK.fl;
   flags.load((list || []).map(function (e) { return e.entry_id; }).filter(Boolean)).then(function () {
     var host = document.getElementById('bk_dvlist'), d = BK.dv;
@@ -3048,6 +3061,7 @@ function bkDvDraw(body, reply, range, since) {
   if (!since) bkPagerPaint('bk_dvpager', 'db', reply, 'Older', 'newest first', bkDvOlder);
   if (bkAudit() && !since) bkDvLoadAll(); /* the filters judge the whole range, never the one page held (a capped or failed read is said by bkDvLoadAll) */
   bkDvCountsHook(reply, range);
+  bkAskedOpen();
   if (typeof CBAttention !== 'undefined')
     CBAttention.mount(document.getElementById('bk_attn_db'), range, function () {
       if (BK.dv && BK.dv.api) BK.dv.api.refresh(); /* the count of ⚑ Needs you arrives with the strip's own read */
@@ -3177,6 +3191,29 @@ function bkAuditPaint() {
   if (note) note.innerHTML = book.since ? '' : tools.riskNote();
   BK.dvQ = false;
   BK.mk.bar(document.getElementById('bk_marks'), { onFilter: function (on) { BK.dvQ = on; if (on) bkQueriesPaint(); else bkQueriesBack(); } }).then(function (handle) { BK.dvBar = handle; });
+}
+/** the bell's words (&mark= a Query, &note= my note, &nl= its label) arrive in the address of a firm seat: read once, forgotten from the address, and the thread or the note opens */
+function bkAskedOpen() {
+  if (BK.dvAsked || !bkAudit()) return;
+  BK.dvAsked = true;
+  var asked = bkAskedTake();
+  if (asked.mark) BK.mk.load([asked.mark]).then(function () { BK.mk.sheet(asked.mark, { title: asked.label || undefined }); });
+  if (asked.note) bkAskedNote(asked.note, asked.label);
+}
+/** the bell's four words, read and forgotten from the address (replace, never a new history entry) */
+function bkAskedTake() {
+  var query = new URLSearchParams(location.search || ''), words = { mark: query.get('mark'), note: query.get('note'), label: (query.get('nl') || '').slice(0, 80) };
+  if (!words.mark && !words.note) return words;
+  ['note', 'mark', 'mday', 'nl'].forEach(function (name) { query.delete(name); });
+  if (history && history.replaceState) history.replaceState(history.state, '', location.pathname + (query.toString() ? '?' + query.toString() : '') + (location.hash || ''));
+  return words;
+}
+/** my note on an entry (kind posting) or on the client itself (its id is the client's: kind client) opens its sheet */
+function bkAskedNote(note, label) {
+  var seat = CBBooksActing.current(), control = BK.fl;
+  if (note === String(seat.store.id)) control = CBFlag.use({ call: bkFlagCall, kind: 'client', entity: function () { return seat.store.id; } });
+  if (!control || control.off()) return;
+  control.load([note]).then(function () { control.sheet(note, { label: note === String(seat.store.id) ? seat.store.name : label || undefined }); });
 }
 /** All queries: every open query with its age, across periods, in place of the list (the mark control's own rows) */
 function bkQueriesPaint() {

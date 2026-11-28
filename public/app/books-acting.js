@@ -167,7 +167,7 @@
   /** the acting page shows only what is read and written through /api/books*: the tabs that call anything else are taken out of the menu, so no request outside it carries the store's header */
   var OWNER_SENTENCE = 'Only the owner may record this.';
   var TABS = ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'dues', 'lock'];
-  var AUDITOR_TABS = ['bank', 'lock', 'gstclose', 'tb', 'pl', 'bs']; /* what an auditor opens on the books page, read only: the Bank, the Month lock, the tax return and the owner's tb, pl and bs screens (ONEP-2 doors) */
+  var AUDITOR_TABS = ['bank', 'lock', 'gstclose', 'daybook', 'tb', 'pl', 'bs']; /* what an auditor opens on the books page, read only: the Bank, the Month lock, the tax return and the owner's tb, pl and bs screens (ONEP-2 doors) */
   /** the Bank tab opens for an acting ADVISER (reads and posts through /api/books/bank/*, /events and /payments) and for an AUDITOR (reads only: bank/log and the kept statements; W15-71, every write control is left out) */
   function tabOpen(tab) {
     if (context && context.role === 'auditor') return AUDITOR_TABS.indexOf(tab) >= 0; /* the auditor's other reads are the network's own books view; here only what needs the books page, read only: the Bank, the Month lock and the tax return (F-73: GET /returns is on the grant's read list, peGstView shows a reader the return and never the Close card) */
