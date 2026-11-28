@@ -4928,7 +4928,7 @@ function bkBsSeed() {
   BK_BS.kind = 'custom';
   BK_BS.asOf = day;
 }
-/** the day a heading may say: the server's shown_as_at (the earlier of the day asked and the shop's today, P1-3), else the day asked */
+/** the day a heading may say: the server's shown_as_at (AUDBS: the day the figures are read at, no longer capped to today), else the day asked */
 function bkBsShownDay(reply) {
   return reply.shown_as_at || reply.asOf;
 }
@@ -4980,7 +4980,7 @@ function bkBsSide(title, items, heads, c, total, totalWas, tid, asOf, fyFrom, ch
 }
 /** the period bar's range text: the day, then the month-ago and year-ago days when compared */
 function bkBsRange(reply, compare) {
-  return tx('as at') + ' ' + bkDate(bkBsShownDay(reply)) + (reply.shown_as_at && reply.shown_as_at < reply.asOf ? ' · ' + tx('year to date') : '') + (compare.month ? ' · ' + bkDate(compare.month.as_at) + ' · ' + bkDate(compare.year && compare.year.as_at) : '');
+  return tx('as at') + ' ' + bkDate(bkBsShownDay(reply)) + (reply.asOf && reply.asOf > bkToday() ? ' · ' + tx('year to date') : '') + (compare.month ? ' · ' + bkDate(compare.month.as_at) + ' · ' + bkDate(compare.year && compare.year.as_at) : '');
 }
 /** the chip beside the period bar: ✓ balances, or a warning when assets and liabilities + equity differ (or the net assets do not agree) */
 function bkBsBalancedChip(balanced, reply) {
