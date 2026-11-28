@@ -85,7 +85,7 @@ const run = async (w) => {
   const openBooks = async (pg, loc) => { await pg.goto(base + '/network.html'); await pg.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 }); await pg.evaluate((l) => window.CBLocale.setLocale(l), loc); /* the region the person chose: CBLocale's own setter, after the page's boot */ await pg.click(T('nw-books-' + MEMBER)); await pg.waitForURL(/accounts\.html/, { timeout: 20000 }); await pg.waitForSelector(D.ROWS, { timeout: 20000 }); await pg.click(T('view-grid-daybook')).catch(() => {}); await pg.waitForTimeout(500); }; /* ONEP-2 PR7b: Open books lands on the owner's Day book (the door); the grid view has the column heads */
   const riskCol = (pg) => pg.$$eval('[data-testid^="db-entry-"]', (rows) => rows.map((r) => { const n = r.querySelector('[data-testid="bv-risk"]'); return n ? Number(n.textContent) : 0; }));
   const keyed = (o, keys) => keys.map((n) => n + '=' + o[n]).join(',');
-  const entryCol = (pg) => pg.$$eval('[data-testid^="db-entry-"]', (rows) => rows.map((r) => (r.textContent.match(/JV-[A-Z]\d\d/) || [''])[0]));
+  const entryCol = (pg) => pg.$$eval('[data-testid^="db-entry-"]', (rows) => rows.map((r) => r.getAttribute('data-no') || '')); /* the owner row carries its entry number as data-no */
   const byKey = async (pg) => { const k = await entryCol(pg), c = await riskCol(pg), o = {}; k.forEach((n, i) => { o[n] = c[i]; }); return o; }; /* the rows are sorted by risk now: compare by entry number, never by position */
 
   await page.setViewportSize(WIDE);

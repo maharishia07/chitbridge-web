@@ -86,6 +86,10 @@ function open(role, search, view, parts, periods) {
     assert.ok(/AUDITOR_TABS = \[[^\]]*'daybook'/.test(acting));
     assert.ok(/data-testid="bv-list"><\/div>';\n    wirePainted\(report\);/.test(view));
   });
+  await ok('GUARD: the banner store switch keeps the screen and period the firm is on (view and period reach openSeat), never the landing door', () => {
+    assert.ok(/onSwitch: switchStore/.test(view) && /onSwitch\(id, name, \{ view: grantKit\.viewState\.report, period: grantKit\.viewState\.period \}\)/.test(view));
+    assert.ok(/onSwitch: function \(id, name, at\) \{ openSeat\([^;]*, at\); \}/.test(read('public/app/network-books.js')));
+  });
   await ok('GUARD: the owner screen holds what the painter had: the tools, the flags for a firm seat, the bell words, no CSV for a read-only seat', () => {
     ['bkJetFilters', 'bkSinceOn', 'bkAskedOpen', 'bkFirmFlags', 'bkJetRange', 'bkDbSeed'].forEach((f) => assert.ok(new RegExp('function ' + f + '\\(').test(cap), f));
     assert.ok(/csv: bkReadOnlySeat\(\)/.test(cap));

@@ -134,7 +134,7 @@
       stores: root.CBBooksActing.clientStores(page.stores, page.held, page.opened && page.opened.id),
       mountList: mountList, sheet: sheet, closeSheet: closeSheet,
       onEnded: page.o.onEnded,
-      onSwitch: function (id, name) { openSeat(id, (page.held[id] && page.held[id].grantor_name) || name); },
+      onSwitch: function (id, name, at) { openSeat(id, (page.held[id] && page.held[id].grantor_name) || name, at); }, /* `at` = the screen and period the firm was on: the switch keeps them */
       /** "← Clients" (or "Back to my queue"): to the queue he came from, else the practice Home, else the network list, by address */
       onBack: function () {
         /* E2 (Fable walk 17 Nov): "← Clients" goes to the practice list BY ADDRESS. history.back() stepped one TAB back (every screen of the books is a history entry), so the address and the screen disagreed and the list was never reached. The list is a new entry; Back from it returns to the client. */

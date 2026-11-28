@@ -218,6 +218,10 @@
     var report = grantKit.viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (grantKit.viewState.period ? root.CBPeriodPick.toAddress(grantKit.viewState.period) : ''); /* E10: the screen and the period ride to Bank and back */
     root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry));
   }
+  /** another client chosen in the banner: it opens on the same screen and period (the workspace stays the workspace) */
+  function switchStore(id, name) {
+    grantKit.viewState.o.onSwitch(id, name, { view: grantKit.viewState.report, period: grantKit.viewState.period });
+  }
   /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares (or posts, when the owner's grant says adviser_posts) */
   function prepareButton() {
     return isAdviser() && !grantKit.viewState.why ? '<button data-cbsid="NET005-B03" type="button" class="act" id="bv_prepare" data-testid="bv-prepare">' + esc(words('Prepare a journal')) + '</button>' : '';
@@ -247,7 +251,7 @@
   }
   function wireBand() {
     var back = function () { root.CBBooksActing.leave(); grantKit.viewState.o.onBack(); };
-    if (isAdviser()) root.CBBooksActing.wireBanner(grantKit.viewState.host, { onBack: back, onSwitch: grantKit.viewState.o.onSwitch });
+    if (isAdviser()) root.CBBooksActing.wireBanner(grantKit.viewState.host, { onBack: back, onSwitch: switchStore }); /* the store switch keeps the screen the firm is on (its workspace or its read), never the landing door */
     else $('bv_back').onclick = back;
   }
   /** the screen pick changes form at the phone width: repaint once when the width crosses it (bound once per page) */
