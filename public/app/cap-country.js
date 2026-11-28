@@ -205,6 +205,7 @@ function csuStoredFields(answer, edit) {
   edit.registered = answer.tax && typeof answer.tax.registered === 'boolean' ? answer.tax.registered : null; /* SET-49: unknown stays null, never false */
   edit.number = (answer.tax && answer.tax.number) || '';
   edit.scheme = (answer.tax && answer.tax.scheme) || 'regular';
+  edit.registeredOn = (answer.tax && answer.tax.registered_on) || ''; /* SET-87: the day the registration began, kept as the server stored it */
   edit.asked = Object.assign({}, answer.asked || {}); /* AE-F-03: the pack's own setup answers (emirate · period · zone · form) */
 }
 /** each stored value's source in words; a value with no source is "not confirmed yet" until the step is done */
@@ -282,6 +283,7 @@ function csuPrefill() {
     registered: null /* SET-49: no default — unknown until the owner picks */,
     number: '',
     scheme: 'regular',
+    registeredOn: '',
     timezone: '',
     words: (CSU.flags && CSU.flags.number_words) || 'pack',
     supplies: csuStoredSupplies() || 'goods'
@@ -534,6 +536,9 @@ var CSU_CLEAN = {
   scheme: function (typed) {
     return String(typed || 'regular');
   },
+  registeredOn: function (typed) {
+    return String(typed || '').slice(0, 10);
+  },
   timezone: function (typed) {
     return String(typed || '');
   },
@@ -552,12 +557,13 @@ var CSU_SOURCE_KEY = {
   registered: 'tax',
   number: 'tax',
   scheme: 'tax',
+  registeredOn: 'tax',
   timezone: 'timezone',
   words: 'words',
   supplies: 'supplies'
 };
-/** the row a field belongs to — the tax row holds three fields (registered · number · scheme) */
-var CSU_ROW_OF = { registered: 'tax', number: 'tax', scheme: 'tax' };
+/** the row a field belongs to — the tax row holds four fields (registered · number · scheme · registered since) */
+var CSU_ROW_OF = { registered: 'tax', number: 'tax', scheme: 'tax', registeredOn: 'tax' };
 /**
  * R49 · R7: THE TAX NUMBER IS CHECKED WHEN THE PERSON LEAVES THE BOX, by the checker the server uses for that country (api profile.taxIdRefusal): a GSTIN by
  * profile-map.gstinChecksum (the engine /engine/profilemap.js, loaded on first need), an ABN / TRN by the pack's own check() (CBRegulation, /engine/tax.js).
@@ -622,7 +628,7 @@ function csuSet(field, typed) {
   CSU.src[CSU_SOURCE_KEY[field]] = tx('you chose');
   var row = CSU_ROW_OF[field] || field;
   /* R49: a number the checker refuses keeps the row OPEN with the reason on it; any other change to the row re-reads the held number */
-  if (row === 'tax') CSU.taxErr = CSU.edit.registered && CSU.edit.number ? csuTaxIdWhy(CSU.edit.country, CSU.edit.number) : '';
+  if (row === 'tax') CSU.taxErr = (CSU.edit.registered && CSU.edit.number ? csuTaxIdWhy(CSU.edit.country, CSU.edit.number) : '') || (CSU.edit.registered ? csuRegisteredOnWhy(CSU.edit.registeredOn) : '');
   if (field === 'country') CSU.taxErr = '';
   csuSettleRow(row);
   CSU.touched = true; /* W24: something moved since the read */
@@ -799,6 +805,18 @@ function csuSchemeInfo(scheme) {
     '" style="cursor:help;color:var(--grey)">ⓘ</span>'
   );
 }
+/** SET-87: today as the owner's own calendar says it (the server checks again in the shop's zone) */
+function csuTodayISO() {
+  var now = new Date();
+  var pad = function (n) {
+    return (n < 10 ? '0' : '') + n;
+  };
+  return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+}
+/** SET-87: '' when the registration day is fine or not given (it may be earlier than the shop's sign-up), else why not: it cannot be in the future */
+function csuRegisteredOnWhy(day) {
+  return day && day > csuTodayISO() ? tx('The registration day cannot be in the future.') : '';
+}
 /** the tax registration row: registered or not, India's regular / composition scheme, and the number */
 function csuTaxRow(e, sources) {
   var india = packRegForm(e.country).schemes.length > 1; /* the pack offers a choice of scheme (India: regular · composition) */
@@ -810,7 +828,8 @@ function csuTaxSummary(e, india) {
   if (e.registered === null) return esc(tx('Not set yet'));
   return e.registered
     ? (india ? esc(e.scheme === 'composition' ? tx('Composition') : tx('Regular')) + csuSchemeInfo(e.scheme) + ' · ' : esc(tx('Registered')) + ' · ') +
-      esc(e.number || '')
+      esc(e.number || '') +
+      (e.registeredOn ? ' · ' + esc(txf('since {d}', { d: e.registeredOn })) : '')
     : esc(tx('Not registered'));
 }
 /** the Tax row painted: the registered pick (no default), India's scheme, and the number once registered */
@@ -851,6 +870,15 @@ function csuTaxRowHTML(e, sources, india, summary) {
           '" value="' +
           esc(e.number) +
           '" onchange="csuSet(\'number\', this.value)">'
+        : '') +
+      (e.registered
+        ? '<label style="display:flex;align-items:center;gap:6px;font-size:.9em">' +
+          esc(tx('Registered since')) +
+          '<input data-cbsid="ACC002-I07" class="inp" type="date" id="cs-tax-registered-on" data-testid="cs-tax-registered-on" max="' +
+          esc(csuTodayISO()) +
+          '" value="' +
+          esc(e.registeredOn) +
+          '" onchange="csuSet(\'registeredOn\', this.value)"></label>'
         : '') +
       (e.registered && CSU.taxErr
         ? '<span data-testid="cs-tax-error" role="alert" style="color:var(--red,#b3261e);font-size:.9em">' + esc(CSU.taxErr) + '</span>'
@@ -1057,13 +1085,19 @@ function renderCountrySetup() {
     };
   }
 }
+/** the tax answer of the write: registered, number, scheme, and the registration day only when one is held (SET-87; an absent day leaves the stored one alone) */
+function csuTaxBody(e) {
+  var tax = { registered: e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null };
+  if (e.registered && e.registeredOn) tax.registered_on = e.registeredOn;
+  return tax;
+}
 /** the body of the one write, from the edit record; CS2: the zone picked of the pack's several (a one-zone pack: the server sets it anyway) */
 function csuSaveBody(e, confirmed) {
   var body = {
     country: e.country,
     currency: e.currency,
     fy_start_month: e.fy,
-    tax: { registered: e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null },
+    tax: csuTaxBody(e),
     timezone: e.timezone || null,
     source: CSU.src
   };
@@ -1106,6 +1140,11 @@ function csuSave() {
   /* SET-49: Tax the owner opened or touched needs an answer before it is sent; Tax left alone goes as null (unknown), never false */
   if (csuTaxNeedsPick(e)) {
     CSU.err = tx('Pick registered or not registered for tax.');
+    return renderCountrySetup();
+  }
+  var dayWhy = e.registered ? csuRegisteredOnWhy(e.registeredOn) : ''; /* SET-87: a registration day in the future is said here, never sent */
+  if (dayWhy) {
+    CSU.err = dayWhy;
     return renderCountrySetup();
   }
   var deregisters = csuDeregisters(e);
