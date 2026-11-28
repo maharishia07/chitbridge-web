@@ -19,9 +19,11 @@
   }
   /** the visits of the answer; an older api that sends only looks[] is shown as before, each look one page */
   function rows(answer) {
-    if (answer && answer.visits) return answer.visits;
-    return ((answer && answer.looks) || []).map(function (look) {
+    var list = (answer && answer.visits) || ((answer && answer.looks) || []).map(function (look) {
       return { grant_id: look.grant_id, grantee_entity: look.grantee_entity, actor_name: null, actor_entity_name: null, from: look.at, to: look.at, pages: 1, refused: look.outcome === 'allowed' ? 0 : 1, pages_list: [{ route_pattern: look.route_pattern, count: 1 }] };
+    });
+    return list.map(function (visit, index) {
+      return Object.assign({ row_id: [visit.grant_id, visit.from, visit.to, visit.actor_identity_id || '', index].join('|') }, visit); /* two person-less visits that start together never share a row */
     });
   }
   /** the firm, and the person after it where the log holds one */
@@ -46,7 +48,7 @@
     return {
       key: 'books-grants-looks',
       rows: function () { return data; },
-      id: function (v) { return v.grant_id + '|' + v.from + '|' + (v.actor_name || ''); },
+      id: function (v) { return v.row_id; },
       rowTid: function (v) { return 'bg-visit-' + (v.refused ? 'refused' : 'looked'); },
       columns: [
         screen.col('at', words('When'), 1, 170, function (v) { return screen.when(v.from); }, function (v) { return v.from || ''; }),
@@ -56,7 +58,7 @@
       ],
       next: function (v) { return detail(v, screen.route); },
       search: function (v) { return whoOf(v, screen.nameOf); },
-      empty: { title: words('Nobody has looked yet'), body: words('Visits show here.') }
+      empty: screen.why ? { title: words('Only the owner sees this'), body: screen.why } : { title: words('Nobody has looked yet'), body: words('Visits show here.') }
     };
   }
   root.CBBooksGrantVisits = { rows: rows, config: config };

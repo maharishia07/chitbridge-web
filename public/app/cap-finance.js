@@ -220,7 +220,7 @@ function finFilterOptions() {
 function finFilterMatch(party, value) {
   if (value === 'over') return !!party.over_limit;
   if (finAgeWord(value)) return !!party.follow_up && party.follow_up.worst === value;
-  if (party.follow_up) return !!party.follow_up.worst; /* W15-94: overdue is the one ageing's word, the same as the Day book chip */
+  if (party.needs) return Number(party.needs.overdue) > 0; /* ACC-412: the api's overdue count; the band is ageing only */
   return Number(party.interest_minor) > 0 || (party.oldest_due && party.oldest_due < bkToday());
 }
 /* ── the columns: every figure is the server's ── */

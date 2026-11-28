@@ -15,7 +15,7 @@
  */
 (function (root) {
   'use strict';
-  var panel = { host: null, o: {}, given: [], parents: [], looks: [], view: 'given', why: null, notice: [], posted: [], seeThem: false };
+  var panel = { host: null, o: {}, firms: [], node: null, given: [], parents: [], looks: [], view: 'given', why: null, notice: [], posted: [], seeThem: false };
   var ROLE = { auditor: 'Auditor: reads only', adviser: 'Accountant: acts for you' };
   var ROLE_NAME = { adviser: 'Accountant', auditor: 'Auditor' };
   function words(s) {
@@ -23,6 +23,10 @@
   }
   function $(id) {
     return root.document.getElementById(id);
+  }
+  /** what the outside-firms module (books-grant-firms.js) needs of this screen: its state and its helpers */
+  function firmsCtx() {
+    return { panel: panel, escapeHtml: esc, words: words, $: $, reload: reload, paint: paint };
   }
   function api(key, o) {
     return root.CBBooksGrantApi.run(panel.o.call, key, o);
@@ -86,16 +90,17 @@
         panel.why = null;
         if (panel.view === 'looks') panel.looks = root.CBBooksGrantVisits.rows(answer);
         else { panel.given = (answer && answer.given) || []; panel.parents = (answer && answer.parents) || []; }
-        return weekly();
+        return root.CBBooksGrantFirms.asking(firmsCtx()).then(weekly);
       },
       function (failure) {
         panel.why = failure.status === 403 || failure.status === 503 ? failure.message : null;
         if (!panel.why) throw failure;
+        panel.given = []; panel.parents = []; panel.looks = []; /* a refused read leaves no list behind: the empty state below says it was refused, never "nobody" (UX-218) */
       }
     );
   }
 
-/** what the adviser posted for the owner in the last 7 days: the same queue, filtered (accepted, delegated, since): a line to read, never a list to clear */
+  /** what the adviser posted for the owner in the last 7 days: the same queue, filtered (accepted, delegated, since): a line to read, never a list to clear */
   function weekly() {
     if (panel.view !== 'given' || !(panel.given || []).some(function (g) { return g.preset === 'adviser'; })) return Promise.resolve();
     var since = dayValue(new Date(Date.now() - 7 * 864e5));
@@ -110,8 +115,8 @@
     return [
       ['given', words('Access I gave'), 'NET004-B01'],
       ['looks', words('Who looked'), 'NET004-B02'],
-      ['accept', words('To accept'), 'NET004-B10'],
-      ['asks', words('Requests'), 'NET004-B14']
+      ['accept', words('Work to approve'), 'NET004-B10'],
+      ['asks', words('Requests'), 'NET004-B19']
     ]
       .map(function (item) {
         return (
@@ -125,7 +130,9 @@
   function paint() {
     panel.host.innerHTML =
       backButton() + '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
-      '<button data-cbsid="NET004-B03" type="button" class="act quiet" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button></div>' +
+      '<button data-cbsid="NET004-B03" type="button" class="act quiet" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button>' +
+      '<button data-cbsid="NET004-B18" type="button" class="act quiet" id="bg_invite" data-testid="bg-invite">' + esc(words('Invite a firm')) + '</button></div>' +
+      (panel.view === 'given' ? root.CBBooksGrantFirms.html(firmsCtx()) : '') +
       '<div class="sub" data-testid="bg-note">' + esc(words('You choose who, in which role, and until when. Every look and every step is recorded.')) + '</div>' +
       noticeHtml() +
       (panel.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(panel.why) + '</div>' : '') +
@@ -138,7 +145,10 @@
     });
     if ($('bg_back')) $('bg_back').onclick = panel.o.onBack;
     greyGive();
+    if (panel.why) $('bg_invite').setAttribute('disabled', '');
     $('bg_give').onclick = openGive;
+    $('bg_invite').onclick = function () { root.CBBooksGrantFirms.invite(firmsCtx()); };
+    Array.prototype.forEach.call(panel.host.querySelectorAll('[data-firm]'), function (button) { button.onclick = function () { root.CBBooksGrantFirms.answer(firmsCtx(), button); }; });
     if ($('bg_seethem')) $('bg_seethem').onclick = function () { panel.view = 'posted'; panel.seeThem = false; reload(); };
     ({ looks: paintLooks, given: paintGiven, accept: paintAccept, posted: paintPosted, asks: paintAsks })[panel.view]($('bg_list'));
   }
@@ -205,12 +215,14 @@
       search: function (g) {
         return [nameOf(g.grantee_entity), g.purpose].join(' ');
       },
-      empty: { title: words('Nobody can see your books yet'), body: words('Connect your bookkeeper or auditor, then give access.') }
+      empty: panel.why
+        ? { title: words('Only the owner sees this'), body: panel.why }
+        : { title: words('Nobody can see your books yet'), body: words('Connect your bookkeeper or auditor, then give access.') }
     });
   }
   /** who looked at these books: one row per visit, newest first (the pages in the row's detail) */
   function paintLooks(host) {
-    panel.o.mountList(host, root.CBBooksGrantVisits.config({ nameOf: nameOf, route: whatWords, when: whenWords, col: col }, panel.looks));
+    panel.o.mountList(host, root.CBBooksGrantVisits.config({ nameOf: nameOf, route: whatWords, when: whenWords, col: col, why: panel.why }, panel.looks));
   }
 
   /* ── Give access: the consent, then a confirm that names the reach ── */
@@ -251,7 +263,7 @@
   }
   /** no firm is connected: say so, and the way to find one (the Requests view, its Ask to connect sheet open) */
   function noFirm() {
-    panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('Connect your bookkeeper or auditor first.')) + '</p><div class="nw-acts"><button data-cbsid="NET004-B23" type="button" class="act" id="bg_findfirm" data-testid="bg-findfirm">' + esc(words('Find your firm')) + '</button></div>');
+    panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('Connect your bookkeeper or auditor first.')) + '</p><div class="nw-acts"><button data-cbsid="NET004-B28" type="button" class="act" id="bg_findfirm" data-testid="bg-findfirm">' + esc(words('Find your firm')) + '</button></div>');
     $('bg_findfirm').onclick = function () {
       panel.o.closeSheet();
       panel.view = 'asks';
@@ -370,7 +382,7 @@
   /** the sheet that changes the end date of one open access */
   function openChange(grant) {
     panel.o.sheet(
-      '<h2>' + esc(words('Change the end date')) + '</h2><div class="bg-form" data-testid="bg-change-form"><div class="sub">' + esc(nameOf(grant.grantee_entity)) + '</div>' +
+      '<h2>' + esc(words('Change the end date')) + '</h2><div class="bg-form" data-testid="bg-change-form"><div class="sub">' + esc(nameOf(grant.grantee_entity)) + ' · ' + esc(words(ROLE_NAME[grant.preset] || ROLE_NAME.auditor)) + '</div>' + /* the change is to THIS role's grant */
         '<label class="sub" for="bg_until2">' + esc(words('Until')) + '</label><input data-cbsid="NET004-I05" id="bg_until2" class="inp" type="date" value="' + esc(dayValue(new Date(grant.expires_at))) + '" data-testid="bg-until2">' +
         root.CBBooksGrantEdit.costsBox(grant) +
         (grant.preset === 'adviser' ? '<div class="bg-consent" role="group" data-testid="bg-post2">' + postingHtml([{ value: 'adviser_posts', words: words(POSTING.adviser_posts) }, { value: 'owner_approves', words: words(POSTING.owner_approves) }], 'bg_post2', grant.posting) + '</div>' : '') +
@@ -457,8 +469,8 @@
   function mount(host, o) {
     panel.host = host;
     panel.o = o || {};
-    panel.view = (o && o.view) || 'given';
-    return reload().then(function () {
+    panel.view = o && o.view === 'add' ? 'asks' : (o && o.view) || 'given'; /* 'add': the firm's Add a client door opens the finder at once */
+    return reload().then(function (done) { if (o && o.view === 'add') root.CBBooksGrantAsks.openAsk('firm'); return done; }).then(function () {
       return { reload: reload };
     });
   }

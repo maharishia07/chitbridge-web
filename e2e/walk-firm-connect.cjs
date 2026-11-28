@@ -19,7 +19,7 @@ const ASK = (id, name, bridge, country, iAm) => ({ edge_id: id, kind: 'firm', i_
 
 W.run('firm-connect', async (w) => {
   const { page, ctx, base } = w;
-  const S = { writes: [], staff: false, refuse: null, costs503: false, asks: 2, invite: { sent: false, delivered: false, message: 'That address could not be reached.' },
+  const S = { writes: [], staff: false, refuse: null, costs503: false, get asks() { return this.to_me.length; }, invite: { sent: false, delivered: false, message: 'That address could not be reached.' },
     to_me: [ASK('e1', 'Acme Books Pty Ltd', 'CB0ACME001', 'AU', 'shop'), ASK('e2', 'Birch Audit', 'CB0BIRCH02', null, 'shop')], by_me: [ASK('e3', 'Cedar Partners', 'CB0CEDAR03', 'AU', 'shop')],
     given: [{ grant_id: GRANT, grantor_entity: MEMBER, grantee_entity: FIRM, grantee_name: 'Acme Books Pty Ltd', preset: 'adviser', posting: 'owner_approves', can_see_costs: false, purpose: 'Year-end books', granted_at: DAY(-5), expires_at: DAY(200), state: 'live' }] };
   const J = (r, status, body) => C.json(r, status, body);
@@ -66,9 +66,12 @@ W.run('firm-connect', async (w) => {
     return { ok: pressed === 'true' && /Waiting for your answer/i.test(list) && /Acme Books Pty Ltd/.test(list) && /CB0ACME001/.test(list) && /AU/.test(list) && /Waiting for their answer/i.test(list) && /Cedar Partners/.test(list) && !/network parent/i.test(list), saw: list.slice(0, 200) };
   });
   await w.step('F2', 'Accept asks first (names the firm), sends the one approve, and says Accept alone gives no access', async () => {
+    const dot0 = await txt(T('bell-dot'));
     await pickRow('ba-ask-me', 'ba-accept');
     const said = await confirmYes();
-    return { ok: wrote(/POST \/api\/network\/connections\/e1\/approve/).length === 1 && /Acme Books/.test(said) && /cannot see your books until you give access/i.test(said), saw: said.slice(0, 160) };
+    await page.waitForTimeout(500);
+    const dot1 = await txt(T('bell-dot'));
+    return { ok: dot0 === '3' && dot1 === '2' && wrote(/POST \/api\/network\/connections\/e1\/approve/).length === 1 && /Acme Books/.test(said) && /cannot see your books until you give access/i.test(said), saw: said.slice(0, 160) };
   });
   await w.step('F3', 'Refuse asks first and sends the one decline for that request', async () => {
     await pickRow('ba-ask-me', 'ba-refuse');
@@ -84,14 +87,15 @@ W.run('firm-connect', async (w) => {
     await page.click(T('ba-ask')); await page.waitForSelector(T('ba-form'), { timeout: 5000 });
     const held = await page.getAttribute(T('ba-send'), 'aria-disabled');
     await page.fill(T('ba-q'), 'acme'); await page.click(T('ba-find')); await page.waitForSelector(T('ba-pick'), { timeout: 5000 });
-    await page.click(T('ba-pick')); await page.click(T('ba-send')); await confirmYes();
+    await page.click(T('ba-pick')); await page.click(T('ba-send')); await page.waitForTimeout(600);
+    const asked = await has(T('confirm'));
     const sent = wrote(/POST \/api\/network\/connections [{]/)[0] || '';
-    return { ok: held === 'true' && /"parentHandle":"acme"/.test(sent) && /"type":"agency"/.test(sent) && !/childBridgeId/.test(sent), saw: sent };
+    return { ok: !asked && held === 'true' && /"parentHandle":"acme"/.test(sent) && /"type":"agency"/.test(sent) && !/childBridgeId/.test(sent), saw: sent };
   });
   await w.step('F6', 'a firm asking a shop sends the child end by bridge id', async () => {
-    await page.click(T('ba-ask')); await page.waitForSelector(T('ba-form'), { timeout: 5000 });
-    await page.selectOption(T('ba-dir'), 'firm'); await page.fill(T('ba-q'), 'acme'); await page.click(T('ba-find')); await page.waitForSelector(T('ba-pick'), { timeout: 5000 });
-    await page.click(T('ba-pick')); await page.click(T('ba-send')); await confirmYes();
+    await open('#add'); await page.waitForSelector(T('ba-form'), { timeout: 15000 }); /* the firm's Add a client door opens the finder at once */
+    await page.fill(T('ba-q'), 'acme'); await page.click(T('ba-find')); await page.waitForSelector(T('ba-pick'), { timeout: 5000 });
+    await page.click(T('ba-pick')); await page.click(T('ba-send')); await page.waitForTimeout(600);
     const sent = wrote(/POST \/api\/network\/connections [{]/)[1] || '';
     return { ok: /"childBridgeId":"CB0ACME001"/.test(sent) && !/parentHandle/.test(sent), saw: sent };
   });
@@ -101,7 +105,7 @@ W.run('firm-connect', async (w) => {
       S.refuse = { status: code === 'EXISTS' ? 409 : 429, code, message: 'server words' };
       await page.click(T('ba-ask')); await page.waitForSelector(T('ba-form'), { timeout: 5000 });
       await page.fill(T('ba-q'), 'acme'); await page.click(T('ba-find')); await page.waitForSelector(T('ba-pick'), { timeout: 5000 });
-      await page.click(T('ba-pick')); await page.click(T('ba-send')); await confirmYes(); await page.waitForTimeout(300);
+      await page.click(T('ba-pick')); await page.click(T('ba-send')); await page.waitForTimeout(700);
       said.push(await txt(T('ba-out'))); await page.click(T('ba-cancel'));
     }
     S.refuse = null;
@@ -156,6 +160,7 @@ W.run('firm-connect', async (w) => {
     return { ok: /Acme Books Pty Ltd · Priya Nair/.test(row) && /3 pages/.test(row) && /trial balance/i.test(pages) && /× 2/.test(pages), saw: row + ' || ' + pages };
   });
   await w.step('F14', 'the bell\'s dot reads the badge (asks counted), its one pinned row opens the requests', async () => {
+    S.to_me = [ASK('e1', 'Acme Books Pty Ltd', 'CB0ACME001', 'AU', 'shop'), ASK('e2', 'Birch Audit', 'CB0BIRCH02', null, 'shop')];
     await open('#books'); await page.waitForSelector(T('bell-btn'), { timeout: 15000 }); await page.waitForTimeout(500);
     const dot = await txt(T('bell-dot'));
     await page.click(T('bell-btn')); await page.waitForSelector('[data-asks="1"]', { timeout: 5000 });
@@ -163,14 +168,13 @@ W.run('firm-connect', async (w) => {
     await page.click('[data-asks="1"]'); await page.waitForSelector(T('ba-list'), { timeout: 15000 });
     return { ok: dot === '3' && /2 requests/.test(row) && /asks/.test(page.url()), saw: 'dot ' + dot + ' · row "' + row + '" · ' + page.url().slice(-18) };
   });
-  await w.step('F15', 'the Home card names the waiting requests and its door opens the Requests', async () => {
+  await w.step('F15', 'the Home Network card stays grey (not ready) and asks nothing until the api half is live', async () => {
     await page.goto(base + '/'); await page.waitForSelector(T('cbshell'), { timeout: 20000 });
     await page.evaluate(() => window.SHELL && window.SHELL.ready);
-    await page.waitForSelector(T('shell-facts-network'), { state: 'attached', timeout: 20000 }); await page.waitForTimeout(1500);
-    await page.waitForFunction(() => /requests to connect/.test(document.body.textContent), null, { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(2500);
     const card = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid="shell-facts-network"]')).map((el) => el.textContent.replace(/\s+/g, ' ').trim()).join(' | ') + ' · spots ' + document.querySelectorAll('[data-testid^="shell-facts-"]').length + ' · ' + (window.SHELL ? 'shell' : 'no shell'));
     const href = await page.getAttribute(T('shell-card-network'), 'href').catch(() => ''); /* the Home card's lines paint only with a full practice answer the stand-in does not give: the card is asked, and its door is the requests */
-    return { ok: /network.html#asks$/.test(href || ''), saw: 'facts asked ' + S.factsAsked + ' · door ' + href + ' · ' + card };
+    return { ok: S.factsAsked !== true, saw: 'facts asked ' + S.factsAsked + ' · door ' + href + ' · ' + card };
   });
   await w.step('F16', 'the Requests view fits 1366x768 and 390x844 with no page scroll', async () => {
     S.to_me = [ASK('e1', 'Acme Books Pty Ltd', 'CB0ACME001', 'AU', 'shop'), ASK('e2', 'Birch Audit', 'CB0BIRCH02', null, 'shop')]; S.by_me = [ASK('e3', 'Cedar Partners', 'CB0CEDAR03', 'AU', 'shop')];

@@ -71,7 +71,7 @@ function go() {
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
-<script src="/app/books-grant-api.js"></script><script src="/app/books-grant-words.js"></script><script src="/app/books-grant-asks.js"></script><script src="/app/books-grant-edit.js"></script><script src="/app/books-grant-visits.js"></script><script src="/app/books-grant-member.js"></script><script src="/app/books-acting.js"></script><script src="/app/books-actions-view.js"></script><script src="/app/lock-words.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
+<script src="/app/books-grant-api.js"></script><script src="/app/books-grant-words.js"></script><script src="/app/books-grant-firms.js"></script><script src="/app/books-grant-asks.js"></script><script src="/app/books-grant-edit.js"></script><script src="/app/books-grant-visits.js"></script><script src="/app/books-grant-member.js"></script><script src="/app/books-acting.js"></script><script src="/app/books-actions-view.js"></script><script src="/app/lock-words.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script><script src="/app/core-answers.js"></script><script src="/app/core-copy.js"></script>
 <script src="/app/cb-words.js"></script>
 <script src="/app/accounts-shell-unsaved.js"></script><script src="/app/accounts-shell.js"></script><script src="/app/accounts-start.js"></script>
@@ -249,7 +249,7 @@ function taxCloseWord() {
   if (item && (returnWord || word)) item[1] = returnWord || word + ' close & pay';
 }
 function navPaint(active) {
-  taxCloseWord(); /* the menu names the shop's own tax: GST · VAT · Consumption tax close & pay ("Tax close & pay" when no pack is known) */
+  taxCloseWord(); const duesNavHid = (window.cbDuesNavHid = typeof window.cbDuesTwin === 'function' && window.cbDuesTwin(active)); /* UX-211: cap-books-needs.js */ /* the menu names the shop's own tax: GST · VAT · Consumption tax close & pay ("Tax close & pay" when no pack is known) */
   const byId = Object.fromEntries(NAV.map((item) => [item[0], item])),
     fold = navFolded();
   $('nav').innerHTML = NAV_GROUPS.map(([text, ids]) => {
@@ -257,7 +257,7 @@ function navPaint(active) {
     const head = text
       ? `<button data-cbsid="BKS001-B02" type="button" class="nav-grp" data-grp="${esc(text)}" data-testid="acc-grp-${esc(text.toLowerCase().replace(/ /g, '-'))}" aria-label="${esc(tx(text))}" aria-expanded="${!shut}"><span class="label">${esc(tx(text))}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
       : '';
-    return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.map((id) => byId[id]).filter(Boolean), active) + '</div>';
+    return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.filter((id) => !(id === 'dues' && duesNavHid)).map((id) => byId[id]).filter(Boolean), active) + '</div>';
   }).join('');
 }
 /* M-F-08 (WALK M): a view-only login is refused the ledger's money (api: the books money gate) and the owner's two doors; those entries are GREYED with the reason (one readiness state: grey, say why), never drawn as if they opened */

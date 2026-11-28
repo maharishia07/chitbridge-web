@@ -333,5 +333,9 @@
     bellKit.needs = count == null ? null : Number(count) || 0;
     LIVE.forEach(function (item) { if (item.repaint) item.repaint(); });
   }
-  root.CBBell = { mount: mount, line: bellKit.line, EP: BELL_EP, markTitle: bellKit.markTitle, setNeeds: setNeeds };
+  /** every bell on the page reads again (after the owner answers a request, the dot must say the new count) */
+  function refreshAll() {
+    LIVE.forEach(function (item) { item.refresh(); });
+  }
+  root.CBBell = { refreshAll: refreshAll, mount: mount, line: bellKit.line, EP: BELL_EP, markTitle: bellKit.markTitle, setNeeds: setNeeds };
 })(typeof window !== 'undefined' ? window : this);

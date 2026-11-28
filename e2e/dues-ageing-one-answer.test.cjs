@@ -39,7 +39,7 @@ ok(JSON.stringify(f.BK_FOLLOW.map((x) => x[1])) === JSON.stringify(['Current', '
 ok(f.bkFollowWord('lt_1m') === '', 'a pack month bucket is no word of this screen (there is no "Other")');
 
 /* Northside: 135,300 owed; 6,600 not due, the rest 31–60 late (the walk's AU numbers) */
-const north = { party_id: 'n', side: 'customer', balance_minor: 13530000, oldest_due: '2026-10-16', disputed_minor: 0, buckets: { not_due: 660000, lt_1m: 12870000 }, follow_up: FU({ not_due: 660000, d31_60: 12870000, worst: 'd31_60' }) };
+const north = { party_id: 'n', side: 'customer', balance_minor: 13530000, oldest_due: '2026-10-16', disputed_minor: 0, needs: { bills: 3, overdue: 2, overdue_minor: 1 }, buckets: { not_due: 660000, lt_1m: 12870000 }, follow_up: FU({ not_due: 660000, d31_60: 12870000, worst: 'd31_60' }) };
 ok(f.bkDuesAge(north) === '31–60 days', 'the oldest-due cell says "31–60 days", not "Not due" (the AU pack buckets are not read)');
 BK.dues = { n: north };
 const next = f.bkDuesNext(north, 'AUD', 'dues');
@@ -63,10 +63,10 @@ ok(counts.overdue === 1, 'the Day book chip: 1 customer overdue = the customers 
 /* W15-95 / W15-107 · the bills, a page the server sends: Date · Bill · Due date · Days overdue · Status · Amount · Still owed · Reviewed */
 BK.dues = { n: north };
 const ans = { bills: [
-  { ref: 'c2', bill_no: 'S042-02', chit_id: 'c2', entry_id: 'e2', date: '2026-08-20', due_date: '2026-09-19', days_overdue: 58, band: 'd31_60', status: 'part', amount_minor: 6000000, owed_minor: 5080000, mark: null, evidence_flag: null, reasons: ['overdue'], why: 'overdue', action: 'pay' },
+  { ref: 'c2', bill_no: 'S042-02', chit_id: 'c2', entry_id: 'e2', date: '2026-08-20', due_date: '2026-09-19', days_overdue: 58, overdue: true, band: 'd31_60', status: 'part', amount_minor: 6000000, owed_minor: 5080000, mark: null, evidence_flag: null, reasons: ['overdue'], why: 'overdue', action: 'pay' },
   { ref: 'c3', bill_no: 'S042-03', chit_id: 'c3', entry_id: 'e3', date: '2026-10-01', due_date: '2026-10-31', days_overdue: null, band: 'not_due', status: 'unpaid', amount_minor: 5000000, owed_minor: 5000000, mark: null, evidence_flag: null, reasons: [] },
-  { ref: 'c5', bill_no: 'S042-05', chit_id: 'c5', entry_id: 'e5', date: '2026-09-01', due_date: null, days_overdue: 40, band: 'd31_60', status: 'unpaid', amount_minor: 100000, owed_minor: 100000, no_terms: true, mark: null, evidence_flag: null, reasons: ['no_terms', 'overdue'], why: 'no_terms', action: 'terms' },
-  { ref: 'c6', bill_no: 'S042-06', chit_id: 'c6', entry_id: 'e6', date: '2026-08-03', due_date: '2026-09-02', days_overdue: 75, band: 'd61_90', status: 'unpaid', amount_minor: 900000, owed_minor: 900000, mark: { class: 'hold', kind: 'on_hold', by_name: 'Pat Auditor', at: '2026-11-15' }, evidence_flag: 'no_tax_invoice', reasons: ['no_tax_invoice', 'overdue'], why: 'no_tax_invoice', action: 'attach' }],
+  { ref: 'c5', bill_no: 'S042-05', chit_id: 'c5', entry_id: 'e5', date: '2026-09-01', due_date: null, days_overdue: null, band: 'd31_60', status: 'unpaid', amount_minor: 100000, owed_minor: 100000, no_terms: true, mark: null, evidence_flag: null, reasons: ['no_terms', 'overdue'], why: 'no_terms', action: 'terms' },
+  { ref: 'c6', bill_no: 'S042-06', chit_id: 'c6', entry_id: 'e6', date: '2026-08-03', due_date: '2026-09-02', days_overdue: 75, overdue: true, band: 'd61_90', status: 'unpaid', amount_minor: 900000, owed_minor: 900000, mark: { class: 'hold', kind: 'on_hold', by_name: 'Pat Auditor', at: '2026-11-15' }, evidence_flag: 'no_tax_invoice', reasons: ['no_tax_invoice', 'overdue'], why: 'no_tax_invoice', action: 'attach' }],
   total: 4, page: 1, limit: 25, counts: { needs: 3, open: 4, paid: 1, all: 5, in_order: 1 }, bands: { d0_30: 9570000, d31_60: 3960000, not_due: 5000000 }, on_account_minor: 7920000, checks: true };
 BK.pb = { n: { q: { tab: 'all', paid: false, why: '', band: '', sort: 'date', dir: 'desc', page: 1 }, ans, busy: false, list: 'dues' } };
 const bills = f.bkPartyBillsHTML('n', 'dues', 'AUD');

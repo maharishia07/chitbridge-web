@@ -94,15 +94,15 @@
   function paint() {
     panel.host.innerHTML =
       (panel.o.onBack ? '<div class="nw-acts"><button data-cbsid="NET004-B09" type="button" class="act quiet" id="ba_back" data-testid="ba-back">← ' + esc(words('Back to My network')) + '</button></div>' : '') +
-      '<div class="nw-acts" data-testid="ba-head"><button data-cbsid="NET004-B15" type="button" class="act" id="ba_ask" data-testid="ba-ask">' + esc(words('Ask to connect')) + '</button>' +
-      '<button data-cbsid="NET004-B16" type="button" class="act quiet" id="ba_invite" data-testid="ba-invite">' + esc(words('Invite by email')) + '</button></div>' +
+      '<div class="nw-acts" data-testid="ba-head"><button data-cbsid="NET004-B20" type="button" class="act" id="ba_ask" data-testid="ba-ask">' + esc(words('Ask to connect')) + '</button>' +
+      '<button data-cbsid="NET004-B21" type="button" class="act quiet" id="ba_invite" data-testid="ba-invite">' + esc(words('Invite by email')) + '</button></div>' +
       '<div class="sub" data-testid="ba-note">' + esc(words('Connecting gives no access. You give access later.')) + '</div>' +
       (panel.why ? '<div class="nw-why" id="ba_why" role="status" data-testid="ba-why">' + esc(panel.why) + '</div>' : '') +
       '<div class="nw-list" id="ba_list" data-testid="ba-list"></div>';
     if ($('ba_back')) $('ba_back').onclick = panel.o.onBack;
     grey($('ba_ask'));
     grey($('ba_invite'));
-    $('ba_ask').onclick = openAsk;
+    $('ba_ask').onclick = function () { openAsk('shop'); };
     $('ba_invite').onclick = openInvite;
     paintList($('ba_list'));
   }
@@ -150,7 +150,7 @@
         confirm: { title: words(text.title), body: '<b>' + esc(whoLine(request)) + '</b><br>' + esc(words(text.body)), yes: words(text.yes), danger: !!text.danger },
         failed: words(text.failed),
         done: words(text.done),
-        outcome: function () { reload(); }
+        outcome: function () { reload(); if (root.CBBell && root.CBBell.refreshAll) root.CBBell.refreshAll(); /* the dot reads the waiting count again */ }
       }
     );
   }
@@ -165,22 +165,23 @@
   }
 
   /* ── Ask to connect: say who asks, find the business, pick it, confirm ── */
-  var found = [];
+  var found = [], direction = 'shop'; /* who asks: a shop asks its firm (the firm is the parent), a firm asks a shop; the page that opens the sheet says which */
   /** the sheet: I am a shop (ask my firm) or a firm (ask a shop); a name, sign-in name or bridge id; the matches to pick; the confirm */
   function askForm() {
     return (
       '<h2>' + esc(words('Ask to connect')) + '</h2><div class="bg-form" data-testid="ba-form">' +
-      '<label class="sub" for="ba_dir">' + esc(words('Who is asking')) + '</label><select data-cbsid="NET004-S03" id="ba_dir" class="inp" data-testid="ba-dir">' +
-      '<option value="shop">' + esc(words('I am a shop: ask my firm')) + '</option><option value="firm">' + esc(words('I am a firm: ask a shop')) + '</option></select>' +
-      '<label class="sub" for="ba_q">' + esc(words('Name, sign-in name or bridge id')) + '</label><div class="nw-acts"><input data-cbsid="NET004-I07" id="ba_q" class="inp" maxlength="80" autocomplete="off" data-testid="ba-q">' +
-      '<button data-cbsid="NET004-B17" type="button" class="act quiet" id="ba_find" data-testid="ba-find">' + esc(words('Find')) + '</button></div>' +
+      '<label class="sub" for="ba_q">' + esc(words(direction === 'firm' ? 'The shop: name, sign-in or bridge id' : 'Your firm: name, sign-in or bridge id')) + '</label><div class="nw-acts"><input data-cbsid="NET004-I08" id="ba_q" class="inp" maxlength="80" autocomplete="off" data-testid="ba-q">' +
+      '<button data-cbsid="NET004-B22" type="button" class="act quiet" id="ba_find" data-testid="ba-find">' + esc(words('Find')) + '</button></div>' +
       '<div class="bg-consent" id="ba_found" role="group" data-testid="ba-found" hidden></div>' +
+      '<div class="sub" data-testid="ba-must">' + esc(words(direction === 'firm' ? 'The shop must accept.' : 'The firm must accept. No books are shared yet.')) + '</div>' +
       '<div class="nw-out" id="ba_out" data-testid="ba-out" role="status"></div>' +
-      '<div class="nw-acts"><button data-cbsid="NET004-B18" type="button" class="act" id="ba_send" data-testid="ba-send" disabled aria-disabled="true" title="' + esc(words('Pick a business first.')) + '">' + esc(words('Send request')) + '</button>' +
-      '<button data-cbsid="NET004-B19" type="button" class="act quiet" id="ba_cancel" data-testid="ba-cancel">' + esc(words('Cancel')) + '</button></div></div>'
+      '<div class="nw-acts"><button data-cbsid="NET004-B23" type="button" class="act" id="ba_send" data-testid="ba-send" disabled aria-disabled="true" title="' + esc(words('Pick a business first.')) + '">' + esc(words('Send request')) + '</button>' +
+      '<button data-cbsid="NET004-B24" type="button" class="act quiet" id="ba_cancel" data-testid="ba-cancel">' + esc(words('Cancel')) + '</button></div></div>'
     );
   }
-  function openAsk() {
+  /** open the sheet; `who` is 'firm' on the firm's Add a client, else the owner's own ask of its firm */
+  function openAsk(who) {
+    direction = who === 'firm' ? 'firm' : 'shop';
     found = [];
     panel.o.sheet(askForm());
     $('ba_cancel').onclick = panel.o.closeSheet;
@@ -195,7 +196,7 @@
     found = list;
     box.hidden = !list.length;
     box.innerHTML = list.map(function (b, i) {
-      return '<label class="bg-tick"><input data-cbsid="NET004-I08" type="radio" name="ba_pick" value="' + i + '" data-testid="ba-pick"> ' + esc([b.display_name, b.bridge_id].filter(Boolean).join(' · ')) + '</label>';
+      return '<label class="bg-tick"><input data-cbsid="NET004-I09" type="radio" name="ba_pick" value="' + i + '" data-testid="ba-pick"> ' + esc([b.display_name, b.bridge_id, b.country].filter(Boolean).join(' · ')) + '</label>';
     }).join('');
     Array.prototype.forEach.call(box.querySelectorAll('input'), function (radio) { radio.onchange = tickPick; });
     tickPick();
@@ -228,20 +229,15 @@
     return direction === 'firm' ? { childBridgeId: pick.bridge_id, type: 'agency' } : { parentHandle: pick.user_id || pick.bridge_id, type: 'agency' };
   }
   function askSend() {
-    var pick = picked(), direction = $('ba_dir').value;
+    var pick = picked();
     root.CBAction.run(
       $('ba_send'),
       function () { return callEndpoint('netConnect', { body: askBody(pick, direction) }); },
       {
         key: 'ba-ask',
-        confirm: {
-          title: words('Send this request?'),
-          body: '<b>' + esc([pick.display_name, pick.bridge_id].join(' · ')) + '</b><br>' + esc(words(direction === 'firm' ? 'The shop must accept.' : 'The firm must accept. Nobody sees your books until you give access.')),
-          yes: words('Send request')
-        },
         failed: words("Couldn't send the request"),
         out: 'ba_out',
-        outcome: function () { panel.o.closeSheet(); reload(); }
+        outcome: function () { panel.o.closeSheet(); reload(); if (panel.o.onSent) panel.o.onSent(); }
       }
     );
   }
@@ -251,10 +247,10 @@
     panel.o.sheet(
       '<h2>' + esc(words('Invite your firm by email')) + '</h2><div class="bg-form" data-testid="ba-invite-form">' +
       '<div class="sub">' + esc(words('They get an email to join. Nothing connects until they sign up and you ask.')) + '</div>' +
-      '<label class="sub" for="ba_email">' + esc(words('Email address')) + '</label><input data-cbsid="NET004-I09" id="ba_email" class="inp" type="email" maxlength="120" autocomplete="off" data-testid="ba-email">' +
+      '<label class="sub" for="ba_email">' + esc(words('Email address')) + '</label><input data-cbsid="NET004-I10" id="ba_email" class="inp" type="email" maxlength="120" autocomplete="off" data-testid="ba-email">' +
       '<div class="nw-out" id="ba_iout" data-testid="ba-iout" role="status"></div>' +
-      '<div class="nw-acts"><button data-cbsid="NET004-B20" type="button" class="act" id="ba_isend" data-testid="ba-isend">' + esc(words('Send invitation')) + '</button>' +
-      '<button data-cbsid="NET004-B21" type="button" class="act quiet" id="ba_icancel" data-testid="ba-icancel">' + esc(words('Cancel')) + '</button></div></div>'
+      '<div class="nw-acts"><button data-cbsid="NET004-B25" type="button" class="act" id="ba_isend" data-testid="ba-isend">' + esc(words('Send invitation')) + '</button>' +
+      '<button data-cbsid="NET004-B26" type="button" class="act quiet" id="ba_icancel" data-testid="ba-icancel">' + esc(words('Cancel')) + '</button></div></div>'
     );
     $('ba_icancel').onclick = panel.o.closeSheet;
     $('ba_isend').onclick = sendInvite;
@@ -285,7 +281,7 @@
 
   function reload() {
     return read().then(paint, function () {
-      panel.host.innerHTML = '<div class="nw-why" role="status" data-testid="ba-fail">' + esc(words("Couldn't read requests.")) + '</div><button data-cbsid="NET004-B22" type="button" class="act" id="ba_retry" data-testid="ba-retry">' + esc(words('Try again')) + '</button>';
+      panel.host.innerHTML = '<div class="nw-why" role="status" data-testid="ba-fail">' + esc(words("Couldn't read requests.")) + '</div><button data-cbsid="NET004-B27" type="button" class="act" id="ba_retry" data-testid="ba-retry">' + esc(words('Try again')) + '</button>';
       $('ba_retry').onclick = reload;
     });
   }
@@ -297,5 +293,5 @@
       return { reload: reload };
     });
   }
-  root.CBBooksGrantAsks = { mount: mount, refusal: refusal, openAsk: openAsk };
+  root.CBBooksGrantAsks = { mount: mount, refusal: refusal, openAsk: openAsk, askBody: askBody };
 })(typeof window !== 'undefined' ? window : globalThis);

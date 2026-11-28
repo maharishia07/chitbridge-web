@@ -32,16 +32,16 @@
   }
   /** the costs choice on the Change sheet, as it stands now */
   function costsBox(grant) {
-    return '<label class="bg-tick"><input data-cbsid="NET004-I10" id="bg_costs2" type="checkbox"' + (grant.can_see_costs ? ' checked' : '') + ' data-testid="bg-costs2"> ' + esc(words('They can see my costs and margins')) + '</label>';
+    return '<label class="bg-tick"><input data-cbsid="NET004-I11" id="bg_costs2" type="checkbox"' + (grant.can_see_costs ? ' checked' : '') + ' data-testid="bg-costs2"> ' + esc(words('They can see my costs and margins')) + '</label>';
   }
   /** a rise: costs were hidden and the box is now ticked */
   function rising(grant, ticked) {
-    return !grant.can_see_costs && !!ticked;
+    return grant.can_see_costs === false && !!ticked;
   }
   /** the PATCH body: the end date and posting as before, the costs choice only when it moved; a rise carries consent (asked first) */
   function body(grant, ids) {
     var out = { expires_at: ids.until, posting: ids.posting || undefined };
-    if (!!ids.costs !== !!grant.can_see_costs) {
+    if (grant.can_see_costs !== undefined && !!ids.costs !== !!grant.can_see_costs) { /* a row that does not say what it shows never has costs hidden by an unticked box */
       out.can_see_costs = !!ids.costs;
       if (rising(grant, ids.costs)) out.consent = true;
     }
