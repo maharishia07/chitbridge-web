@@ -295,7 +295,7 @@
       (grantKit.viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' + pagerSlot(report) +
       (grantKit.markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes; fd1117: the marks bar (count and All queries) sits UNDER the list with the notes, so the first data row stays where the ceiling holds it */ +
-      (grantKit.viewState.why ? '' : grantKit.riskNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
+      (grantKit.viewState.why ? '' : grantKit.riskNote(report)) /* under the list too: the first data row stays where the ceiling holds it */;
     wirePainted(report);
   }
   /** the failure frame: a 403 the server named by a code says why and what to do and the way back to his queue (W19); anything else is the one frame as before */
