@@ -3094,11 +3094,12 @@ function bkJetRange(period) {
   BK.dvYeRead = !!after;
   return after || period;
 }
-/** the period the JET rules judge against: a window that opens at the financial year's start is that whole year (its end is fixed, not today), else the window itself */
+/** the period the JET rules judge against: a window that opens at the financial year's start and runs to today or to the year's end is that whole year (its end is fixed, not today); any other window (a month, a part year, a closed year) is judged as itself */
 function bkJetPeriod(window) {
   if (!window || window.from !== bkFyFrom()) return window;
-  var start = new Date(window.from + 'T00:00:00Z');
-  return { from: window.from, to: new Date(Date.UTC(start.getUTCFullYear() + 1, start.getUTCMonth(), start.getUTCDate() - 1)).toISOString().slice(0, 10) };
+  var start = new Date(window.from + 'T00:00:00Z'),
+    yearEnd = new Date(Date.UTC(start.getUTCFullYear() + 1, start.getUTCMonth(), start.getUTCDate() - 1)).toISOString().slice(0, 10);
+  return window.to >= bkToday() || window.to === yearEnd ? { from: window.from, to: yearEnd } : window;
 }
 var BK_JET_KEYS = ['mark', 'risk', 'rec', 'time', 'round', 'narr', 'ye', 'madeby'];
 /** the filter choices of this page: the address on the first read, then what the person chose; the address word dbf_by is the Made by filter (the owner's own Person filter keeps its key) */
