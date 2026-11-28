@@ -259,9 +259,10 @@ W.run('books-grant', async (w) => {
     return { ok: /Acme Brand/.test(ask) && /read only/i.test(ask) && /until/i.test(ask) && none && S.gives.length === 1 && sent.consent === true && sent.grantee === BRAND && sent.can_see_costs === false && !!sent.expires_at, saw: ask.slice(0, 110) + ' · posts ' + S.gives.length };
   });
   await w.step('M5', 'the member · Who looked: when, who, what — the refused look is said as refused', async () => {
-    await page.click(T('bg-seg-looks')); await page.waitForSelector(T('bg-look-allowed'), { timeout: 10000 });
+    await page.click(T('bg-seg-looks')); await page.waitForSelector('[data-testid^="bg-visit-"]', { timeout: 10000 });
+    await page.click('[data-testid^="bg-visit-"]'); await page.waitForSelector(T('bg-visit-pages'), { timeout: 5000 }); /* UX-220: one row per visit; the pages are its detail and a refused look is counted */
     const list = await txt(T('bg-list'));
-    return { ok: /trial balance/i.test(list) && /Looked/.test(list) && /Refused: not open to an auditor/.test(list), saw: list.slice(0, 140) };
+    return { ok: /trial balance/i.test(list) && /[0-9]+ pages?/.test(list) && (await has(T('bg-visit-refused'))), saw: list.slice(0, 140) };
   });
   await w.step('M6', 'the member · End access asks first, then ends: the row says Ended', async () => {
     await page.click(T('bg-seg-given')); await page.waitForSelector('[data-testid^="bg-grant-"]', { timeout: 10000 });

@@ -164,12 +164,12 @@
     /** ONE read of the feed (never polled) */
     function read() {
       if (bell.dead || !whoToken(opts)) return Promise.resolve();
-      return call(opts, 'notifications')
+      return call(opts, 'notifications', bellKit.readQuery(bell))
         .then(function (reply) {
           if (bell.dead) return;
           bell.err = false;
-          bell.rows = (reply && reply.notifications) || [];
-          setCount(reply && reply.count != null ? reply.count : bell.rows.length);
+          bellKit.take(bell, reply);
+          setCount(bellKit.countOf(bell, reply));
           paint();
         })
         .catch(function () {
@@ -218,14 +218,13 @@
 
     function toggle() {
       bell.open = !bell.open;
-      bell.out = '';
-      bell.tone = '';
+      bell.out = ''; bell.tone = ''; bell.loading = bell.open; /* the feed is read on opening, not before */
       paint();
       /* OPENING IS SEEING: looking moves the watermark, so the dot clears without a "mark all read" button */
       if (bell.open) {
         call(opts, 'notifSeen')
           .then(function () {
-            setCount(0);
+            setCount(bell.asks || 0); /* waiting requests are not seen away */
             paint();
           })
           .catch(function (failure) { if (root.cbQuiet) root.cbQuiet('bell:seen', failure); /* a failed clear leaves the list as it was; the next read says the truth */ });
@@ -334,5 +333,9 @@
     bellKit.needs = count == null ? null : Number(count) || 0;
     LIVE.forEach(function (item) { if (item.repaint) item.repaint(); });
   }
-  root.CBBell = { mount: mount, line: bellKit.line, EP: BELL_EP, markTitle: bellKit.markTitle, setNeeds: setNeeds };
+  /** every bell on the page reads again (after the owner answers a request, the dot must say the new count) */
+  function refreshAll() {
+    LIVE.forEach(function (item) { item.refresh(); });
+  }
+  root.CBBell = { refreshAll: refreshAll, mount: mount, line: bellKit.line, EP: BELL_EP, markTitle: bellKit.markTitle, setNeeds: setNeeds };
 })(typeof window !== 'undefined' ? window : this);
