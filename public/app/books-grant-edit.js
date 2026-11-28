@@ -50,7 +50,7 @@
   /** the confirm of a rise in costs: the server's own words of giving them, then the question */
   function riseWords(consent, who) {
     var said = consent ? [consent.headline, consent.costs].filter(Boolean).map(function (line) { return '<div>' + esc(line) + '</div>'; }).join('') : '';
-    return '<b>' + esc(who) + '</b> ' + esc(words('will be able to see your costs and margins.')) + said + '<div>' + esc(words('Every look is recorded. You can hide them again any time.')) + '</div>';
+    return '<b>' + esc(who) + '</b> ' + esc(words('can see your costs and margins.')) + said + '<div>' + esc(words('Every look is recorded. You can hide costs again.')) + '</div>';
   }
   /** a refusal of the change in words: the costs column not switched on yet, or consent missing */
   function wording(failure) {

@@ -27,14 +27,14 @@
   };
   /** every refusal of the ask doors in a plain sentence (what happened · what it means · what to do); a code not listed keeps the server's own words */
   var WORDS = {
-    EXISTS: 'You have already asked, or you are already connected. Nothing was sent.',
-    FIRM_DIRECTION: 'These two are already connected the other way round: the firm is the one that looks after the books. Nothing was sent.',
-    ASK_LIMIT: 'Too many requests are waiting, or too many were sent today. Nothing was sent. Try again tomorrow.',
-    ASK_COOLING_OFF: 'That business refused a short while ago. You can ask again in an hour.',
-    INVITE_LIMIT: 'Too many invitations today, or that address was invited this week. Nothing was sent.',
+    EXISTS: 'Already asked or connected. Nothing was sent.',
+    FIRM_DIRECTION: 'You are already connected the other way. Nothing was sent.',
+    ASK_LIMIT: 'Too many requests. Nothing was sent. Try again tomorrow.',
+    ASK_COOLING_OFF: 'They refused a short while ago. Ask again in an hour.',
+    INVITE_LIMIT: 'Too many invitations, or already invited this week. Nothing was sent.',
     OWNER_ONLY: 'Only the owner sends and answers requests. Ask your owner.',
-    CHILD_NOT_FOUND: 'We could not find that business. Check its name or bridge id. Nothing was sent.',
-    PARENT_NOT_FOUND: 'We could not find that business. Check its name or bridge id. Nothing was sent.',
+    CHILD_NOT_FOUND: 'Business not found. Check the name or bridge id.',
+    PARENT_NOT_FOUND: 'Business not found. Check the name or bridge id.',
     SELF: 'That is your own business. Nothing was sent.'
   };
   var panel = { host: null, o: {}, to_me: [], by_me: [], why: null };
@@ -96,7 +96,7 @@
       (panel.o.onBack ? '<div class="nw-acts"><button data-cbsid="NET004-B09" type="button" class="act quiet" id="ba_back" data-testid="ba-back">← ' + esc(words('Back to My network')) + '</button></div>' : '') +
       '<div class="nw-acts" data-testid="ba-head"><button data-cbsid="NET004-B15" type="button" class="act" id="ba_ask" data-testid="ba-ask">' + esc(words('Ask to connect')) + '</button>' +
       '<button data-cbsid="NET004-B16" type="button" class="act quiet" id="ba_invite" data-testid="ba-invite">' + esc(words('Invite by email')) + '</button></div>' +
-      '<div class="sub" data-testid="ba-note">' + esc(words('Connecting gives nobody access to your books. You give access yourself afterwards.')) + '</div>' +
+      '<div class="sub" data-testid="ba-note">' + esc(words('Connecting gives no access. You give access later.')) + '</div>' +
       (panel.why ? '<div class="nw-why" id="ba_why" role="status" data-testid="ba-why">' + esc(panel.why) + '</div>' : '') +
       '<div class="nw-list" id="ba_list" data-testid="ba-list"></div>';
     if ($('ba_back')) $('ba_back').onclick = panel.o.onBack;
@@ -132,7 +132,7 @@
         { id: 'cancel', tid: 'ba-cancel', label: words('Cancel request'), when: function (a) { return a.g === 'them'; }, run: askCancel }
       ],
       search: whoLine,
-      empty: { title: words('No requests to connect'), body: words('Ask your bookkeeper or auditor to connect, then give access.') }
+      empty: { title: words('No requests'), body: words('Ask to connect, then give access.') }
     });
   }
   function forMe(a) {
@@ -155,13 +155,13 @@
     );
   }
   function askAccept(request) {
-    answer(request, 'netApprove', { title: 'Accept this request?', body: 'You are connected. They cannot see your books until you give them access.', yes: 'Accept', failed: "Couldn't accept", done: 'Connected.' });
+    answer(request, 'netApprove', { title: 'Accept?', body: 'You are connected. They cannot see your books until you give access.', yes: 'Accept', failed: "Couldn't accept", done: 'Connected.' });
   }
   function askRefuse(request) {
-    answer(request, 'netDecline', { title: 'Refuse this request?', body: 'Nothing is connected. They can ask again after an hour.', yes: 'Refuse', failed: "Couldn't refuse", done: 'Request refused.', danger: true });
+    answer(request, 'netDecline', { title: 'Refuse?', body: 'Nothing is connected. They can ask again after an hour.', yes: 'Refuse', failed: "Couldn't refuse", done: 'Request refused.', danger: true });
   }
   function askCancel(request) {
-    answer(request, 'netDecline', { title: 'Cancel your request?', body: 'They will not be asked any more. You can ask again.', yes: 'Cancel request', failed: "Couldn't cancel", done: 'Request cancelled.', danger: true });
+    answer(request, 'netDecline', { title: 'Cancel request?', body: 'You can ask again.', yes: 'Cancel request', failed: "Couldn't cancel", done: 'Request cancelled.', danger: true });
   }
 
   /* ── Ask to connect: say who asks, find the business, pick it, confirm ── */
@@ -171,12 +171,12 @@
     return (
       '<h2>' + esc(words('Ask to connect')) + '</h2><div class="bg-form" data-testid="ba-form">' +
       '<label class="sub" for="ba_dir">' + esc(words('Who is asking')) + '</label><select data-cbsid="NET004-S03" id="ba_dir" class="inp" data-testid="ba-dir">' +
-      '<option value="shop">' + esc(words('I am a shop: ask my bookkeeper or auditor')) + '</option><option value="firm">' + esc(words('I am a firm: ask a shop')) + '</option></select>' +
+      '<option value="shop">' + esc(words('I am a shop: ask my firm')) + '</option><option value="firm">' + esc(words('I am a firm: ask a shop')) + '</option></select>' +
       '<label class="sub" for="ba_q">' + esc(words('Name, sign-in name or bridge id')) + '</label><div class="nw-acts"><input data-cbsid="NET004-I07" id="ba_q" class="inp" maxlength="80" autocomplete="off" data-testid="ba-q">' +
       '<button data-cbsid="NET004-B17" type="button" class="act quiet" id="ba_find" data-testid="ba-find">' + esc(words('Find')) + '</button></div>' +
       '<div class="bg-consent" id="ba_found" role="group" data-testid="ba-found" hidden></div>' +
       '<div class="nw-out" id="ba_out" data-testid="ba-out" role="status"></div>' +
-      '<div class="nw-acts"><button data-cbsid="NET004-B18" type="button" class="act" id="ba_send" data-testid="ba-send" disabled aria-disabled="true" title="' + esc(words('Find and pick a business first.')) + '">' + esc(words('Send request')) + '</button>' +
+      '<div class="nw-acts"><button data-cbsid="NET004-B18" type="button" class="act" id="ba_send" data-testid="ba-send" disabled aria-disabled="true" title="' + esc(words('Pick a business first.')) + '">' + esc(words('Send request')) + '</button>' +
       '<button data-cbsid="NET004-B19" type="button" class="act quiet" id="ba_cancel" data-testid="ba-cancel">' + esc(words('Cancel')) + '</button></div></div>'
     );
   }
@@ -208,7 +208,7 @@
     var go = $('ba_send'), on = !!picked();
     go.disabled = !on;
     go.setAttribute('aria-disabled', String(!on));
-    go.title = on ? '' : words('Find and pick a business first.');
+    go.title = on ? '' : words('Pick a business first.');
   }
   function findBusiness() {
     var text = $('ba_q').value.trim();
@@ -218,7 +218,7 @@
       function (reply) {
         var list = ((reply && reply.results) || []).filter(function (b) { return !!b.bridge_id; });
         paintFound(list);
-        if (!list.length) $('ba_out').textContent = words('Nobody found. Check the name or bridge id.');
+        if (!list.length) $('ba_out').textContent = words('Nobody found.');
       },
       function (failure) { $('ba_out').textContent = failure.message || words("Couldn't search. Try again."); }
     );
@@ -236,7 +236,7 @@
         key: 'ba-ask',
         confirm: {
           title: words('Send this request?'),
-          body: '<b>' + esc([pick.display_name, pick.bridge_id].join(' · ')) + '</b><br>' + esc(words(direction === 'firm' ? 'This shop is asked to let you look after its books. It must accept.' : 'This firm is asked to look after your books. It must accept. Nobody can see your books until you give access.')),
+          body: '<b>' + esc([pick.display_name, pick.bridge_id].join(' · ')) + '</b><br>' + esc(words(direction === 'firm' ? 'The shop must accept.' : 'The firm must accept. Nobody sees your books until you give access.')),
           yes: words('Send request')
         },
         failed: words("Couldn't send the request"),
@@ -250,7 +250,7 @@
   function openInvite() {
     panel.o.sheet(
       '<h2>' + esc(words('Invite your firm by email')) + '</h2><div class="bg-form" data-testid="ba-invite-form">' +
-      '<div class="sub">' + esc(words('We send an invitation to join ChitBridge. Nothing is connected until they sign up and you ask them to connect.')) + '</div>' +
+      '<div class="sub">' + esc(words('They get an email to join. Nothing connects until they sign up and you ask.')) + '</div>' +
       '<label class="sub" for="ba_email">' + esc(words('Email address')) + '</label><input data-cbsid="NET004-I09" id="ba_email" class="inp" type="email" maxlength="120" autocomplete="off" data-testid="ba-email">' +
       '<div class="nw-out" id="ba_iout" data-testid="ba-iout" role="status"></div>' +
       '<div class="nw-acts"><button data-cbsid="NET004-B20" type="button" class="act" id="ba_isend" data-testid="ba-isend">' + esc(words('Send invitation')) + '</button>' +
@@ -285,7 +285,7 @@
 
   function reload() {
     return read().then(paint, function () {
-      panel.host.innerHTML = '<div class="nw-why" role="status" data-testid="ba-fail">' + esc(words("Couldn't read your requests. Try again.")) + '</div><button data-cbsid="NET004-B22" type="button" class="act" id="ba_retry" data-testid="ba-retry">' + esc(words('Try again')) + '</button>';
+      panel.host.innerHTML = '<div class="nw-why" role="status" data-testid="ba-fail">' + esc(words("Couldn't read requests.")) + '</div><button data-cbsid="NET004-B22" type="button" class="act" id="ba_retry" data-testid="ba-retry">' + esc(words('Try again')) + '</button>';
       $('ba_retry').onclick = reload;
     });
   }

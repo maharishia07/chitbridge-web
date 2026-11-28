@@ -56,7 +56,7 @@
       ],
       next: function (v) { return detail(v, screen.route); },
       search: function (v) { return whoOf(v, screen.nameOf); },
-      empty: { title: words('Nobody has looked yet'), body: words('Each visit to your books will be listed here.') }
+      empty: { title: words('Nobody has looked yet'), body: words('Visits show here.') }
     };
   }
   root.CBBooksGrantVisits = { rows: rows, config: config };
