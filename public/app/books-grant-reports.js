@@ -81,8 +81,13 @@
   /** no day typed: the read is for the period (as at its end for tb, bs and dues; from – to for the p&l and the day book) */
   function periodQuery(report, period) {
     if (!period || !period.from || !report.day) return {};
-    if (report.day === 'asOf') return { asOf: period.to }; /* tb, bs, dues: as at the end of the period */
+    if (report.day === 'asOf') return { asOf: notAfterToday(period.to) }; /* tb, bs, dues: as at the end of the period */
     return { from: period.from, to: period.to }; /* p&l, day book: for the period */
+  }
+  /** AUDBS: an as-at day that has not happened is asked as today (the owner's own default), so the firm's read and the owner's read ask one day; the server's E1 rule says the same for the ageing */
+  function notAfterToday(day) {
+    var today = root.CBShopTime && root.CBShopTime.today ? root.CBShopTime.today() : '';
+    return today && day > today ? today : day;
   }
   /** a day typed: that one day, in the shape the read takes. FW2-02: on the P&L (a range) a day typed inside the period in force ends the period there: Oct – 15 Nov, never the year to date beside a control that says the quarter */
   function dayQuery(report, day, period) {
