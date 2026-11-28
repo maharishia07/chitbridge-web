@@ -331,7 +331,7 @@ function vaultCardHTML(vault, encrypted) {
     '</select>' +
     '<button data-cbsid="ACC002-B03" class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ add section</button></div>' +
     '<div class="err" id="vault_err" style="margin-top:8px"></div>' +
-    '<button data-cbsid="ACC002-B04" class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()">' +
+    '<button data-cbsid="ACC002-B04" class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()"' + CBRoles.seatGate('owner') + '>' + /* UX-226b C6: a seat cannot save: greyed, the one refusal */
     tx('Save vault') +
     '</button></div>'
   );

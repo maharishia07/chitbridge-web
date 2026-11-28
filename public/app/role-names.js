@@ -2,7 +2,7 @@
  * role-names.js — UX-224: ONE name for each outside role, ONE sentence for "your seat cannot open this".
  *
  * OWNS      CBRoles: the role-name map (an outside accountant is "Accountant", the reader "Auditor", the shop's own books seat "Bookkeeper", a staff login "Staff") and the one refusal
- *           sentence "Your seat cannot <what>. Ask the owner." The api's own role words come from lib/seat-abilities (whyOf, canOf); this file is the screen side of the same decision.
+ *           sentence "Your seat cannot <what>. Ask the owner." The api's role words are lib/seat-abilities ROLE_NAMES (the one home, with whyOf/canOf); this map is the first paint and adopt() swaps in the server's copy once Home reads /entities/sides.
  * CALLED BY cap-employees-give.js (Delegate work) · cap-catalogue.js · cap-bank-store.js · cap-books.js · cap-books-lock.js · cap-employees.js · cap-settings.js · cap-tasks.js · network-app.js
  * FLOW      a screen asks CBRoles.name(role) / .line(role) / .firm(role, given) / .refusal(what); nothing here reads the server or decides who may do anything
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/locale
@@ -52,5 +52,14 @@
   function refusal(what) {
     return translated(CANNOT[what] || CANNOT.any);
   }
-  root.CBRoles = { ROLES: ROLES, name: name, line: line, firm: firm, refusal: refusal };
+  /** UX-226b: the api's role words (lib/seat-abilities ROLE_NAMES, carried on GET /entities/sides as `roles`) replace the first-paint copy above: ONE home, the server */
+  function adopt(map) {
+    if (map && typeof map === 'object') Object.keys(map).forEach(function (key) { if (map[key] && map[key].name) ROLES[key] = map[key]; });
+  }
+  /** UX-226b C6: the disabled + title attributes of a control a seat (not the owner) cannot use: the one refusal as its title; empty for the owner */
+  function seatGate(what) {
+    var seat = typeof SESSION !== 'undefined' && SESSION && SESSION.actorId;
+    return seat ? ' disabled title="' + refusal(what).replace(/"/g, '&quot;').replace(/</g, '&lt;') + '"' : '';
+  }
+  root.CBRoles = { ROLES: ROLES, name: name, line: line, firm: firm, refusal: refusal, adopt: adopt, seatGate: seatGate };
 })(typeof window !== 'undefined' ? window : this);
