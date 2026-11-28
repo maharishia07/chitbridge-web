@@ -26,6 +26,7 @@
     "check:signin": "node tests/signin-ui.test.cjs && node tests/settings-connect-google.test.cjs",
     "check:homebar": "node tests/home-phone-bar.test.cjs",
     "check:homebits": "node tests/home-bits-1129.test.cjs",
+    "check:ux217": "node tests/ux217-seat-words.test.cjs",
     "check:lvux": "node tests/lvux-1129.test.cjs",
     "check:firmhome": "node tests/firm-home-budget.test.cjs",
     "check:prready": "node tests/pr-ready.test.cjs",

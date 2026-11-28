@@ -105,6 +105,7 @@
     return '/accounts.html?acting=' + encodeURIComponent(store.id) + (doing ? '&prepare=' + doing : '') + '#/daybook';
   }
   /** W15-71: the auditor's way to the client's Bank (and Month lock) on the books page: the same page, the auditor's seat, read only */
+  /** UX-223: `role` is the seat the firm HOLDS for this client ('adviser' = a grant that acts for the shop); the page enters that seat, never an auditor seat the firm has no grant for (that answered "You do not have access") */
   function auditAddressOf(store, tab, carry, role) {
     return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&role=' + (role === 'adviser' ? 'adviser' : 'auditor') + (carry || '') + '#/' + (tab || 'bank');
   }

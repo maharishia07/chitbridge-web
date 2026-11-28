@@ -170,7 +170,7 @@ t('the list of a read: CSV is off (read only), no search under ten rows, a Month
   assert.strictEqual(config.csv, false);
   assert.strictEqual(config.tools.search, false);
   assert.strictEqual(typeof config.onOpen, 'function');
-  assert.ok(/«Nothing to show here»/.test(config.empty.title));
+  assert.ok(/«No month has ended yet»/.test(config.empty.title)); /* UX-223: no month over is said, not "Nothing to show here" */
 });
 t('a failed read is a frame\'s sentence, not an empty table: the since view says what it did not find (could not read words)', () => {
   const st = state({ since: true, answer: { currency: 'AUD', entries: [] } });

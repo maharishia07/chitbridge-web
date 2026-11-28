@@ -783,11 +783,11 @@ var CBShop = (function () {
     return typeof SESSION !== 'undefined' && !!(SESSION && SESSION.actorId);
   }
   /** the Business section: the same inputs the workshop's Profile paints (shopFieldsHTML), one Save (M64) */
-  function shopCardHTML(e) {
-    var actorId = isActorSeat();
+  function shopCardHTML(whoseRow) {
+    var actorId = isActorSeat(), e = actorId ? Object.assign({}, (whoseRow && whoseRow.shop) || {}) : whoseRow || {}; /* UX-217: a seat's row is the person (their own name); the Business card reads the shop the api sends beside it (/me shop), blank when none, never the person's name */
     return (
-      shopNameHTML(e || {}) +
-      shopFieldsHTML(e || {}, shopLicLabel()) +
+      shopNameHTML(e) +
+      shopFieldsHTML(e, shopLicLabel()) +
       '<div class="err" id="pf_err_profile" data-testid="shop-err" style="margin-top:8px"></div>' +
       (actorId
         ? '<p class="sub" data-testid="shop-ask-owner">' + esc0(tx('Only the owner can change these.')) + '</p>'
