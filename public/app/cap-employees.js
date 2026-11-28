@@ -136,7 +136,9 @@
     E.holds = null;
     E.holdsWhy = '';
     if (!root.CBAssign || (E.o.embed && E.o.view === 'add')) return Promise.resolve();
-    return root.CBAssign.holds().then(
+    /* the one seat rule (CBAvatar.staffSeat): a plain staff seat may not read what people hold, so it is not asked: no column, no refused call */
+    var known = root.CBAvatar && root.CBAvatar.seatKnown ? root.CBAvatar.seatKnown() : Promise.resolve(false);
+    return known.then(function (staff) { return staff ? { people: null, why: '' } : root.CBAssign.holds(); }).then(
       function (answer) {
         E.holdsWhy = answer.why;
         if (!answer.people) return;

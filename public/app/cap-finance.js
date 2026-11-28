@@ -83,6 +83,11 @@ async function finLoad(quiet) {
     if (FIN.api) FIN.api.refresh();
   }
   try {
+    if (window.CBAvatar && CBAvatar.seatKnown && (await CBAvatar.seatKnown())) { /* the one seat rule (CBAvatar.staffSeat): a plain staff seat may not see collections (the owner's read), so it is not asked: the worded state, no refused call */
+      if (generation !== FIN.gen) return;
+      FIN.state = 'denied';
+      return finDenied();
+    }
     var dues = await finDuesRead();
     if (generation !== FIN.gen) return;
     bkDuesStore(dues);

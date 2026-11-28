@@ -26,11 +26,12 @@ function stub() {
     apply: () => stub()
   });
 }
+const AV = app('avatar.js'), AV_CUT = AV.slice(AV.indexOf('function staffOf(me)'), AV.indexOf('function shopCountry()')); /* the real seat rule, the waiters and announceShop */
 const SRC = { api: app('books-grant-api.js'), practice: app('books-practice.js'), door: app('books-clients-door.js') };
 /** one Home load of a seat: the three real files in a vm; `apiSrc` lets the mutation swap the seat answer */
-function page(seat, apiSrc) {
+function page(seat, apiSrc, avSrc) {
   const calls = [], listeners = {}, store = { cb_sess: JSON.stringify({ token: 'tok-' + seat.name + '-0123456789' }) };
-  const doc = { readyState: 'complete', documentElement: stub(), head: stub(), body: stub(), addEventListener: (n, f) => { (listeners[n] = listeners[n] || []).push(f); }, createElement: () => stub(), querySelector: () => null, getElementById: () => null, querySelectorAll: () => [] };
+  const doc = { dispatchEvent() {}, readyState: 'complete', documentElement: stub(), head: stub(), body: stub(), addEventListener: (n, f) => { (listeners[n] = listeners[n] || []).push(f); }, createElement: () => stub(), querySelector: () => null, getElementById: () => null, querySelectorAll: () => [] };
   const root = { document: doc, localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } }, console, Promise, JSON, Date, Math, Object, Array, String, Number, Error, parseInt, parseFloat, isFinite,
     setTimeout, clearTimeout, setInterval: (f) => setInterval(f, 100), clearInterval, Event: function () {}, CustomEvent: function (n, o) { this.type = n; this.detail = o && o.detail; }, dispatchEvent() {}, tx: (s) => s,
     fetch: (url) => {
@@ -40,12 +41,13 @@ function page(seat, apiSrc) {
     } };
   root.window = root; root.CB_API = 'https://api.example.com'; root.CBApiBase = { get: () => root.CB_API };
   vm.createContext(root);
+  vm.runInContext('var root = globalThis;' + (avSrc || AV_CUT) + ';this.CBAvatar = { lastMe: function () { return LAST_ME; }, staffSeat: staffSeat, seatKnown: seatKnown, announce: announceShop };', root);
   vm.runInContext(apiSrc || SRC.api, root);
   vm.runInContext(SRC.practice, root);
   vm.runInContext(SRC.door, root);
-  return { calls, announce: (detail) => (listeners['cb:me'] || []).forEach((f) => f({ detail })) };
+  return { calls, root, announce: (entity) => root.CBAvatar.announce(entity) };
 }
-const me = (actor, whole, hat, practice) => ({ country: 'AU', ledger_on: true, is_practice: practice, seat: { actor, whole_entity: whole, hat } });
+const me = (actor, whole, hat, practice) => ({ identity_type: actor ? 'actor' : 'entity', whole_entity: whole, hat, is_practice: practice, country: 'AU' });
 const SEATS = [
   { name: 'owner', me: me(false, false, null, false), asks: true },
   { name: 'firm', me: me(false, false, null, true), asks: true },
@@ -55,7 +57,7 @@ const SEATS = [
 ];
 const firmCalls = (p) => p.calls.filter((c) => /^\/api\/books-grants/.test(c.p));
 (async () => {
-  check(SRC.api.includes('? true : meSeat;'), 'the one seat answer is in books-grant-api.js (readsClients)');
+  check(AV.includes('function staffOf(me)') && SRC.api.includes('av.staffSeat()'), 'ONE seat rule (CBAvatar.staffOf); readsClients and heldSplit read it, never a second test');
   check(SRC.api.includes('SEAT_WAIT_MS'), 'a /me that never answers does not hide a firm Home for ever (the page asks after the wait)');
   for (const seat of SEATS) {
     const p = page(seat);
@@ -68,9 +70,21 @@ const firmCalls = (p) => p.calls.filter((c) => /^\/api\/books-grants/.test(c.p))
     else check(firm.length === 0, seat.name + ': Counter staff asks NO firm read on Home (' + firm.length + ' calls)');
     check(p.calls.filter((c) => c.status >= 400).length === 0 || seat.asks, seat.name + ': zero 4xx calls');
   }
-  const mutated = page(SEATS[4], SRC.api.replace('? true : meSeat;', '? true : true;'));
+  const mutated = page(SEATS[4], null, AV_CUT.replace('seat.actor === true &&', 'false &&'));
+  mutated.announce(SEATS[4].me);
   await wait(800);
   check(firmCalls(mutated).filter((c) => c.status === 403).length > 0, 'mutation: with the seat answer forced to "ask" the cashier Home calls the refused reads (the guard goes red without the fix)');
+  /* the same seat rule gates every other page's owner-only read (walk 28 Nov: network heldSplit, finance dues?finance=1, employees chits/holds): the staff seat asks none of them */
+  const staff = page(SEATS[4]), owner = page(SEATS[0]);
+  staff.announce(SEATS[4].me); owner.announce(SEATS[0].me);
+  const held = (pg) => { const calls = []; return pg.root.CBBooksGrantApi.heldSplit((m, path) => { calls.push(path); return Promise.resolve({ received: [], given: [] }); }).then(() => calls); };
+  check((await held(staff)).length === 0, 'network.html: heldSplit asks nothing for the staff seat (no GET /api/books-grants)');
+  check((await held(owner)).length === 1, 'network.html: heldSplit still asks for the owner');
+  const fin = app('cap-finance.js'), emp = app('cap-employees.js');
+  const finGate = fin.indexOf('CBAvatar.seatKnown'), finRead = fin.indexOf('await finDuesRead()');
+  check(finGate > 0 && finGate < finRead, 'finance.html: the seat answer comes before dues?finance=1 (no refused call, the worded state instead)');
+  const empGate = emp.indexOf('CBAvatar.seatKnown'), empRead = emp.indexOf('CBAssign.holds()');
+  check(empGate > 0 && empGate < empRead, 'employees.html: the seat answer comes before chits/holds (no refused call, no column)');
   console.log(failures ? failures + ' failed' : 'all passed');
   process.exit(failures ? 1 : 0);
 })();

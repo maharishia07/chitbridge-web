@@ -538,6 +538,24 @@
   }
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
      own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
+  /** ⭐ THE ONE SEAT RULE for "does this page ask what a plain staff login may not": a plain staff seat = an actor that is not whole-business and not a manager (the api's own 'staff' seat, lib/role-matrix: the owner-only reads refuse it).
+      staffSeat() → true | false | null (null = /me has not answered); seatKnown(ms) → a promise of that answer, false after the wait when /me never answers (a page then asks, as before: the server still refuses). Every page's owner-only or firm read asks this first, never its own test. */
+  function staffOf(me) {
+    var seat = me && me.seat;
+    return !!seat && seat.actor === true && seat.whole_entity !== true && seat.hat !== 'manager';
+  }
+  var SEAT_WAITERS = [], SEAT_WAIT_MS = 10000; /* /me that never answers must not hide a page for ever: after the wait the page asks, as before (the server still refuses) */
+  function staffSeat() {
+    return LAST_ME ? staffOf(LAST_ME) : null;
+  }
+  function seatKnown(ms) {
+    if (LAST_ME) return Promise.resolve(staffOf(LAST_ME));
+    return new Promise(function (go) {
+      var timer = root.setTimeout(function () { SEAT_WAITERS = SEAT_WAITERS.filter(function (w) { return w !== wake; }); go(false); }, ms || SEAT_WAIT_MS);
+      function wake(staff) { root.clearTimeout(timer); go(staff); }
+      SEAT_WAITERS.push(wake);
+    });
+  }
   var LAST_ME = null, /* the last cb:me detail: a script that loads after /me answered reads it (lastMe) */
     SHOP_COUNTRY = null,
     SHOP_LEDGER_ON; /* l16 firmhome: /me's ledger_on (true | false); null = /me answered without it; undefined = /me not answered yet. Home asks GET /books/health only when it is not true/false */
@@ -551,6 +569,8 @@
     SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
     try {
       LAST_ME = { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON, is_practice: entity && typeof entity.is_practice === 'boolean' ? entity.is_practice : null, seat: { actor: !!entity && entity.identity_type === 'actor', whole_entity: !!entity && entity.whole_entity === true, hat: (entity && entity.hat) || null } };
+      var waiting = SEAT_WAITERS; SEAT_WAITERS = [];
+      waiting.forEach(function (wake) { wake(staffOf(LAST_ME)); });
       root.document.dispatchEvent(new CustomEvent('cb:me', { detail: LAST_ME })); /* seat: the login's own row, for CBBooksGrantApi.readsClients (the one answer to "does this seat ask the firm's reads") */
     } catch (e) {
       if (root.console) root.console.warn('avatar: cb:me not announced', e);
@@ -1251,6 +1271,9 @@
     fontStack: fontStack,
     shopCountry: shopCountry,
     lastMe: function () { return LAST_ME; },
+    staffSeat: staffSeat,
+    seatKnown: seatKnown,
+    staffOf: staffOf,
     ledgerOn: ledgerOn
   };
 })(typeof window !== 'undefined' ? window : this);
