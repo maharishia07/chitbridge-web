@@ -79,7 +79,7 @@ const ok = (n) => console.log('ok  ' + n) || ran++;
   const books = fs.readFileSync(pub('app/cap-books.js'), 'utf8'), bank = fs.readFileSync(pub('app/cap-bank.js'), 'utf8'), sheet = fs.readFileSync(pub('app/cap-bank-sheet.js'), 'utf8'), prev = fs.readFileSync(pub('app/bank-preview.js'), 'utf8');
   assert.ok(books.includes("booksLoans: { m: 'GET', p: '/api/books/loans'") && books.includes("booksGstLodged: { m: 'GET', p: '/api/books/gst/lodged'"), "the two reads are in the api table");
   assert.ok(bank.includes("net_minor: one.net_minor") && sheet.includes("lodged_bas: bkshBook().lodged"), "the lodged net of each period reaches suggest as lodged_bas");
-  assert.ok(prev.includes("loanRef: preview.loan[item.key]") && ui.includes("BKS017-S11") && ui.includes("Choose which loan this pays") && ui.includes("outstanding_minor"), "the picked loan rides into the post and the picker shows what each owes");
+  assert.ok(prev.includes("loanRef: preview.loan[item.key]") && ui.includes("BKS017-S11") && !ui.includes("Choose which loan this pays") && typeof POST.loanNeed === 'function' && ui.includes("outstanding_minor"), "the picked loan rides into the post and the picker shows what each owes");
   ok('the loan picker and lodged_bas are wired to GET /loans and GET /gst/lodged');
   console.log(ran + ' checks passed');
 })().catch((e) => { console.error('FAIL', e && e.stack || e); process.exit(1); });
