@@ -56,7 +56,7 @@
   }
   /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
   function monthRows(answer) {
-    var today = new Date().toISOString().slice(0, 10); /* W4-13: only months that are OVER, the rule the year box and the practice read count by (a month still running is not work to lock yet) */
+    var today = (root.CBShopTime && root.CBShopTime.today()) || new Date().toISOString().slice(0, 10); /* 1138: the shop day in the shop zone, never a UTC slice */ /* W4-13: only months that are OVER, the rule the year box and the practice read count by (a month still running is not work to lock yet) */
     return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && !p.before_books && p.end_date && String(p.end_date).slice(0, 10) < today; }).map(function (p) {
       var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
       var who = root.CBLockWords ? root.CBLockWords.whoOf(p, p.status) : { line: '', note: '', all: [] }; /* W15-97: who locked it and when, who opened it again and why: the server's trail, read only */
@@ -116,7 +116,7 @@
   }
   /** FW2-01: the return reads the period that holds the day it is asked, and the server ignores a day still to come (AT-03: a year's end still to come is no pick, so a year keeps the server's own default); a quarter or month that has begun but not ended (the quarter we are in) is asked at its last day that has happened */
   function dayHeld(end) {
-    var today = new Date().toISOString().slice(0, 10);
+    var today = (root.CBShopTime && root.CBShopTime.today()) || new Date().toISOString().slice(0, 10); /* 1138: the shop day in the shop zone, never a UTC slice */
     return end > today ? today : end;
   }
   /** a day typed: that one day, in the shape the read takes. FW2-02: on the P&L (a range) a day typed inside the period in force ends the period there: Oct – 15 Nov, never the year to date beside a control that says the quarter */
