@@ -23,7 +23,7 @@ of file each thing is; this says what already does the job.
 | 112 | `entry` | `books-store.js` |  |
 | 112 | `store` | `move-in-proof.js` | store(conn, entity, rec) — |
 | 106 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
-| 104 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
+| 105 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 102 | `next` | `dayopen.js` | the next thing to do — |
 | 101 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 94 | `refusal` | `availability.js` | and is not judged here (stamp keeps its own rule for those). |
@@ -37,8 +37,8 @@ of file each thing is; this says what already does the job.
 | 85 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
 | 85 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 84 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 84 | `read` | `books-grant-asks.js` |  |
 | 83 | `rows` | `books-grant-asks.js` | var GROUP = { me: |
-| 83 | `read` | `books-grant-asks.js` |  |
 | 82 | `count` | `money-check.js` | the count /health reads |
 | 80 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
 | 79 | `items` | `books-store.js` | PERF1: |
@@ -113,6 +113,7 @@ of file each thing is; this says what already does the job.
 | 40 | `record` | `network-books.js` | record the client now open (or the list, id null) in history: |
 | 40 | `entries` | `books-store.js` |  |
 | 39 | `modal` | `app.html` |  |
+| 39 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 39 | `escJs` | `helpers.js` | A value placed inside a JS string literal of an inline handler, onclick="fn('" + escJs(x) + "')": |
 | 39 | `says` | `adopt.js` |  |
 | 39 | `guard` | `amend.js` | would disturb what has gone out. |
@@ -120,7 +121,6 @@ of file each thing is; this says what already does the job.
 | 39 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
 | 38 | `ensureCap` | `app.html` |  |
 | 38 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
-| 37 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
 | 37 | `note` | `device-id.js` | note(where, problem) — |
 | 37 | `names` | `shortcuts.js` |  |
 | 37 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
