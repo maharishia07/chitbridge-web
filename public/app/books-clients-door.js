@@ -59,6 +59,9 @@
   function tick() {
     var tokenNow = token();
     if (!tokenNow || !root.CBBooksGrantApi) return;
+    var asks = root.CBBooksGrantApi.readsClients ? root.CBBooksGrantApi.readsClients() : true; /* the one seat answer: a staff seat asks no firm read (books-grant-api.js readsClients); null = /me has not answered yet */
+    if (asks === null) return;
+    if (asks === false) { seen.token = tokenNow; seen.count = 0; return; }
     if (seen.token !== tokenNow) {
       seen.token = tokenNow;
       seen.count = 0;

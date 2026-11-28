@@ -523,6 +523,13 @@
   function tick() {
     var tokenNow = token();
     if (!tokenNow) return;
+    /* ⭐ one read path, roles restrict: a staff seat (CBBooksGrantApi.readsClients) holds no client and the api refuses it this read, so it is not asked: the shop Home, no refused call. null = /me has not answered: wait a beat (the hold ceiling still releases Home). */
+    var asks = root.CBBooksGrantApi && root.CBBooksGrantApi.readsClients ? root.CBBooksGrantApi.readsClients() : true;
+    if (asks === null) return;
+    if (asks === false) {
+      if (practiceKit.practiceState.token !== tokenNow) { practiceKit.practiceState.token = tokenNow; practiceKit.practiceState.data = null; hint(false); settle(); }
+      return;
+    }
     if (practiceKit.practiceState.token !== tokenNow) {
       practiceKit.practiceState.token = tokenNow;
       practiceKit.practiceState.data = null;

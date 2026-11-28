@@ -538,7 +538,8 @@
   }
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
      own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
-  var SHOP_COUNTRY = null,
+  var LAST_ME = null, /* the last cb:me detail: a script that loads after /me answered reads it (lastMe) */
+    SHOP_COUNTRY = null,
     SHOP_LEDGER_ON; /* l16 firmhome: /me's ledger_on (true | false); null = /me answered without it; undefined = /me not answered yet. Home asks GET /books/health only when it is not true/false */
   /** UX-221: what this seat may open is told to edition.js, which keeps it */
   function noteSeat(entity) {
@@ -549,7 +550,8 @@
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
     SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
     try {
-      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON, is_practice: entity && typeof entity.is_practice === 'boolean' ? entity.is_practice : null } }));
+      LAST_ME = { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON, is_practice: entity && typeof entity.is_practice === 'boolean' ? entity.is_practice : null, seat: { actor: !!entity && entity.identity_type === 'actor', whole_entity: !!entity && entity.whole_entity === true, hat: (entity && entity.hat) || null } };
+      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: LAST_ME })); /* seat: the login's own row, for CBBooksGrantApi.readsClients (the one answer to "does this seat ask the firm's reads") */
     } catch (e) {
       if (root.console) root.console.warn('avatar: cb:me not announced', e);
     }
@@ -1248,6 +1250,7 @@
     FS_BASE: FS_BASE,
     fontStack: fontStack,
     shopCountry: shopCountry,
+    lastMe: function () { return LAST_ME; },
     ledgerOn: ledgerOn
   };
 })(typeof window !== 'undefined' ? window : this);
