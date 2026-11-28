@@ -89,7 +89,7 @@ W.run('books-prepare', async (w) => {
   await page.setViewportSize(WIDE);
   await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + S1), { timeout: 20000 });
   await w.step('P1', 'the firm · Open books → "Prepare a journal" is offered in the workspace; it opens the books page acting for Store One', async () => {
-    await page.click(T('nw-books-' + S1)); await page.waitForSelector(T('bv-prepare'), { timeout: 10000 });
+    await page.goto(base + '/network.html?open=' + S1 + '&view=dues'); await page.waitForSelector(T('bv-prepare'), { timeout: 20000 }); /* ONEP-2 PR7b: a fresh Open books lands on the owner's Day book; the workspace (Prepare a journal) is the grant view, opened by address on a read it still has */
     await page.click(T('bv-prepare')); await page.waitForSelector(T('ba-band'), { timeout: 20000 });
     const band = await txt(T('ba-band')), where = page.url();
     return { ok: /Acting for Store One/.test(band) && /accounts\.html\?acting=/.test(where), saw: band + ' · ' + where.replace(base, '') };
@@ -113,8 +113,7 @@ W.run('books-prepare', async (w) => {
   });
   await w.step('P5', 'the firm · back in the workspace, "Prepared by my team" lists the journal, waiting for review', async () => {
     await page.click(T('en-done')); await page.click(T('ba-back')); await page.waitForTimeout(800); if (!(await page.locator(T('nw-books-' + S1)).count())) await page.goto(base + '/network.html');   /* Back goes to the firm's Clients, which a firm login now lands on as its practice (W4): the workspace list is network.html */
-    await page.waitForSelector(T('nw-books-' + S1), { timeout: 20000 });
-    await page.click(T('nw-books-' + S1)); await page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 }); await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-team'), { timeout: 10000 });
+    await page.goto(base + '/network.html?open=' + S1 + '&view=dues'); await page.waitForSelector(T('bv-tab-actions'), { timeout: 20000 }); /* the workspace by address (the landing door goes to the Day book) */ await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-team'), { timeout: 10000 });
     await page.click(T('ba-q-team')); await page.waitForTimeout(600);
     const list = await txt(T('ba-list'));
     return { ok: /Journal/.test(list) && /Waiting for review/.test(list) && /Me Myself/.test(list) && /250\.00/.test(list), saw: list.slice(0, 140) };
