@@ -784,6 +784,7 @@ new MutationObserver(() => cardLabels($('content'))).observe($('content'), { chi
 /* ═══ THE STATES BEFORE THE LEDGER: signed out · another shop still here · the Ledger off ═══════════════════════ */
 function card(html, bad) {
   document.body.classList.remove('lg-on', 'lg-sel', 'bk-on');
+  if ($('nav') && $('nav').querySelector('.bk-skel')) $('nav').innerHTML = ''; /* 1138: a card (a refusal, Ledger off, country setup) ends the page here: the menu's first-paint skeleton goes with it, never left shimmering beside the words */
   $('title').hidden = true;
   $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`;
   $('summary').textContent = '';

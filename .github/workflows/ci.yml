@@ -460,6 +460,7 @@ jobs:
           node tests/rail-parts.test.cjs
           node tests/books-grant-parts.test.cjs
           node tests/books-grant-fail-loud.test.cjs
+          node tests/accounts-card-clears-skeleton.test.cjs
           node tests/books-practice-parts.test.cjs
           node tests/cap-mark-sheet.test.cjs
           node tests/aud-f73-auditor-tax-return.test.cjs
