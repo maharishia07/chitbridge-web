@@ -9,7 +9,7 @@ let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); 
 const logged = [];
 const cx = vm.createContext({
   console, EP: {}, tx: (s) => s, txf: (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k]), esc: (s) => String(s == null ? '' : s),
-  api: async () => ({}), document: { getElementById: () => null, querySelector: () => null },
+  api: async () => ({}), FileReader: function () { this.readAsText = () => {}; }, CBSteps: { create: () => ({ destroy() {}, paintBody() {}, paintFoot() {}, paint() {} }) }, document: { getElementById: () => null, querySelector: () => null },
   cblog: (level, words) => logged.push(level + ': ' + words), bkCur: () => 'INR'
 });
 cx.window = cx;
@@ -54,4 +54,14 @@ ok(done.includes('mi-done') && done.includes('mi-done-add') && done.includes('En
 /* AP-F-06: MYOB is offered, greyed, with its sentence in the option; the other two stay choosable */
 const srcHtml = run("miSel('mi-source', 'source', MI_SOURCES, 'xero')");
 ok(/<option value="myob" disabled>MYOB — not built yet/.test(srcHtml) && /<option value="xero" selected>/.test(srcHtml) && !/<option value="qbo"[^>]*disabled/.test(srcHtml), 'MYOB is a greyed option with its sentence; Xero and QuickBooks stay choosable');
+/* CON-162 / CON-163 (batch 1136): the failed Import is said on the preview step; opening Move in again never shows the last run's result */
+run("MIV.out = null; MIV.err = 'No answer from the server in 90 s — try again.'; MIV.plan = { counts: { add: 2, merge: 0, skip: 0, hold: 0 }, notes: [], rows: [] };");
+ok(run('miRender("preview")').includes('mi-error') && run('miRender("preview")').includes('90 s'), 'CON-162: a failed Import (the preview is still up) says why on the preview step');
+run("MIV.err = '';");
+ok(!run('miRender("preview")').includes('mi-error'), 'CON-162: no failure, no error line');
+run("MIV.out = { added: 90, merged: 0, skipped: 0, held: 0 };");
+run("miView({ innerHTML: '' });");
+ok(run('MIV.out') === null && !run('miRender("file")').includes('mi-done'), 'CON-163: opening Move in again drops the last run result and starts at the file step');
+run("MIV.out = { added: 90, merged: 0, skipped: 0, held: 0 }; miFile({ files: [{ name: 'next.csv' }] });");
+ok(run('MIV.out') === null, 'CON-163: picking a new file drops the last run result');
 console.log(n + ' checks, all ok');

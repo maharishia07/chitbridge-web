@@ -569,7 +569,7 @@ async function ftLoad(quiet) {
       return { e: e };
     }
   );
-  var list = api('crmParties').then(
+  var list = crmPartiesAll(api).then(
     function (reply) {
       return { r: reply };
     },

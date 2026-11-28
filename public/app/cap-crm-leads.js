@@ -48,7 +48,7 @@ async function crmLeadsLoad(quiet) {
     crmLeadsRefresh();
   }
   try {
-    var reply = await api('crmParties', { query: { view: 'leads' } });
+    var reply = await crmPartiesAll(api, { view: 'leads' });
     if (generation !== LEADS.gen) return;
     LEADS.ready = !(reply && reply.leads_migrated === false);
     LEADS.rows = crmNormalize((reply && reply.parties) || []);

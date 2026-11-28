@@ -129,6 +129,7 @@
  "public/app/cap-crm-groups-sheet.js":["public/crm.html"],
  "public/app/cap-crm-groups-window.js":["public/crm.html"],
  "public/app/cap-crm-groups.js":["public/crm.html"],
+ "public/app/cap-crm-add.js":["public/crm.html"],
  "public/app/cap-crm-assign.js":["public/crm.html"],
  "public/app/cap-crm-leads.js":["public/crm.html"],
  "public/app/cap-crm-privacy-register.js":["public/crm.html"],

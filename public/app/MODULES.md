@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (125)
+## Capabilities (126)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -56,6 +56,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-connector-reissue.js` | — | the connector REISSUE step-up: re-type the gateway name + a one-time code emailed to the entity, then a fresh package or key. Split out of cap-connect |
 | `cap-connector.js` | lazy · connectors | IoT / ERP connector MANAGEMENT (lazy; loaded via ensureCap('connector') on INVOCATION) |
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
+| `cap-crm-add.js` | — | cap-crm-add.js — CB CRM: the quick add's own parts (the phone and e-mail typed in it, the server's "Already your party" search, what happens after the |
 | `cap-crm-assign.js` | — | cap-crm-assign.js — CB CRM: who holds a follow-up (the signed token's claims, the Unassigned bucket, the Assign button's body) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
@@ -321,7 +322,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | `combo-lab.html` | 0 | the old Combo Lab address: it only forwards to offer-lab-next.html?mode=combo (T2-LABS), the page that wears the Finance frame. |
 | `conversion-lab.html` | 12 | the Conversion lab: a quantity valued, or a priced basket converted, by the real engine (engine/convert.js · CBConvert, with CBMoney and CBUnits) on a bare page, so a con |
 | `country-lab.html` | 17 | the Country lab: the country packs side by side (tax · fiscal year · tax-ID word · zones), read from the adopted engines. |
-| `crm.html` | 74 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
+| `crm.html` | 75 | the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why). |
 | `design-mock.html` | 2 | a paper prototype of the network store page: no API, no build |
 | `embed.html` | 7 | the catalogue embed: one shop's catalogue inside another site (an iframe), read-only, the storefront's own rows. |
 | `employees.html` | 32 | the People page: the shop's people, their hats, sessions and breaks (the server answers may/why on every action). |
@@ -357,4 +358,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*268 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*269 app modules, 4 other scripts, 44 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

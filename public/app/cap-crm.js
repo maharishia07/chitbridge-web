@@ -609,7 +609,7 @@ async function crmLoad(quiet) {
     crmRefresh();
   }
   try {
-    var reply = await api('crmParties');
+    var reply = await crmPartiesAll(api); /* CRM-261: every page of the list, 500 at a time */
     if (g !== CRM.loadGen) return;
     var rows = ((reply && reply.parties) || (Array.isArray(reply) ? reply : [])).concat(((reply && reply.walk_ins) || []).map(crmWalkInFrom));
     CRM.rows = crmNormalize(rows);
@@ -2034,10 +2034,10 @@ async function crmFuAct(id, body, done) {
 }
 
 /* ═══ 3 · ADD PARTY — one field; look on ChitBridge and in your parties first (F1) ═══════════════════════════════ */
-var ADD = { role: 'customer', q: '', busy: false, found: null };
+var ADD = { role: 'customer', q: '', busy: false, found: null, mine: null }; /* mine: the server's ?q answer (CRM-259); null = not asked yet, the loaded list answers meanwhile */
 function crmAddOpen(q) {
   ADD.q = q || '';
-  ADD.found = null;
+  ADD.found = ADD.mine = null;
   ADD.busy = false;
   ui.dialog({
     mount: 'CRM001-U201',
@@ -2055,6 +2055,9 @@ function crmAddOpen(q) {
       '" placeholder="' +
       esc(tx('Name, User ID, phone or e-mail')) +
       '" autocomplete="off"></label>' +
+      '<div style="display:flex;gap:8px"><label style="flex:1">' + esc(tx('Phone')) +
+      ' <span class="hint">' + esc(tx('(optional)')) + '</span><input data-cbsid="CRM001-I05" class="inp" id="crm_addphone" data-testid="crm-addphone" type="tel" inputmode="tel" autocomplete="off" style="width:100%"></label><label style="flex:1">' + esc(tx('E-mail')) +
+      ' <span class="hint">' + esc(tx('(optional)')) + '</span><input data-cbsid="CRM001-I06" class="inp" id="crm_addemail" data-testid="crm-addemail" type="email" inputmode="email" autocomplete="off" style="width:100%"></label></div>' +
       '<div class="supacts"><span class="hint">' +
       esc(tx('As')) +
       '</span><div class="seg2" role="group" aria-label="' +
@@ -2099,12 +2102,13 @@ function crmAddType(ev) {
 }
 async function crmAddSearch() {
   var q = ADD.q.trim();
-  ADD.found = null;
+  ADD.found = ADD.mine = null;
   if (q.length < 2 || (q.indexOf('@') >= 0 && !/\S+@\S+\.\S+/.test(q))) {
     crmAddResults();
     return;
   }
   var mine = q;
+  crmAddAskServer(mine); /* CRM-259: 'Already your party' is the server's search, not a filter over the page */
   try {
     var reply = await api('entitySearch', { query: { q: q } });
     if (ADD.q.trim() === mine) ADD.found = (reply && (reply.results || reply.entities)) || (Array.isArray(reply) ? reply : []);
@@ -2131,11 +2135,9 @@ function crmAddResults() {
       '<p class="hint" style="margin:0">' + esc(tx('Type a name to add a local party, or a User ID / e-mail to find them on the network.')) + '</p>';
     return;
   }
-  var mine = CRM.rows
-    .filter(function (item) {
-      return crmAddMatches(item, ql);
-    })
-    .slice(0, 4);
+  var mine = (ADD.mine || CRM.rows.filter(function (item) {
+    return crmAddMatches(item, ql);
+  })).slice(0, 4);
   mine.forEach(function (item) {
     h +=
       '<div class="result" data-testid="crm-add-mine"><span><span class="k">' +
@@ -2201,19 +2203,17 @@ async function crmAddGo(kind, byHandle) {
     first = both ? 'customer' : role,
     ep = first === 'supplier' ? 'supAdd' : 'custAdd',
     name = ADD.q.trim().replace(/\s+/g, ' ');
+  /* CRM-260: a local party may be added with a phone and an e-mail, typed here; the server judges both (the same checks as the party's own edit) */
+  var contact = crmAddContact(kind),
+    phone = contact.phone;
+  if (!crmAddEmailOk(contact.email)) return crmAddBadEmail();
   var bodyFor = function (rl) {
-    return kind === 'found' ? (rl === 'supplier' ? { supplier_bridge_id: byHandle.bridge_id } : { handle: byHandle.user_id }) : { name: name };
+    return crmAddBody(kind, rl, byHandle, name, phone);
   };
   try {
     var reply = await api(ep, { body: bodyFor(first) });
     if (both) await api('supAdd', { body: bodyFor('supplier') }); /* "Both" = the two EXISTING adds; the second finds the same party and adds the other role */
-    var made = (reply && (reply.customer || reply.supplier)) || {},
-      id = made.customer_identity_id || made.supplier_entity_id;
-    closeModal();
-    toast(tx(both ? 'Customer and supplier added' : role === 'supplier' ? 'Supplier added' : 'Customer added') + ': ' + (made.display_name || ADD.q));
-    await crmLoad(true);
-    var p = id && CRM.byKey[id];
-    crmGo(p ? '#/party/' + encodeURIComponent(crmKey(p)) : '#/parties');
+    await crmAddDone((reply && (reply.customer || reply.supplier)) || {}, role, first, contact);
   } catch (e) {
     toast((e && e.message) || tx("Couldn't add that. Try again."));
   }

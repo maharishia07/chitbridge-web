@@ -150,7 +150,7 @@
   function facts(report) {
     var items = report.facts
       .filter(function (f) {
-        return grantKit.viewState.answer && grantKit.viewState.answer[f[0]] != null;
+        return grantKit.viewState.answer && !grantKit.viewState.answer.needs && grantKit.viewState.answer[f[0]] != null; /* ACC-410: a return waiting on the shop's setup has no net: AED 0.00 would be a figure nobody computed */
       })
       .map(function (f) {
         return '<span class="tag" data-testid="bv-fact-' + f[0] + '">' + esc(grantKit.words(f[1])) + ': ' + esc(grantKit.minorWords(grantKit.viewState.answer[f[0]])) + '</span>';

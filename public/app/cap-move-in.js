@@ -61,12 +61,9 @@ var MI_REFUSED = {
 
 function miFresh() {
   MIV.f = { source: 'xero', kind: 'accounts', side: 'customer', as_at: '', name: '', csv: null, xlsx: null, country: miShopCountry() };
-  MIV.pre = null;
+  MIV.pre = MIV.plan = MIV.out = MIV.refused = null;
   MIV.dec = {};
-  MIV.plan = null;
-  MIV.out = null;
   MIV.err = '';
-  MIV.refused = null;
 }
 /** the shop's own country (two letters): the session's, else the books' own (GET /health country, miKnowShop), or '' while unknown */
 function miShopCountry() {
@@ -158,7 +155,7 @@ function miDecisions() {
 
 /* ── the view (BK.views.movein) ── */
 function miView(body) {
-  if (!MIV.f) miFresh();
+  if (!MIV.f || MIV.out) miFresh(); /* CON-163: a finished run's result is shown once; opening Move in again starts a new file */
   miKnowShop();
   body.innerHTML =
     '<div data-testid="mi-steps"><div id="mi_rail"></div><div id="mi_sub" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px"></div>' +
@@ -331,6 +328,7 @@ function miPreviewStepHTML() {
     counts = plan.counts || {};
   return (
     '<div data-testid="mi-preview-step">' +
+    (MIV.err ? '<div data-testid="mi-error" role="alert" style="color:var(--warn-2);font-weight:600;margin-bottom:8px">' + esc(MIV.err) + '</div>' : '') /* CON-162: a failed Import says so here, where the press was */ +
     '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' +
     miBigNumber(counts.add, tx('will add'), 'mi-n-add') +
     miBigNumber(counts.merge, tx('will merge'), 'mi-n-merge') +
@@ -402,7 +400,7 @@ function miFile(input) {
   form.name = file.name;
   form.csv = null;
   form.xlsx = null;
-  MIV.pre = null;
+  MIV.pre = MIV.out = null; /* CON-163: a new file never sits under the last run's result */
   MIV.dec = {};
   MIV.plan = null;
   miDropRead();

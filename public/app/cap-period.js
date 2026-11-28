@@ -465,9 +465,11 @@ async function peGstView(body) {
      without the route yet, keeps the GST close & pay below as the whole page. */
   let ret = null;
   try {
-    PE_RET.q = Object.assign({}, peRetRecall());
+    const recalled = peRetRecall();
+    PE_RET.q = Object.assign({}, recalled, { stagger: null, emirate: null }); /* ACC-410: the VAT period and the Emirate are the SHOP's setup answers (the server reads them for any seat); this device sends no guess of its own */
     if (!PE_RET.q.period) PE_RET.q.on = await peBusyDay(); /* open on the quarter that has entries, as the Day book does */
     ret = await peReturnLoad();
+    if (ret && ret.needs === 'stagger' && (recalled.stagger || recalled.emirate)) ret = await peSetupKeep(ret, recalled.stagger, recalled.emirate); /* a pick this device alone held moves into the shop's setup once */
   } catch (e) {
     body.innerHTML = '<div class="pe-bad">' + bkErr(e) + '</div>';
     return;
@@ -727,8 +729,6 @@ function peRetRemember() {
     localStorage.setItem(
       peRetKey(),
       JSON.stringify({
-        stagger: PE_RET.q.stagger || null,
-        emirate: PE_RET.q.emirate || null,
         frequency: PE_RET.q.frequency || null,
         simpler: PE_RET.q.simpler || null
       })
@@ -756,7 +756,7 @@ async function peBusyDay() {
       .map((item) => String(item.end_date).slice(0, 10))
       .sort()
       .pop();
-    return last || '';
+    return last ? [last, new Date().toISOString().slice(0, 10)].sort()[0] : ''; /* ACC-411: a month that has begun is asked at today (the server ignores a day still to come) */
   } catch (failure) {
     return bkQuiet('busy-day', failure, '');
   }
@@ -798,7 +798,7 @@ function peReturnWord(r) {
 }
 /** a pick changed (period · frequency · labels · stagger · Emirate): ask again, repaint; the server's refusal is one sentence in the slot */
 async function peReturnPick(k, v) {
-  PE_RET.q[k] = v;
+  if ((k === 'stagger' || k === 'emirate' ? await peSetupKeep(PE_RET.r, k === 'stagger' ? v : '', k === 'emirate' ? v : '') : null) === null) PE_RET.q[k] = v; /* a pick for the shop's setup is kept there (peSetupKeep); only a refused save stays this view's own pick */
   if (k !== 'period') {
     delete PE_RET.q.period;
     peRetRemember();
@@ -869,7 +869,7 @@ function peReturnAeFields(returnAnswer) {
     stg = returnAnswer.staggers || {};
   const staggerOpts = [['', '—']].concat(
     Object.keys(stg).map((item) => [
-      stg[item].monthly ? 'monthly' : item,
+      item, /* the pack's stagger key, as the shop's setup holds it */
       stg[item].monthly ? tx('Monthly') : txf('Stagger {n} · tax year ends {m}', { n: item, m: stg[item].tax_year_end })
     ])
   );

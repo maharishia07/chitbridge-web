@@ -197,7 +197,7 @@ async function route(S, r) {
 
   /* ── 1 · THE PAGE'S OWN SOURCE ───────────────────────────────────────────────────────────────────────────── */
   {
-    const html = fs.readFileSync(path.join(PUB, 'crm.html'), 'utf8'), js = ['cap-crm.js', 'cap-crm-assign.js', 'cap-crm-record.js', 'cap-crm-timeline.js'].map((f) => fs.readFileSync(path.join(PUB, 'app', f), 'utf8')).join('\n');
+    const html = fs.readFileSync(path.join(PUB, 'crm.html'), 'utf8'), js = ['cap-crm.js', 'cap-crm-add.js', 'cap-crm-assign.js', 'cap-crm-record.js', 'cap-crm-timeline.js'].map((f) => fs.readFileSync(path.join(PUB, 'app', f), 'utf8')).join('\n');
     const all = html + '\n' + js;
     ok(/<title>CRM<\/title>/.test(html), 'the page is named CRM');
     ok(!/\balert\s*\(/.test(all), 'no alert() anywhere');
