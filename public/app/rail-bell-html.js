@@ -235,7 +235,7 @@
   /** UX-215: the one pinned row at the top while requests to connect wait for the owner; it opens the requests, the rows are read there */
   function asksRowHtml(bell) {
     if (!(bell.asks > 0)) return '';
-    return '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-asks"><span aria-hidden="true">🤝</span><span><div class="cbb-t"><b>' + esc(bell.asks + ' ' + bellText(bell.asks === 1 ? bellKit.BELL_WORDS.askOne : bellKit.BELL_WORDS.askMany)) + '</b></div></span></button>';
+    return '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-row" data-asks="1"><span aria-hidden="true">🤝</span><span><div class="cbb-t"><b>' + esc(bell.asks + ' ' + bellText(bell.asks === 1 ? bellKit.BELL_WORDS.askOne : bellKit.BELL_WORDS.askMany)) + '</b></div></span></button>';
   }
   /** the open panel: title, the rows (yours first) or the error / empty line, and the footer with Clear all */
   function panelHtml(bell) {

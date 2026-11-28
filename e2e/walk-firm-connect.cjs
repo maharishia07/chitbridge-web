@@ -158,16 +158,17 @@ W.run('firm-connect', async (w) => {
   await w.step('F14', 'the bell\'s dot reads the badge (asks counted), its one pinned row opens the requests', async () => {
     await open('#books'); await page.waitForSelector(T('bell-btn'), { timeout: 15000 }); await page.waitForTimeout(500);
     const dot = await txt(T('bell-dot'));
-    await page.click(T('bell-btn')); await page.waitForSelector(T('bell-asks'), { timeout: 5000 });
-    const row = await txt(T('bell-asks'));
-    await page.click(T('bell-asks')); await page.waitForSelector(T('ba-list'), { timeout: 15000 });
+    await page.click(T('bell-btn')); await page.waitForSelector('[data-asks="1"]', { timeout: 5000 });
+    const row = await txt('[data-asks="1"]');
+    await page.click('[data-asks="1"]'); await page.waitForSelector(T('ba-list'), { timeout: 15000 });
     return { ok: dot === '3' && /2 requests to connect/.test(row) && /asks/.test(page.url()), saw: 'dot ' + dot + ' · row "' + row + '" · ' + page.url().slice(-18) };
   });
   await w.step('F15', 'the Home card names the waiting requests and its door opens the Requests', async () => {
     await page.goto(base + '/'); await page.waitForSelector(T('cbshell'), { timeout: 20000 });
     await page.evaluate(() => window.SHELL && window.SHELL.ready);
     await page.waitForSelector(T('shell-facts-network'), { state: 'attached', timeout: 20000 }); await page.waitForTimeout(1500);
-    const card = await page.evaluate(() => { const el = document.querySelector('[data-testid="shell-facts-network"]'); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; });
+    await page.waitForFunction(() => /requests to connect/.test(document.body.textContent), null, { timeout: 15000 }).catch(() => {});
+    const card = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid="shell-facts-network"]')).map((el) => el.textContent.replace(/\s+/g, ' ').trim()).join(' | ') + ' · spots ' + document.querySelectorAll('[data-testid^="shell-facts-"]').length + ' · ' + (window.SHELL ? 'shell' : 'no shell'));
     return { ok: /2 requests to connect/.test(card), saw: card };
   });
   await w.step('F16', 'the Requests view fits 1366x768 and 390x844 with no page scroll', async () => {

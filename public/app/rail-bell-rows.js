@@ -150,12 +150,12 @@
   }
   /** a press on a row of the list: which kind of notice it is decides what opens; false when it was not on a row of ours */
   function pressRow(bell, opts, node, repaint) {
-    if (node.closest('[data-testid="bell-asks"]')) {
+    var row = node.closest('[data-testid="bell-row"]');
+    if (!row) return false;
+    if (row.getAttribute('data-asks')) {
       pressAsks(bell, repaint);
       return true;
     }
-    var row = node.closest('[data-testid="bell-row"]');
-    if (!row) return false;
     if (row.getAttribute('data-chit')) {
       openChitRow(bell, opts, row, repaint);
       return true;
