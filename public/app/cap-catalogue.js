@@ -454,7 +454,7 @@ var CBCatalogueApp = (function () {
   }
   /** the one sentence for a cost-blind login — the server's field decides; the words are the gate's own (routes/products.js) */
   function costWhy() {
-    return S.cost === null ? T('Checking who may see prices…') : T('Your access does not include cost or price. The owner grants “Sees costs” in Employees.');
+    return S.cost === null ? T('Checking who may see prices…') : (typeof CBRoles !== 'undefined' ? CBRoles.refusal('costs') : '');
   }
 
   /* ── the server's answers ── */

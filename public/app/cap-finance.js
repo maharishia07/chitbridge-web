@@ -143,7 +143,7 @@ function finOff() {
         failed: function (e) {
           switchOn.disabled = false;
           switchOn.textContent = tx('Turn on');
-          toast(tx('Could not switch it on.') + ' ' + (e && e.status === 403 ? tx('Only the owner may do this.') : tx('Try again.')));
+          toast(tx('Could not switch it on.') + ' ' + (e && e.status === 403 ? (typeof CBRoles !== 'undefined' ? CBRoles.refusal('owner') : '') : tx('Try again.')));
         }
       });
     };

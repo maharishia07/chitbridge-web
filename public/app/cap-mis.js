@@ -322,7 +322,7 @@ function fmViews(current) {
 }
 function fmDeniedWords() {
   return FM.state === 'denied'
-    ? { title: tx('This sign-in cannot open the reports.'), sub: (FM.err && FM.err.message) || '' }
+    ? { title: (typeof CBRoles !== 'undefined' ? CBRoles.refusal('reports') : ''), sub: (FM.err && FM.err.message) || '' }
     : { title: tx('Could not read the reports.'), sub: tx('Nothing was lost. Try again.') };
 }
 function fmMount(frame) {

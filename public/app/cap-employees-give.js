@@ -19,12 +19,12 @@
   /** the firms that hold a live books grant, read from the SAME list "Who can see my books" shows (the page's `grants()`, GET /api/books-grants): [{ id, name, role, until }] */
   function firmsOf(answer) {
     var seen = {};
-    return ((answer && answer.given) || []).filter(function (g) { return g.state === 'live' && !g.revoked_at && !g.ended_at; }).filter(function (g) {
+    return ((answer && answer.given) || []).filter(function (g) { return g.state === 'live' && !g.revoked_at && !g.ended_at && g.preset !== 'auditor'; }) /* UX-224 O8: an auditor only reads, there is no work to give it */.filter(function (g) {
       var key = String(g.grantee_entity);
       return seen[key] ? false : (seen[key] = true);
     }).map(function (g) {
       var member = root.CBBooksGrantMember;
-      return { id: String(g.grantee_entity), name: g.grantee_name || words('Your firm'), role: member && member.roleWords ? member.roleWords(g.preset) : '', until: g.expires_at && typeof root.shopDay === 'function' ? root.shopDay(g.expires_at) : '' };
+      return { id: String(g.grantee_entity), name: root.CBRoles ? root.CBRoles.firm(g.preset, g.grantee_name) : g.grantee_name || '', role: member && member.roleWords ? member.roleWords(g.preset) : '', until: g.expires_at && typeof root.shopDay === 'function' ? root.shopDay(g.expires_at) : '' };
     });
   }
   /** the firm chosen: who it is, what it may do and until when, and the one door to change or end it (the grants screen, not a second panel) */

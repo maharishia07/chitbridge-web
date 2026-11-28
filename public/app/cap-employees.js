@@ -182,7 +182,7 @@
       adding = E.o.embed && E.o.view === 'add';
     E.el.innerHTML =
       '<div class="empty" data-testid="emp-fail"><div class="t">' +
-      esc(T(refused ? 'This sign-in cannot open this' : adding ? "Couldn't open the form" : "Couldn't read your people")) +
+      esc(refused ? (typeof CBRoles !== 'undefined' ? CBRoles.refusal('any') : '') : T(adding ? "Couldn't open the form" : "Couldn't read your people")) +
       '</div>' +
       '<button data-cbsid="EMP001-B01" type="button" class="act" id="emp_retry" data-testid="emp-retry">' +
       esc(T('Try again')) +

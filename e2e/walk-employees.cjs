@@ -254,7 +254,7 @@ W.run('employees', async (w) => {
     const t = await txt('[data-testid="emp-fail"]'); S.listDenied = false;
     await page.click('[data-testid="emp-retry"]'); await page.waitForSelector('[data-testid="emp-bar"]', { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(300);
     const back = await rows();
-    return { ok: /This sign-in cannot open this/.test(t) && /Try again/.test(t) && back >= 3, saw: '"' + t.slice(0, 80) + '"; after Try again: ' + back + ' rows' };
+    return { ok: /Your seat cannot open this/.test(t) && /Try again/.test(t) && back >= 3, saw: '"' + t.slice(0, 80) + '"; after Try again: ' + back + ' rows' };
   });
   await w.step('E17', 'CX6 · Employees -> payroll is SAID (one line), readable (AA) and unclipped in light and dark at 1366 and 390 px, no sideways scroll', async () => {
     const seen = [];

@@ -120,9 +120,9 @@ of file each thing is; this says what already does the job.
 | 38 | `ensureCap` | `app.html` |  |
 | 38 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 37 | `note` | `device-id.js` | note(where, problem) — |
+| 37 | `names` | `shortcuts.js` |  |
 | 37 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 36 | `call` | `assign-bar.js` | one call to the api; a network failure is NOT thrown: |
-| 36 | `names` | `shortcuts.js` |  |
 | 35 | `bkMoney` | `cap-books.js` |  |
 | 35 | `shown` | `country-compare.js` | one side's value for the line: |
 | 35 | `reason` | `lab-kit.js` | W9: |

@@ -15,12 +15,13 @@ const helpers = read('public/app/helpers.js');
 const cut = (name) => { const at = helpers.indexOf('function ' + name); assert(at >= 0, name); let depth = 0, i = helpers.indexOf('{', at); const start = at; for (; i < helpers.length; i++) { if (helpers[i] === '{') depth++; if (helpers[i] === '}' && --depth === 0) break; } return helpers.slice(start, i + 1); };
 const ctx = { atob: (t) => Buffer.from(t, 'base64').toString(), tx: (s) => s, SESSION: {} };
 vm.createContext(ctx);
+vm.runInContext(read('public/app/role-names.js'), ctx); /* UX-224: the refusal sentence is CBRoles' one */
 vm.runInContext(cut('jwtPayload') + cut('viewOnlyLogin') + cut('viewOnlyMoneyWhy'), ctx);
 const as = (role, level) => { ctx.SESSION = { role, token: token(level) }; return vm.runInContext('viewOnlyLogin()', ctx); };
 assert.strictEqual(as('user', 'viewer'), true, 'a viewer login is view-only');
 assert.strictEqual(as('user', 'owner'), false, 'the owner is not');
 assert.strictEqual(as('entity', 'viewer'), false, 'an entity session is not');
-assert(/accountant or bookkeeper/.test(vm.runInContext('viewOnlyMoneyWhy()', ctx)), 'the reason names who may read');
+assert(/Your seat cannot read the books. Ask the owner./.test(vm.runInContext('viewOnlyMoneyWhy()', ctx)), 'the reason is the one refusal: the seat cannot read the books, ask the owner (CBRoles, UX-224)');
 assert(read('public/accounts.html').includes('return viewOnlyLogin();') && !/=== 'viewer'/.test(read('public/accounts.html').split('const viewOnlySeat')[1].slice(0, 400)), 'Accounts uses the one reading, no second copy');
 
 /* Returns: grey + reason for a view-only login; the month list from the shop's day */

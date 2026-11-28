@@ -456,11 +456,9 @@ function bkErr(e) {
 }
 /** STAFF-BOOKS: a view the server refuses this seat (403: the money reads are the owner's and the auditor's) says so in the server's own sentence, in the ONE empty/refused state (emptyState), never a raw error and never a blank pane.
  *  Any other failure keeps bkErr's words. `what` names the view. */
-/** the ONE sentence of who may read a gated books screen (twin of the api gate lib/books-readers.js READ_MONEY_WORDS: owner · the shop's accountant or bookkeeper · auditor) */
-var BK_READ_WORDS = "Only the owner, the shop's accountant or bookkeeper, or the shop's auditor may read these figures.";
 function bkRefused(e, what) {
   if (!e || e.status !== 403) return bkErr(e);
-  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc(tx(e.message || BK_READ_WORDS)) + ' ' + esc(tx('A job title is only a name. To read the books, the owner picks the Bookkeeper seat for you under People.'))); /* AG-F-06: a person called Bookkeeper by job title alone has no seat; the answer says what to ask for */
+  return emptyState('🔒', tx(what || 'Not for this sign-in'), esc((typeof CBRoles !== 'undefined' ? CBRoles.refusal('books') : '')) /* UX-224: the one refusal (CBRoles), not the api's long list of who may read; AG-F-06's "ask the owner" is its last words */); /* AG-F-06: a person called Bookkeeper by job title alone has no seat; the answer says what to ask for */
 }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */

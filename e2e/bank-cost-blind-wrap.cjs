@@ -8,7 +8,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS = path.join(__dirname, 'shots');
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const books = require('./lib/books-api.cjs');
-const SAY = 'Your access does not include costs, so the bank statements are hidden.';
+const SAY = 'Your seat cannot open the bank statements. Ask the owner.';
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const C = require('./lib/contract.cjs');   /* every answer the stand-in serves for a route in the api contract is checked (e2e/contract.cjs holds this) */
@@ -59,7 +59,7 @@ const ACCOUNTS = [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role:
     console.log(tag + ' ' + JSON.stringify(m));
     const sum = m.lines.find((l) => l.id === 'bank-stmts-sum');
     ok(!!sum && sum.text === SAY && !sum.cut && !sum.nowrap && sum.right <= m.w, tag + ': the Statements line reads in full, wrapped not cut (' + (sum && sum.lines) + ' line(s))');
-    for (const l of m.lines.filter((x) => x.id === 'bank-store-line')) ok(l.text.indexOf('Your access does not include costs') === 0 && !l.cut && l.right <= m.w, tag + ': the log line reads in full');
+    for (const l of m.lines.filter((x) => x.id === 'bank-store-line')) ok(l.text.indexOf('Your seat cannot open the bank statements') === 0 && !l.cut && l.right <= m.w, tag + ': the log line reads in full');
     ok(m.sx <= 0, tag + ': no sideways scroll (' + m.sx + ')');
     const cap = tag === 'phone' ? 560 : 347; /* the line before this fix: phone 539 (cut to one line), laptop 347; the phone grows only by the wrapped lines of this one sentence */
     ok(m.head > 0 && m.head <= cap, tag + ': head budget - the Statements box ends at ' + m.head + ' px (budget ' + cap + ')');

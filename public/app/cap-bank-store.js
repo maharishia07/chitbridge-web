@@ -28,7 +28,7 @@ const bksE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
 const bksNotSetUp = (failure) => !!failure && failure.status === 503;
 /** the api's 403 COST_BLIND (B3): this login may not see costs, so the bank statements and log are not its to read; ONE test and ONE sentence for every bank read (the body's code, from the error's own data) */
 const bksCostBlind = (failure) => !!failure && failure.status === 403 && !!failure.data && (failure.data.code === 'COST_BLIND' || (failure.data.error && failure.data.error.code === 'COST_BLIND'));
-const bksCostBlindSay = () => tx('Your access does not include costs, so the bank statements are hidden.');
+const bksCostBlindSay = () => (typeof CBRoles !== 'undefined' ? CBRoles.refusal('bank') : '');
 /** why a bank read failed, in words: the cost-blind sentence, else the server's own message */
 const bksWhy = (failure) => (bksCostBlind(failure) ? bksCostBlindSay() : (failure && failure.message) || '');
 

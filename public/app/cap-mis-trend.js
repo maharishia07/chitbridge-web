@@ -350,7 +350,7 @@ function trWords() {
   return TR.state === 'refused'
     ? { title: tx('Set your country, money and year first.'), sub: '' }
     : TR.state === 'denied'
-      ? { title: tx('This sign-in cannot open the reports.'), sub: '' }
+      ? { title: (typeof CBRoles !== 'undefined' ? CBRoles.refusal('reports') : ''), sub: '' }
       : { title: tx('Could not read the trend.'), sub: tx('Nothing was lost. Try again.') };
 }
 /** the Trend view: the top, the chart box, and the table (CBList) — mounted once; the data repaints the parts */
