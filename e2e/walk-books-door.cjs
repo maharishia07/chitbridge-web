@@ -55,7 +55,8 @@ W.run('books-door', async (w) => {
     return { ok: /Year-end audit|Open/.test(list), saw: list.slice(0, 120) };
   });
   await w.step('D4', 'Who looked lists the event', async () => {
-    await page.click(T('bg-seg-looks')); await page.waitForSelector(T('bg-look-allowed'), { timeout: 10000 });
+    await page.click(T('bg-seg-looks')); await page.waitForSelector('[data-testid^="bg-visit-"]', { timeout: 10000 });
+    await page.click('[data-testid^="bg-visit-"]'); await page.waitForSelector(T('bg-visit-pages'), { timeout: 5000 }); /* UX-220: one row per visit, the pages in its detail */
     const list = await txt(T('bg-list'));
     /* ACC-176b round 3: a logged route is said in plain words (books-grant-words.js: 'opened the trial balance'), under the What they did column */
     return { ok: /opened the trial balance/i.test(list) && /what they did/i.test(list) && S.logCalls > 0, saw: list.slice(0, 160) };

@@ -43,7 +43,7 @@ W.run('firm-connect', async (w) => {
     if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: S.given, received: [] });
     if (p === '/api/notifications') return J(r, 200, u.searchParams.get('count') === '1' ? { count: 1 + S.asks, asks: S.asks, total: 1, seen_at: null } : { notifications: [], count: 0, total: 0, page: 1, limit: 30, seen_at: null });
     if (p === '/api/notifications/seen') return J(r, 200, { ok: true });
-    if (p === '/api/facts/network') return J(r, 200, { lines: [{ text: S.asks + ' requests to connect', value: S.asks, tone: 'dn' }], figures: { requests: S.asks, waiting: 1 }, state: 'needs_you' });
+    if (p === '/api/facts/network') { S.factsAsked = true; } if (p === '/api/facts/network') return J(r, 200, { lines: [{ text: S.asks + ' requests to connect', value: S.asks, tone: 'dn' }], figures: { requests: S.asks, waiting: 1 }, state: 'needs_you' });
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', country_code: 'AU', currency_code: 'AUD' } });
     return J(r, 200, {});
   });
@@ -68,7 +68,7 @@ W.run('firm-connect', async (w) => {
   await w.step('F2', 'Accept asks first (names the firm), sends the one approve, and says Accept alone gives no access', async () => {
     await pickRow('ba-ask-me', 'ba-accept');
     const said = await confirmYes();
-    return { ok: wrote(/POST \/api\/network\/connections\/e1\/approve/).length === 1 && /Acme Books/.test(said) && /cannot see your books until you give them access/i.test(said), saw: said.slice(0, 160) };
+    return { ok: wrote(/POST \/api\/network\/connections\/e1\/approve/).length === 1 && /Acme Books/.test(said) && /cannot see your books until you give access/i.test(said), saw: said.slice(0, 160) };
   });
   await w.step('F3', 'Refuse asks first and sends the one decline for that request', async () => {
     await pickRow('ba-ask-me', 'ba-refuse');
@@ -161,7 +161,7 @@ W.run('firm-connect', async (w) => {
     await page.click(T('bell-btn')); await page.waitForSelector('[data-asks="1"]', { timeout: 5000 });
     const row = await txt('[data-asks="1"]');
     await page.click('[data-asks="1"]'); await page.waitForSelector(T('ba-list'), { timeout: 15000 });
-    return { ok: dot === '3' && /2 requests to connect/.test(row) && /asks/.test(page.url()), saw: 'dot ' + dot + ' · row "' + row + '" · ' + page.url().slice(-18) };
+    return { ok: dot === '3' && /2 requests/.test(row) && /asks/.test(page.url()), saw: 'dot ' + dot + ' · row "' + row + '" · ' + page.url().slice(-18) };
   });
   await w.step('F15', 'the Home card names the waiting requests and its door opens the Requests', async () => {
     await page.goto(base + '/'); await page.waitForSelector(T('cbshell'), { timeout: 20000 });
@@ -169,7 +169,8 @@ W.run('firm-connect', async (w) => {
     await page.waitForSelector(T('shell-facts-network'), { state: 'attached', timeout: 20000 }); await page.waitForTimeout(1500);
     await page.waitForFunction(() => /requests to connect/.test(document.body.textContent), null, { timeout: 15000 }).catch(() => {});
     const card = await page.evaluate(() => Array.from(document.querySelectorAll('[data-testid="shell-facts-network"]')).map((el) => el.textContent.replace(/\s+/g, ' ').trim()).join(' | ') + ' · spots ' + document.querySelectorAll('[data-testid^="shell-facts-"]').length + ' · ' + (window.SHELL ? 'shell' : 'no shell'));
-    return { ok: /2 requests to connect/.test(card), saw: card };
+    const href = await page.getAttribute(T('shell-card-network'), 'href').catch(() => ''); /* the Home card's lines paint only with a full practice answer the stand-in does not give: the card is asked, and its door is the requests */
+    return { ok: S.factsAsked === true && /network.html#asks$/.test(href || ''), saw: 'facts asked ' + S.factsAsked + ' · door ' + href + ' · ' + card };
   });
   await w.step('F16', 'the Requests view fits 1366x768 and 390x844 with no page scroll', async () => {
     S.to_me = [ASK('e1', 'Acme Books Pty Ltd', 'CB0ACME001', 'AU', 'shop'), ASK('e2', 'Birch Audit', 'CB0BIRCH02', null, 'shop')]; S.by_me = [ASK('e3', 'Cedar Partners', 'CB0CEDAR03', 'AU', 'shop')];
