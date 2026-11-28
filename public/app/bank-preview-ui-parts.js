@@ -490,13 +490,13 @@
   }
   /** put every painter of a statement line on the one shared `ctx` (the order matters: each builder reads what the ones before it put there) */
   function build(ctx) {
-    addAsks(ctx);
-    addPartyAsks(ctx);
+    addTaxWords(ctx);
     addEntryWords(ctx);
     addQuestions(ctx);
     addFeeAndBasis(ctx);
     addLoanAsks(ctx);
     addAsks(ctx);
+    addPartyAsks(ctx);
     addLineNote(ctx);
     addParties(ctx);
     addChoices(ctx);
