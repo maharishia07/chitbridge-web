@@ -156,7 +156,7 @@
   }
   /** the tax kind question and the ONE question a held-back line asks next; each function lands on the one shared `ctx` */
   function addAsks(ctx) {
-    var cfg = ctx.cfg, escapeHtml = ctx.escapeHtml, amountText = ctx.amountText, tag = ctx.tag, dataKey = ctx.dataKey, taxWordOf = ctx.taxWordOf, chartOf = ctx.chartOf, optionsOf = ctx.optionsOf, entryNote = ctx.entryNote, nearBox = ctx.nearBox, invoiceQuestion = ctx.invoiceQuestion, tickBox = ctx.tickBox, basisQuestion = ctx.basisQuestion;
+    var escapeHtml = ctx.escapeHtml, dataKey = ctx.dataKey, taxWordOf = ctx.taxWordOf, chartOf = ctx.chartOf, optionsOf = ctx.optionsOf, nearBox = ctx.nearBox, invoiceQuestion = ctx.invoiceQuestion, tickBox = ctx.tickBox;
     /** FIN-116: a money-out line the bank's words proposed carries no tax until the owner says what tax it is: the pack's own kinds, chosen here, never a default; the answer goes through the controller (resolve: one taught rule, the one splitter) */
     function taxKindBox(item) {
       var kinds = chartOf().taxKinds;
@@ -178,9 +178,7 @@
       );
     }
     /** whether the question a held-back line asks is one of these needs */
-    function needsAny(item, needs) {
-      return needs.indexOf(item.needs) >= 0;
-    }
+    function needsAny(item, needs) { return needs.indexOf(item.needs) >= 0; }
     /** the one question a held-back line asks next */
     function askedBox(item) {
       if (item.needs === 'may_be_in_books') return nearBox(item);
@@ -188,12 +186,43 @@
       if (item.needs === 'tax_invoice') return invoiceQuestion(item);
       if (item.needs === 'fee_tax') return ctx.feeTaxQuestion(item);
       if (item.needs === 'which_liability') return liabilityBox(item);
+      if (item.needs === 'which_account') return ctx.whichAccountBox(item);
       if (needsAny(item, ['interest', 'interest_too_big'])) return ctx.interestBox(item);
       if (needsAny(item, ['needs_tick', 'balance_break'])) return tickBox(item);
       if (item.needs === 'tax_kind') return taxKindBox(item);
       return '';
     }
     Object.assign(ctx, { taxKindBox, liabilityBox, askedBox });
+  }
+  /** the two questions a payment to a party asks (which account, which open bill); each function lands on the one shared `ctx` */
+  function addPartyAsks(ctx) {
+    var escapeHtml = ctx.escapeHtml, amountText = ctx.amountText, dataKey = ctx.dataKey, chartOf = ctx.chartOf, optionsOf = ctx.optionsOf;
+    /** BB-P1-3: a payment to a party that settles no bill asks which expense account it is for (the same account and tax-kind lists and button as a line nothing explained); the answer keeps the party */
+    function whichAccountBox(item) {
+      var chart = chartOf(), key = escapeHtml(item.key);
+      return (
+        '<span class="bd-ask">Which account is this for?</span> ' +
+        '<select data-cbsid="BKS017-S05" class="bd-inp" aria-label="Account" data-act="acct" data-key="' + key + '">' + optionsOf(chart.expense, function (one) { return one.role; }, function (one) { return one.name; }) + '</select> ' +
+        '<select data-cbsid="BKS017-S06" class="bd-inp" aria-label="Tax kind" data-act="taxkind" data-key="' + key + '">' + optionsOf(chart.taxKinds, function (one) { return one.id; }, function (one) { return one.name; }) + '</select> ' +
+        '<button data-cbsid="BKS017-B08" type="button" class="bd-btn" data-act="useacct" data-key="' + key + '">Use this account</button>'
+      );
+    }
+    /** BB-P1-3: the api found ONE open bill of this party for exactly this amount: it is shown and asked, never settled without a yes */
+    function whichBillBox(item, result) {
+      var bill = result.bill || {};
+      return (
+        '<span class="bd-ask">' + escapeHtml('Same amount as an open bill (' + bill.ref + ', ' + amountText({ amount_minor: bill.open_minor }) + '). Use it?') + '</span> ' +
+        '<button data-cbsid="BKS017-B36" type="button" class="bd-btn" data-act="billuse"' + dataKey(item) + '>Yes, settle that bill</button> ' +
+        '<button data-cbsid="BKS017-B37" type="button" class="bd-btn" data-act="billno"' + dataKey(item) + '>No, pick an account</button>'
+      );
+    }
+    Object.assign(ctx, { whichAccountBox, whichBillBox });
+  }
+  /** what a line says once the adapter answered it: the api's question (nothing was posted), or added, or why not */
+  function resultNote(ctx, item, result) {
+    if (result.needs === 'which_bill' && result.bill) return ctx.whichBillBox(item, result);
+    if (result.needs === 'which_account') return ctx.whichAccountBox(item);
+    return result.ok ? ctx.tag('ok', ctx.cfg.addedWords || 'Added') : ctx.tag('bad', 'Not added: ' + result.why);
   }
   /** the note under a line: the message of a line the sheet cannot finish, the line's note and the engine's own sentence; each function lands on the one shared `ctx` */
   function addLineNote(ctx) {
@@ -222,7 +251,7 @@
     }
     /** what a line says once it is neither added nor closed: the entry it would make, the ONE question, every other thing holding it back, the reason and the say-box */
     function lineNoteCore(item, result) {
-      if (result) return result.ok ? tag('ok', cfg.addedWords || 'Added') : tag('bad', 'Not added: ' + result.why);
+      if (result) return resultNote(ctx, item, result);
       if (item.state === 'closed') return tag('bad', item.why);
       var done = alreadyNote(item, escapeHtml);
       if (done) return done;
@@ -467,6 +496,7 @@
     addFeeAndBasis(ctx);
     addLoanAsks(ctx);
     addAsks(ctx);
+    addPartyAsks(ctx);
     addLineNote(ctx);
     addParties(ctx);
     addChoices(ctx);

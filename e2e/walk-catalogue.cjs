@@ -161,7 +161,7 @@ const walk = async (w) => {
       await page.click('[data-testid="cat-edit"]'); await page.waitForSelector('[data-testid="cat-field-price"]', { timeout: 5000 });
       const disabled = await page.getAttribute('[data-testid="cat-field-price"]', 'disabled'), why = await txt('[data-testid="cat-price-why"]');
       S.costs = true;
-      return { ok: /not shown/.test(col) && disabled !== null && /does not include cost or price/.test(why), saw: '"' + col + '" · disabled=' + (disabled !== null) + ' · "' + why + '"' };
+      return { ok: /not shown/.test(col) && disabled !== null && /Your seat cannot see costs. Ask the owner./.test(why), saw: '"' + col + '" · disabled=' + (disabled !== null) + ' · "' + why + '"' };
     });
   }
   const catgs = async () => { await page.goto(base + '/catalogue.html?t=' + Date.now() + '#/categories'); await page.waitForSelector('[data-testid="cat-categories"] .cbl-row, [data-testid="cbl-empty-catalogue-categories"], [data-testid="catg-read-err"]', { timeout: 30000 }); await page.waitForTimeout(400); };   /* clock-ok: a cache-busting suffix, not a business date */

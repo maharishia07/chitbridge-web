@@ -30,13 +30,13 @@
   grantKit.drill = drill;
   grantKit.alive = alive;
   grantKit.reload = reload;
-  grantKit.viewState = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null, mk: null, period: null, range: null, choices: undefined };
+  grantKit.viewState = { host: null, o: {}, report: 'daybook', day: '', answer: null, why: null, mk: null, period: null, range: null, choices: undefined };
   /** where a reviewer lands: the auditor on the Day book (the entries are the job), the adviser on the trial balance */
   function viewKnown(k) {
     return k === grantKit.ACTIONS || grantKit.REPORTS.some(function (r) { return r.k === k; });
   }
   function homeOf(options) {
-    return options && options.member && options.member.role === 'adviser' ? 'tb' : 'daybook';
+    return 'daybook'; /* ONEP-2: the trial balance is the owner's screen now (a door), so both seats land on the Day book until it is a door too */
   }
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -164,10 +164,8 @@
     grantKit.viewState.answer = answer;
     grantKit.viewState.seen = report.k === 'daybook' && grantKit.viewState.since && answer ? { to: answer.seen_to, total: answer.total, since: answer.since } : null; /* rank 10: the watermark of what this screen listed: Mark as checked sends it back */
     if (grantKit.viewState.o.onRead) grantKit.viewState.o.onRead(); /* the first books read answered 200: the seat the person chose may now be remembered */
-    if (report.k === 'pl' && answer && answer.gross_profit) { answer.gross_profit_minor = answer.gross_profit.gross_profit_minor; answer.gross_cost_minor = answer.gross_profit.cost_of_sales_minor; } /* the server's gross profit, named like its other totals */
     grantKit.viewState.why = null;
     ingestEntries(report, answer);
-    ingestExplained(report, answer);
     root.CBBooksActing.setCurrency(answer && answer.currency);
   }
   /** the Day book's entries go to the three helpers: each entry carries its mark, its evidence and my bookmark */
@@ -176,11 +174,6 @@
     if (grantKit.viewState.mk) grantKit.viewState.mk.ingest(answer && answer.entries, answer); /* ACC-358: each entry carries its mark */
     if (grantKit.viewState.ev) grantKit.viewState.ev.ingest(answer && answer.entries); /* CMP062: and its evidence */
     if (grantKit.viewState.fl) flagsRead = grantKit.viewState.fl.load(((answer && answer.entries) || []).map(function (e) { return e.entry_id; }).filter(Boolean)); /* CMP066: my bookmarks of these entries, ONE read per 200; a failed read draws no chip rather than saying none */
-  }
-  /** the P&L's flagged lines: my explanations of them, ONE read */
-  function ingestExplained(report, answer) {
-    if (report.k !== 'pl') return;
-    if (grantKit.viewState.fa && answer && answer.compare) flagsRead = grantKit.viewState.fa.load(grantKit.plRows(answer).filter(function (r) { return r.change_over; }).map(grantKit.explainId).filter(Boolean)); /* my explanations of the flagged lines, ONE read; a failed read draws no button rather than saying none */
   }
   /** a read failed: a 401 goes up to the page, anything else is said by the frame (never the server's raw word) */
   function keepFailure(failure) {
@@ -195,47 +188,72 @@
   function phone() {
     return typeof root.matchMedia === 'function' && root.matchMedia('(max-width: 700px)').matches;
   }
-  /** RW3-16: the return tab is named by the CLIENT's own pack. network.html loads no pack registry, so the word comes from the server: GET /periods answers `return_name` (BAS · VAT return) from the audited shop's pack, read before the first paint; Tax return only where it names none */
-  function labelOf(r) {
-    var own = r.k === 'bas' && grantKit.viewState.choices && grantKit.viewState.choices.return_name;
-    return own || r.label;
+  /** ONEP-1: the client's tax return is the OWNER's screen (accounts.html, tab gstclose), opened in this seat: this view fetches no return of its own. The word is the client's pack's (GET /periods return_name), the neutral Tax return when it names none */
+  function returnWord() {
+    return (grantKit.viewState.choices && grantKit.viewState.choices.return_name) || 'Tax return';
+  }
+  function returnButton() {
+    return !grantKit.viewState.why ? '<button data-cbsid="NET005-B12" type="button" class="act quiet" id="bv_return" data-testid="bv-return-open">' + esc(words(returnWord())) + '</button>' : '';
+  }
+  function openReturn() {
+    var report = grantKit.viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (grantKit.viewState.period ? root.CBPeriodPick.toAddress(grantKit.viewState.period) : ''); /* the screen and the period ride to the owner's return and back */
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'gstclose', carry, isAdviser() ? 'adviser' : 'auditor'));
   }
   function tabs() {
     if (phone()) return '';
     var all = grantKit.REPORTS.map(function (r) {
-      return { k: r.k, label: labelOf(r) };
+      return { k: r.k, label: r.label };
     });
     if (isAdviser()) all.push({ k: grantKit.ACTIONS, label: 'Actions' });
-    return all.map(function (r) {
-      return (
-        '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (grantKit.viewState.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (grantKit.viewState.report === r.k) + '">' + esc(words(r.label)) + '</button>'
-      );
-    }).join('') + prepareButton() + bankButton();
+    if (!grantKit.viewState.why) all.push({ door: 'tb', id: 'bv_tb', testid: 'bv-tb-open', label: 'Trial balance' }, { door: 'pl', id: 'bv_pl', testid: 'bv-pl-open', label: 'Profit and loss' }, { door: 'bs', id: 'bv_bs', testid: 'bv-bs-open', label: 'Balance sheet' }); /* ONEP-2: owner screens opened in this seat, not read here */
+    return all.map(tabButton).join('') + returnButton() + prepareButton() + bankButton();
+  }
+  /** ONE tab button definition: a read of this view (data-report) or a door to the owner's screen (a press opens it in the seat) */
+  function tabButton(r) {
+    var on = !r.door && grantKit.viewState.report === r.k;
+    return '<button data-cbsid="NET005-B02" type="button" id="' + (r.door ? r.id : 'bv_tab_' + r.k) + '" class="act' + (on ? '' : ' quiet') + '"' + (r.door ? '' : ' data-report="' + r.k + '" aria-pressed="' + on + '"') + ' data-testid="' + (r.door ? r.testid : 'bv-tab-' + r.k) + '">' + esc(words(r.label)) + '</button>';
   }
   /** the phone's screen pick: the library Select (ui-select.js, as period-pick.js uses) with the same screens as the buttons, and the Bank / Prepare ways as its last lines; the address follows the pick (onView) */
   function tabSelect() {
     if (!phone() || grantKit.viewState.why || !root.ui || typeof root.ui.select !== 'function') return '';
-    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(labelOf(r)) }; });
+    var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(r.label) }; });
+    options.push({ value: '_tb', label: words('Trial balance') }, { value: '_pl', label: words('Profit and loss') }, { value: '_bs', label: words('Balance sheet') });
+    options.push({ value: '_return', label: words(returnWord()) });
     if (isAdviser()) options.push({ value: grantKit.ACTIONS, label: words('Actions') }, { value: '_prepare', label: words('Prepare a journal') });
     else options.push({ value: '_bank', label: words('Bank') });
     return '<span class="bv-tabsel" data-testid="bv-tabsel">' + root.ui.select({
       mount: 'NET005-U02', label: 'Books', bare: true, id: 'bv_tabsel', testid: 'bv-tab-select', value: grantKit.viewState.report, options: options,
-      onChange: function (value) {
-        if (value === '_prepare') return openPrepare();
-        if (value === '_bank') return openBank();
-        grantKit.viewState.report = value;
-        tell();
-        reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
-      }
+      onChange: onTabPick
     }) + '</span>';
   }
+  /** the way a Select line other than a report opens: Prepare, Bank, the return, or one of the owner's three statements; null for a report */
+  function doorOfPick(value) {
+    var doors = { _prepare: openPrepare, _bank: openBank, _return: openReturn, _tb: function () { return openDoor('tb'); }, _pl: function () { return openDoor('pl'); }, _bs: function () { return openDoor('bs'); } };
+    return Object.prototype.hasOwnProperty.call(doors, value) ? doors[value] : null;
+  }
+  /** the phone Select was changed: a door opens its screen, a report becomes the read, reloads, and the Select keeps focus */
+  function onTabPick(value) {
+    var door = doorOfPick(value);
+    if (door) return door();
+    grantKit.viewState.report = value;
+    tell();
+    reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
+  }
   /** W15-71: the auditor's way to the client's Bank (home, kept statements, a month's lines, who matched, the sign-off) and Month lock: the books page in the auditor's seat, read only */
+  /** ONEP-2: the trial balance is the OWNER's screen (accounts.html, tab tb) opened in this seat: this view reads no trial balance of its own. The period rides in the address (E10 carry) */
+  /** ONEP-2: the P&L is the OWNER's screen too. The window rides as from= and to= (a financial year is given by toAddress as fy= only, so its own dates ride too) */
+  function openDoor(tab) {
+    var report = grantKit.viewState.report, period = grantKit.viewState.period;
+    var span = period && period.kind === 'year' && period.from && period.to ? '&from=' + encodeURIComponent(period.from) + '&to=' + encodeURIComponent(period.to) : ''; /* a year is carried as fy= and, for the owner screen, its own dates */
+    var carry = (report ? '&view=' + encodeURIComponent(report) : '') + (period ? root.CBPeriodPick.toAddress(period) : '') + span;
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, tab, carry, isAdviser() ? 'adviser' : 'auditor'));
+  }
   function bankButton() {
     return !isAdviser() && !grantKit.viewState.why ? '<button data-cbsid="NET005-B10" type="button" class="act quiet" id="bv_bank" data-testid="bv-bank">' + esc(words('Bank')) + '</button>' : '';
   }
   function openBank() {
     var report = grantKit.viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (grantKit.viewState.period ? root.CBPeriodPick.toAddress(grantKit.viewState.period) : ''); /* E10: the screen and the period ride to Bank and back */
-    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry));
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'bank', carry, grantKit.viewState.o.member.role));
   }
   /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares (or posts, when the owner's grant says adviser_posts) */
   function prepareButton() {
@@ -258,7 +276,7 @@
   function screenName() {
     if (onActions()) return words('Queues');
     var r = grantKit.REPORTS.filter(function (x) { return x.k === grantKit.viewState.report; })[0];
-    return r ? words(labelOf(r)) : '';
+    return r ? words(r.label) : '';
   }
   /** l16 R4-2b: a screen of the client's books is a history entry: the page is told (onView) so Back and Forward can restore it */
   function tell() {
@@ -288,8 +306,7 @@
       (grantKit.viewState.why ? '<div class="nw-why" id="bv_why" data-testid="bv-why"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' + pagerSlot(report) +
       (grantKit.markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes; fd1117: the marks bar (count and All queries) sits UNDER the list with the notes, so the first data row stays where the ceiling holds it */ +
-      (grantKit.viewState.why ? '' : grantKit.riskNote(report) + grantKit.cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
-      (grantKit.viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + grantKit.bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
+      (grantKit.viewState.why ? '' : grantKit.riskNote(report)) /* under the list too: the first data row stays where the ceiling holds it */;
     wirePainted(report);
   }
   /** the failure frame: a 403 the server named by a code says why and what to do and the way back to his queue (W19); anything else is the one frame as before */
@@ -303,13 +320,16 @@
     wireBand();
     if (grantKit.viewState.why && $('bv_why')) drawWhy($('bv_why'));
     fillPeriodSlot(report);
-    if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
-    if ($('bv_bank')) $('bv_bank').onclick = openBank;
+    wireDoorButtons();
     wireTabButtons();
-    grantKit.wireBankTbLine();
     grantKit.wireSince();
     if (onActions()) grantKit.mountQueues();
     else if (!grantKit.viewState.why) { paintList(report); grantKit.paintMarkBar(report); }
+  }
+  /** the buttons that open another screen (Prepare, Bank, the return, the three statements) are wired when they are drawn */
+  function wireDoorButtons() {
+    var wires = { bv_prepare: openPrepare, bv_bank: openBank, bv_return: openReturn, bv_tb: function () { openDoor('tb'); }, bv_pl: function () { openDoor('pl'); }, bv_bs: function () { openDoor('bs'); } };
+    Object.keys(wires).forEach(function (id) { if ($(id)) $(id).onclick = wires[id]; });
   }
   /** a tab press opens that read and gives the tab focus */
   function wireTabButtons() {
@@ -381,9 +401,17 @@
   }
   function reload() {
     var mine = grantKit.viewState;
-    return load().then(function () { if (alive() && grantKit.viewState === mine) paint(); }, function () {
-      if (grantKit.viewState.o.onEnded) grantKit.viewState.o.onEnded();
-    });
+    return load().then(function () { if (alive() && grantKit.viewState === mine) paint(); }, function (failure) {
+      if (failure && failure.status === 401 && grantKit.viewState.o.onEnded) grantKit.viewState.o.onEnded(); /* the sign-in ended: the page leaves; ANY other exception (keepAnswer, a cell, a wire) is said, never taken for "ended" */
+      else paintFailed(mine, failure);
+    }).catch(function (failure) { paintFailed(mine, failure); });
+  }
+  /** FAIL LOUD (1138, the blank client): a screen that threw while painting says so in words, in the page, with Try again and the way back, and logs why; it never leaves the pane empty. Only the client still open is told */
+  function paintFailed(mine, failure) {
+    if (typeof root.cblog === 'function') root.cblog('error', 'books-grant: the client screen could not be painted: ' + ((failure && (failure.stack || failure.message)) || failure));
+    var host = mine && mine.host;
+    if (!host || !root.CBShell || typeof root.CBShell.readFailed !== 'function' || grantKit.viewState !== mine) return;
+    root.CBShell.readFailed(host, { what: words('These books'), status: 0, retry: reload, back: [{ href: '/network.html', label: words('Back to My network') }] });
   }
   var stopForgetting = null;
   /** the answer and the day of the store that was open are forgotten when the store changes */
@@ -456,7 +484,7 @@
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
     stopForgetting = root.CBBooksActing.onClear(forget);
-    Promise.resolve(reload()).then(focusHeading, focusHeading).then(function () { openAskedNote(asked); });
+    reload().then(focusHeading, focusHeading).then(function () { openAskedNote(asked); });
     return {
       /** Back or Forward to another screen of this client's books */
       setView: function (report, period) {

@@ -9,11 +9,12 @@ const vm = require('vm');
 const store = fs.readFileSync('public/app/cap-bank-store.js', 'utf8'), stm = fs.readFileSync('public/app/cap-bank-statements.js', 'utf8');
 const line = (src, name) => { const m = src.match(new RegExp('^const ' + name + ' = [^\n]*$', 'm')); if (!m) throw new Error(name + ' not found'); return m[0]; };
 const cx = vm.createContext({ tx: (s) => s, BKST: { mode: 'server', data: null, fileTotal: 0 } });
+vm.runInContext(fs.readFileSync('public/app/role-names.js', 'utf8'), cx); /* UX-224: the one refusal */
 vm.runInContext(['bksCostBlind', 'bksCostBlindSay', 'bksWhy'].map((n) => line(store, n)).join('\n') + '\n' + ['bkstBlind', 'bkstRefusalCode', 'bkstRefusedWords', 'bkstWhyNot'].map((n) => line(stm, n)).join('\n') + '\nthis.f = { bksCostBlind, bksCostBlindSay, bksWhy, bkstWhyNot };', cx);
 const f = cx.f;
 let bad = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) bad++; };
-const SAY = 'Your access does not include costs, so the bank statements are hidden.';
+const SAY = 'Your seat cannot open the bank statements. Ask the owner.'; /* UX-224: CBRoles.refusal('bank') */
 (async () => {
   const log403 = Object.assign(new Error('Forbidden'), { status: 403, data: { code: 'COST_BLIND' } });
   ok(f.bksCostBlind(log403) && f.bksWhy(log403) === SAY, '/bank/log 403 COST_BLIND says the sentence: ' + f.bksWhy(log403));
@@ -28,6 +29,7 @@ const SAY = 'Your access does not include costs, so the bank statements are hidd
   const { liftFns } = require('./lib/lift-fn.cjs');
   const homeState = { signed: {}, known: false, blind: false }; /* cap-bank-home.js keeps it as BANK_HOME and publishes it as window.BKH */
   const cx2 = vm.createContext({ tx: (s) => s, bkhSignedRange: () => ({}), BKST: { mode: 'server', data: { accounts: [{ code: '1100', account_id: 'a1' }] }, fileTotal: 0 }, BANK_HOME: homeState, BKH: homeState, api: () => Promise.reject(log403) });
+  vm.runInContext(fs.readFileSync('public/app/role-names.js', 'utf8'), cx2);
   vm.runInContext(['bksCostBlind', 'bksCostBlindSay'].map((n) => line(store, n)).join('\n') + '\n' + liftFns('public/app/cap-bank-home.js', ['bankHomeSigned']) + '\n' + liftFns('public/app/cap-bank-statements.js', ['bkstSummary']) + '\nthis.g = { bankHomeSigned, bkstSummary };', cx2);
   await cx2.g.bankHomeSigned();
   ok(cx2.BKH.blind === true && cx2.BKH.known === false, 'bankHomeSigned records the 403 COST_BLIND (blind, not known)');

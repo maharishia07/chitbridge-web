@@ -26,9 +26,9 @@
     actionsReturn: { m: 'POST', p: '/api/books-actions/:id/return', idem: 'attempt' } /* { store_id, body_hash, reason } */,
     actionsAccept: { m: 'POST', p: '/api/books-actions/:id/accept', idem: 'attempt' } /* the owner only: { store_id, body_hash, total_minor, currency } */
   };
-  /* the books reads an auditor opens. Plain paths on purpose: the endpoint registry already names each one (cap-books.js booksTB · booksPL · booksBS · booksDaybook · booksPeriods, accounts-shell.js booksDues) and
+  /* the books reads an auditor opens. Plain paths on purpose: the endpoint registry already names each one (cap-books.js booksDaybook · booksPeriods, accounts-shell.js booksDues) and
      ep-aliases.cjs fails an endpoint with two names; this page reads them with a header the books page never sends. */
-  var READS = { readTB: '/api/books/trial-balance', readPL: '/api/books/pl', readBS: '/api/books/bs', readDaybook: '/api/books/daybook', readLedger: '/api/books/ledger/:account', readDues: '/api/books/dues', readPeriods: '/api/books/periods', readReturns: '/api/books/returns' /* YE-F-11: the tax return (a grant read) */ };
+  var READS = { readDaybook: '/api/books/daybook', readLedger: '/api/books/ledger/:account', readDues: '/api/books/dues', readPeriods: '/api/books/periods' };
   var HEADER = 'X-Books-For'; /* names the member whose books are read; the server checks it against a live grant */
   var ROLE_HEADER = 'X-Books-Role'; /* `adviser` picks the member's adviser grant; absent is the auditor's (read only) */
   var STATE = { live: 'Open', revoked: 'Ended', expired: 'Ran out', edge_off: 'Paused: not connected now' };
@@ -110,7 +110,8 @@
   }
   /** held(call) → { <member entity id>: the live grant this business holds on its books }: a login that may not list grants gets {} and the list shows nothing extra */
   function heldSplit(call) {
-    return callEndpoint(call, 'grantsList').then(
+    var known = root.CBAvatar && root.CBAvatar.seatKnown ? root.CBAvatar.seatKnown() : Promise.resolve(false);
+    return known.then(function (staff) { return staff ? {} : callEndpoint(call, 'grantsList'); }).then(
       function (answer) { return splitOfGrants(answer); },
       function (failure) {
         return failure && (failure.status === 401 || failure.status === 403) ? {} : { unread: true }; /* a login that may not list grants has none; a list that could not be read is said as that (l16 fable3), never as "no grant" */
@@ -222,5 +223,13 @@
   function stateWords(state) {
     return words(STATE[state] || state || '');
   }
-  root.CBBooksGrantApi = { run: callEndpoint, held: held, heldSplit: heldSplit, doorsFor: doorsFor, clientColumns: clientColumns, endedWords: endedWords, visible: visible, endedToggle: endedToggle, wireEnded: wireEnded, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, closedBooks: closedBooks, closedFrame: closedFrame, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
+  /** ⭐ readsClients() — the ONE answer to "does this seat ask the firm's reads" (Home's practice list GET /api/books-grants/practice, the Your-clients door GET /api/books-grants). The api's own declaration (lib/role-matrix OWNER_AND_FIRM_SEATS: owner · adviser · auditor allow, a PLAIN actor of a shop deny) is read from /me through the one cb:me announcement:
+      a staff login (an actor of a shop that is not a practice, not whole-business, not a manager) holds no client and is refused both reads, so Home never makes them (a cashier's Home: no refused call). true = ask · false = do not ask · null = /me has not answered yet (the caller waits a beat). */
+  var loadedAt = Date.now(), SEAT_WAIT_MS = 10000; /* /me that never answers (offline, a failed read) must not hide a firm's Home: after the wait the page asks, as it did before */
+  /** the seat rule is CBAvatar's (staffSeat, the one rule for every page's owner-only read); this is only the firm reads' name for it */
+  function readsClients() {
+    var staff = root.CBAvatar && root.CBAvatar.staffSeat ? root.CBAvatar.staffSeat() : null;
+    return staff === null ? (Date.now() - loadedAt > SEAT_WAIT_MS ? true : null) : !staff;
+  }
+  root.CBBooksGrantApi = { run: callEndpoint, readsClients: readsClients, held: held, heldSplit: heldSplit, doorsFor: doorsFor, clientColumns: clientColumns, endedWords: endedWords, visible: visible, endedToggle: endedToggle, wireEnded: wireEnded, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, closedBooks: closedBooks, closedFrame: closedFrame, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
 })(typeof window !== 'undefined' ? window : globalThis);

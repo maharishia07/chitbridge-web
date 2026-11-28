@@ -37,6 +37,7 @@ const run = async (w) => {
   const handler = async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
     S.calls.push({ m, p, q: u.search, h });
+    if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } }); /* ONEP-2: the owner's page the P&L door opens (accounts.html) asks for the shop's name */
     if (p === '/api/flags/query') { const b = JSON.parse(q.postData() || '{}'), flags = {}; S.flags.filter((f) => f.subject_kind === b.subject_kind && (b.ids || []).indexOf(f.subject_id) >= 0).forEach((f) => { (flags[f.subject_id] = flags[f.subject_id] || []).push(f); }); return J(r, 200, { subject_kind: b.subject_kind, subject_entity: b.subject_entity, flags }); }
     if (p === '/api/flags' && m === 'POST') { const b = JSON.parse(q.postData() || '{}'); S.posts.push(b); const made = (b.items || []).map((item, n) => flagOf(b, item, S.flags.length + n)); S.flags = S.flags.concat(made); return J(r, 200, { created: made.length, already: 0, flags: made }); }
     if (p.indexOf('/api/flags') === 0) return J(r, 404, { error: 'We could not find that.' });
@@ -115,7 +116,8 @@ const run = async (w) => {
     return { ok: s.x, saw: 'x fits ' + s.x };
   });
   await w.step('P1', 'P&L: Explain on the two flagged lines (Sales 4000, Rent 5000) only', async () => {
-    await page.click(T('bv-tab-pl')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(600);
+    /* ONEP-2 (web #814-#819): the firm view's P&L is a DOOR (bv-pl-open) to the owner's P&L (accounts.html#/pl in the auditor's seat), which carries the Explain chip (cap-books bkExplainPaint, same data-fl-k="account" chips). Same fact, asserted on that screen. */
+    await page.click(T('bv-pl-open')); await page.waitForURL((u) => u.pathname === '/accounts.html', { timeout: 20000 }); await page.waitForSelector(T('pl-table'), { timeout: 20000 }); await page.waitForSelector('[data-fl-k="account"]', { timeout: 15000 }); await page.waitForTimeout(600);
     const ids = await page.$$eval('[data-fl-k="account"]', (els) => els.map((e) => e.getAttribute('data-fl') + ':' + e.textContent.trim()));
     return { ok: ids.join(',') === '4000@2026-06-30:Explain,5000@2026-06-30:Explain', saw: ids.join(',') };
   });

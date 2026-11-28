@@ -10,13 +10,9 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8').split
 let n = 0;
 const ok = (name, fn) => { fn(); n++; console.log('  ok   ' + name); };
 const view = read('public/app/books-grant-view.js');
-const at = view.indexOf('function labelOf(r)');
-const body = view.slice(at, view.indexOf('\n  }\n', at) + 4);
-const make = (packWord) => new Function('root', body + '; return labelOf;')({ packWord });
-ok('RW3-16 an AU client names its return tab BAS', () => assert.strictEqual(make((k) => (k === 'returnName' ? 'BAS' : ''))({ k: 'bas', label: 'Tax return' }), 'BAS'));
-ok('RW3-16 no pack word keeps the neutral Tax return; other tabs untouched', () => { assert.strictEqual(make(() => '')({ k: 'bas', label: 'Tax return' }), 'Tax return'); assert.strictEqual(make((k) => 'BAS')({ k: 'tb', label: 'Trial balance' }), 'Trial balance'); });
-ok('RW3-16 the tab strip, the phone select and the tag all read labelOf', () => { assert.ok(view.includes('label: labelOf(r)') && view.includes('words(labelOf(r))')); });
-ok('RW3-22 the trial balance Group column reads group_label', () => assert.ok(/\['group_label', 'Group'\]/.test(read('public/app/books-grant-reports.js'))));
+ok('RW3-16 (ONEP-1) the door is named by the client pack word (return_name), the neutral Tax return when it names none', () => { assert.ok(view.includes('viewState.choices.return_name') && view.includes("|| 'Tax return'")); });
+ok('RW3-16 the door button and the phone select both read returnWord', () => { assert.ok(view.includes('words(returnWord())')); });
+ok('RW3-22 (ONEP-2: the trial balance is the owner screen for a firm seat) the firm view has no trial-balance Group column left to read', () => assert.ok(!/k: 'tb'/.test(read('public/app/books-grant-reports.js'))));
 ok('RW3-08 the Month lock column says Profit and holds no "Income, tax out"', () => { const lock = read('public/app/cap-books-lock.js'); assert.ok(lock.includes("tx('Profit')")); assert.ok(!/tx\('Income, tax out'\)/.test(lock)); assert.ok(read('public/app/books-grant-reports.js').includes("['profit_minor', 'Profit'")); });
 ok('RW3-03/04 acting: no Switch on for a client, and its own health is read', () => { const acc = read('public/accounts.html'); assert.ok(acc.includes('isOwner() && !(window.CBBooksActing && CBBooksActing.current())')); assert.ok(acc.includes('const profile = acting ? {}')); });
 ok('RW3-16 a firm heads its client list Your clients', () => { const nw = read('public/app/network-app.js'); assert.ok(nw.includes('clientsHead() +') && nw.includes("T('Your clients')")); });

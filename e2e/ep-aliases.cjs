@@ -35,6 +35,11 @@ const FILES = ['app.html'].concat(
  * The other ten are still UNEXAMINED (the note below). The list is a ratchet: it may only shrink, and a stale entry fails.
  */
 const JUSTIFIED = new Set([
+  /* UX-215 (firm-connect 1138): the Network page's Requests card (public/app/books-grant-asks.js) keeps a PRIVATE table of the routes it calls, under the names the app shell and accounts-shell.js already give them: one name per route, two PAGES (app.html is never loaded beside it, and the table is never merged into a page EP) */
+  'POST /api/network/connections|netConnect',
+  'POST /api/network/connections/:id/approve|netApprove',
+  'POST /api/network/connections/:id/decline|netDecline',
+  'GET /api/entities/search|entitySearch',
   'PUT /api/chits/:id/status|advance,status',
   'PUT /api/actors/assign/:id|assign,unassign',
 ]);

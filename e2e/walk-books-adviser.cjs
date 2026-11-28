@@ -99,6 +99,7 @@ W.run('books-adviser', async (w) => {
 
   await ctx.route(base + '/api/**', async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
+    if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Store One', currency_code: 'INR' } }); /* ONEP-2: the owner's page a statement door opens (accounts.html) asks for the shop's name */
     if (p.indexOf('/api/books-actions') === 0) { S.calls.push({ read: p, store: storeOf(h), h }); return actions(r, q, p, m, h); }
     if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Kumar and Co', membership: Object.assign({}, ex.store.networks[0].membership, { state: 'active' }), offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: S1, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: S2, name: 'Store Two', city: 'Sydney', km: 9, purpose: 'Snacks' }] });
@@ -107,7 +108,7 @@ W.run('books-adviser', async (w) => {
       return J(r, 200, adviser ? { headline: 'Let your adviser firm act in your books', can_read: ['everything you can see in your books'], can_do: ['post and reverse entries', 'lock and unlock a month, and close the year'], cannot: ['act outside your books', 'hide what it did'], costs, rights: 'You can end this at any time.', posting_choices: [{ value: 'adviser_posts', words: 'Your accountant posts for you' }, { value: 'owner_approves', words: 'You approve each post' }] /* the api names who-posts for an adviser role; the form is held until one is picked (paintPosting) */ }
         : { headline: 'Let your network parent read your books', can_read: ['your trial balance'], cannot: ['change or add anything'], costs, rights: 'You can end this at any time.' });
     }
-    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: S.given, received: [{ grant_id: G1, grantor_entity: S1, grantee_entity: OWN, preset: 'adviser', state: 'live', expires_at: DAY(200) }, { grant_id: G2, grantor_entity: S2, grantee_entity: OWN, preset: 'adviser', state: 'live', expires_at: DAY(200) }] });
+    if (p === '/api/books-grants' && m === 'GET') return J(r, 200, { given: S.given, received: [{ grant_id: G1, grantor_entity: S1, grantor_name: 'Store One', grantee_entity: OWN, preset: 'adviser', state: 'live', expires_at: DAY(200) }, { grant_id: G2, grantor_entity: S2, grantor_name: 'Store Two', grantee_entity: OWN, preset: 'adviser', state: 'live', expires_at: DAY(200) }] });
     if (p === '/api/books-grants' && m === 'POST') { S.gives.push(JSON.parse(q.postData() || '{}')); return J(r, 201, { grant_id: G2, grantor_entity: OWN, grantee_entity: BRAND, preset: 'adviser', purpose: 'x', expires_at: DAY(300), warnings: [{ code: 'BOTH_ROLES_ONE_FIRM', words: 'This firm already holds the auditor role. The two roles stay separate.' }] }); }
     if (/\/api\/books-grants\/[^/]+\/revoke$/.test(p)) { S.given = S.given.map((g) => Object.assign({}, g, { state: 'revoked', revoked_at: DAY(0) })); return J(r, 200, { grant_id: G1, actions_withdrawn: 2 }); }
     if (p === '/api/books-grants/log') return J(r, 200, { looks: [] });
@@ -115,7 +116,7 @@ W.run('books-adviser', async (w) => {
       if (!firmOk(h) || asOwner(h)) return refuse(r, 403, 'BOOKS_GRANT_NONE', 'No access has been given for these books.');
       const cur = h['x-books-for'] === S2 ? 'AUD' : 'INR';
       if (p === '/api/books/trial-balance') { const ex = example('GET /api/books/trial-balance'); return J(r, 200, Object.assign(ex, { currency: cur, rows: [line(ex.rows[0], { code: '1000', name: 'Cash', group: 'Assets', dr_minor: 123400, cr_minor: 0 })], total_dr_minor: 123400, total_cr_minor: 123400, balanced: true })); }
-      const ex = example('GET ' + p); return J(r, 200, Object.assign(ex, { currency: cur, entries: [], parties: [], periods: [] }));
+      const ex = example('GET ' + p); if ('currency' in ex) ex.currency = cur; ['entries', 'parties', 'periods'].forEach((k) => { if (Array.isArray(ex[k])) ex[k] = []; }); return J(r, 200, ex); /* only the keys the api's own example has (the owner's page the doors open also reads /health: X1) */
     }
     return J(r, 200, {});
   });
@@ -137,11 +138,13 @@ W.run('books-adviser', async (w) => {
   await page.setViewportSize(WIDE);
   await openNetwork();
   await w.step('F1', 'the firm · "Open books" on an adviser grant → the banner says "Acting for Store One, INR"; every read sent the store and the adviser role', async () => {
-    await openStore(S1); await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 }); await page.waitForTimeout(200);
+    /* ONEP-2 (web #814-#819): the trial balance is a DOOR (bv-tb-open) to the owner's screen in the adviser seat (accounts.html#/tb); the banner and the headers are asserted on that screen */
+    await openStore(S1); await page.click(T('bv-tb-open')); await page.waitForURL((u) => u.pathname === '/accounts.html', { timeout: 20000 }); await page.waitForSelector(T('tb-balanced'), { timeout: 20000 }); await page.waitForTimeout(400);
     const band = await txt(T('ba-band')), reads = S.calls.filter((c) => c.h && c.h['x-books-for'] === S1);
     return { ok: /Acting for Store One, INR/.test(band) && !(await has(T('bv-band'))), saw: band };
   });
   await w.step('F2', 'the firm · the banner stays on the Day book and on the Actions tab, and does not scroll away', async () => {
+    await openNetwork(); await openStore(S1); /* the door left for the owner's screen: come back to the firm view */
     await page.click(T('bv-tab-daybook')); await page.waitForTimeout(400); const a = await txt(T('ba-band'));
     await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-tabs'), { timeout: 10000 }); await page.waitForTimeout(300);
     const b = await txt(T('ba-band')), top = await page.$eval(T('ba-band'), (e) => e.getBoundingClientRect().top);
@@ -149,10 +152,13 @@ W.run('books-adviser', async (w) => {
   });
   /* W19 / rule 4: the SAME first-data guard as the auditor's (e2e/lib/first-data-top.cjs), for the accountant seat: every client view by 20% / 30% of the screen, from y = 0 */
   await w.step('W19', 'the firm · w19-first-data-top: every books view at 1366x768 and 390x844 starts its data by 20% / 30% of the viewport from y = 0', async () => {
-    await page.click(T('bv-tab-tb')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
-    const r = await require('./lib/first-data-top.cjs').firstDataTop(page, { T, has, WIDE, NARROW, seat: 'accountant' });
+    const FDT = require('./lib/first-data-top.cjs');
+    const r = await FDT.firstDataTop(page, { T, has, WIDE, NARROW, seat: 'accountant' });
+    /* the three statements are doors: their first data row is measured on the OWNER's screen the door opens in this seat, against the same ceilings */
+    const o = await FDT.ownerFirstDataTop(page, { T, WIDE, NARROW, seat: 'accountant', openFirm: async () => { await openNetwork(); await page.click(T('nw-books-' + S1)); await page.waitForSelector(T('ba-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-tab-select'), { state: 'attached', timeout: 3000 }).catch(() => page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 })); } }); /* the phone holds the screens in one select, not tab buttons */
+    await page.setViewportSize(WIDE); await openNetwork(); await openStore(S1);
     await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-tabs'), { timeout: 10000 }); await page.waitForTimeout(300); /* back where F3 expects to be */
-    return r;
+    return { ok: r.ok && o.ok, saw: r.saw + ' || owner screens: ' + o.saw };
   });
   await w.step('F3', 'the firm · "To review" lists the two waiting actions with their total and who prepared them; "To accept" offers no Accept', async () => {
     const list = await txt(T('ba-list')); await queue('accept');

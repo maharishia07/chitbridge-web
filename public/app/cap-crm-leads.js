@@ -338,16 +338,16 @@ function crmLeadSave(btn) {
 /* ═══ THE RECORD — "Move to…" (the server says which moves, and may/why) ════════════════════════════════════════ */
 function crmStageBtn(party) {
   if (!crmEdit() || !party.lead || party.lead.stage === 'customer') return '';
-  var verdict = party.lead.may || { ok: true },
-    refused = verdict.ok === false;
+  var verdict = party.lead.may || { ok: true }, refused = verdict.ok === false,
+    refusedWhy = verdict.code === 'read_only' || verdict.code === 'comment_only' ? crmViewWhy() : tx(CRM_LEADS_WAIT); /* DRIFT 21: the seat's own refusal in its words, not the 'after an update' line */
   return (
     '<button data-cbsid="CRM004-B02" type="button" class="act quiet' +
     (refused ? ' ghost' : '') +
     '" data-crm="rstage" data-testid="crm-act-stage"' +
-    (refused ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') +
+    (refused ? ' disabled title="' + esc(refusedWhy) + '"' : '') +
     '>' +
     esc(tx('Move to…')) +
-    (refused ? '<span class="why wide-only">' + esc(tx(CRM_LEADS_WAIT)) + '</span>' : '') +
+    (refused ? '<span class="why wide-only">' + esc(refusedWhy) + '</span>' : '') +
     '</button>'
   );
 }

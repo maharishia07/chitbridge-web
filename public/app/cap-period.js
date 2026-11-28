@@ -725,6 +725,7 @@ async function peGstPay(btn) {
 var PE_RET = { r: null, q: {}, api: null, block: '', why: '' };
 const peRetKey = () => 'cb_ret_' + ((typeof SESSION !== 'undefined' && SESSION && (SESSION.entityId || SESSION.bridgeId)) || 'shop');
 function peRetRemember() {
+  if (!peOwner()) return; /* ONEP-1: no device picks are kept for a client's return */
   try {
     localStorage.setItem(
       peRetKey(),
@@ -736,6 +737,7 @@ function peRetRemember() {
   } catch (_) { /* storage blocked or full: the page works without it */ }
 }
 function peRetRecall() {
+  if (!peOwner()) return {}; /* ONEP-1: a seat reads the shop's own return, not this device's picks */
   try {
     const parsed = JSON.parse(localStorage.getItem(peRetKey()) || 'null') || {};
     Object.keys(parsed).forEach((item) => {

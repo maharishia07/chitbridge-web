@@ -32,7 +32,7 @@ const bell = load(['public/app/rail-bell-html.js', 'public/app/rail-bell-rows.js
 const kit = bell.CBBellKit;
 
 t('the bell and its parts share one kit; the bell keeps its public keys', () => {
-  assert.deepStrictEqual(Object.keys(bell.CBBell).sort(), ['EP', 'line', 'markTitle', 'mount', 'setNeeds']);
+  assert.deepStrictEqual(Object.keys(bell.CBBell).sort(), ['EP', 'line', 'markTitle', 'mount', 'refreshAll', 'setNeeds']);
   ['line', 'panelHtml', 'bellButtonHtml', 'pressRow', 'openMark', 'call'].forEach((key) => assert.strictEqual(typeof kit[key], 'function', key));
 });
 t('a line: an unknown action is worded from its name, a known one from the table; mine is flagged', () => {

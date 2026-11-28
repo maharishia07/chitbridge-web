@@ -12,6 +12,8 @@ const fs = require('fs'), path = require('path');
 const TARGET = { wide: 0.20, narrow: 0.30 };
 const SLACK_PX = 2;
 const VIEWS = ['tb', 'pl', 'bs', 'daybook', 'dues', 'periods'];
+/* ONEP-2 (web #814-#819): the trial balance, P&L and balance sheet are DOORS of the firm view (bv-tb-open ...; "_tb" ... on the phone select): a press leaves the page for the owner's screen, so they are not views of THIS page and are not measured here (a walk measures them on the owner's screen) */
+const DOORS = ['tb', 'pl', 'bs'];
 function overrides() { try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'first-data-ceilings.json'), 'utf8')).ceilings || {}; } catch (_) { return {}; } }
 /** one measurement of the open view, in the page: the first visible data row (or the empty state) and the sideways overflow */
 const measure = () => document && (() => {
@@ -29,6 +31,7 @@ async function firstDataTop(page, o) {
     await page.setViewportSize(vp); await page.waitForTimeout(300);
     const narrow = vp.width < 500;
     for (const view of VIEWS) {
+      if (DOORS.includes(view)) continue;
       const pick = narrow && (await has(T('bv-tab-select'))); /* a phone holds the six screens as ONE library select (header line); a laptop as buttons */
       if (!pick && !(await has(T('bv-tab-' + view)))) continue;
       if (pick) await page.selectOption(T('bv-tab-select'), view); else await page.click(T('bv-tab-' + view));
@@ -50,4 +53,32 @@ async function firstDataTop(page, o) {
   await page.setViewportSize(WIDE); await page.waitForTimeout(300);
   return { ok: bad.length === 0, saw: bad.length ? bad.join(' · ') + ' || ' + out.join(' · ') : out.join(' · '), all: out, bad };
 }
-module.exports = { firstDataTop, TARGET, VIEWS };
+/** one measurement on an OWNER statement screen (trial balance, P&L, balance sheet) the door opened: the first visible statement row (a drill row is not one) */
+const measureOwner = () => { const rows = Array.from(document.querySelectorAll('table.bktab tbody tr, table.bk-st tbody tr')).filter((e) => !e.hasAttribute('data-drill') && e.offsetParent !== null && e.getBoundingClientRect().height > 0); return { H: innerHeight, top: rows[0] ? rows[0].getBoundingClientRect().top : null, rows: rows.length, x: document.documentElement.scrollWidth - document.documentElement.clientWidth }; };
+/**
+ * ONEP-2: the same first-data rule for the three DOORS, on the owner's screen the door opens in the seat (20% at 1366x768, 30% at 390x844 from y = 0, the held ceilings of first-data-ceilings.json only fall).
+ * o.openFirm() puts the page on the open client (firm view) at the current viewport; the door is pressed (a button, or the phone select's "_tb" "_pl" "_bs" line); the owner's screen is measured.
+ */
+async function ownerFirstDataTop(page, o) {
+  const { T, WIDE, NARROW, seat, openFirm } = o, held = overrides(), out = [], bad = [];
+  for (const vp of [WIDE, NARROW]) {
+    const narrow = vp.width < 500;
+    for (const view of DOORS) {
+      await page.setViewportSize(vp); await openFirm(); await page.waitForTimeout(300);
+      if (narrow) await page.selectOption(T('bv-tab-select'), '_' + view); else await page.click(T('bv-' + view + '-open'));
+      await page.waitForURL((u) => u.pathname === '/accounts.html', { timeout: 20000 });
+      await page.waitForSelector(view === 'tb' ? T('tb-balanced') : T(view + '-table'), { timeout: 20000 }); await page.waitForTimeout(600);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const m = await page.evaluate(measureOwner), key = seat + '.' + view + '.' + vp.width, target = narrow ? TARGET.narrow : TARGET.wide, ceiling = Math.max(held[key] || 0, target);
+      if (m.top == null) { bad.push(key + ' (owner screen) nothing to measure'); continue; }
+      const frac = m.top / m.H;
+      out.push(key + ' owner ' + Math.round(m.top) + 'px ' + (frac * 100).toFixed(0) + '% (limit ' + (ceiling * 100).toFixed(0) + '%)');
+      const slack = held[key] ? SLACK_PX / m.H : 0;
+      if (frac > ceiling + slack + 1e-9) bad.push(key + ' owner screen: first row at ' + Math.round(m.top) + 'px = ' + (frac * 100).toFixed(1) + '% > ' + (ceiling * 100).toFixed(0) + '%');
+      if (m.x > 0) bad.push(key + ' owner screen sideways ' + m.x);
+    }
+  }
+  await page.setViewportSize(WIDE);
+  return { ok: bad.length === 0, saw: bad.length ? bad.join(' · ') + ' || ' + out.join(' · ') : out.join(' · '), all: out, bad };
+}
+module.exports = { firstDataTop, ownerFirstDataTop, TARGET, VIEWS };

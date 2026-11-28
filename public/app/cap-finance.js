@@ -50,8 +50,13 @@ function finUnbilledWords(unbilled) {
     (unbilled.minor == null ? '' : ' ' + bkMoney(Number(unbilled.minor), unbilled.currency || FIN.cur))
   );
 }
+/** the one seat rule (CBAvatar.staffSeat, the api's seat answer): a seat that may not see collections is not asked: the refusal the page already words for a 403, with no call */
+async function finSeatGate() {
+  if (window.CBAvatar && CBAvatar.seatKnown && (await CBAvatar.seatKnown())) throw Object.assign(new Error(FIN_OWNER_ONLY), { status: 403 });
+}
 /** the dues (the server's, finance=1) and, beside them in parallel, the unbilled orders into FIN.unbilled — a failure there leaves the line out, never a guessed 0 */
 async function finDuesRead() {
+  await finSeatGate();
   var unbilledAsk = api('workFacts', { query: { unbilled: '1' } }).then(
     function (facts) {
       return (facts && facts.figures && facts.figures.unbilled) || null;
@@ -143,7 +148,7 @@ function finOff() {
         failed: function (e) {
           switchOn.disabled = false;
           switchOn.textContent = tx('Turn on');
-          toast(tx('Could not switch it on.') + ' ' + (e && e.status === 403 ? tx('Only the owner may do this.') : tx('Try again.')));
+          toast(tx('Could not switch it on.') + ' ' + (e && e.status === 403 ? (typeof CBRoles !== 'undefined' ? CBRoles.refusal('owner') : '') : tx('Try again.')));
         }
       });
     };

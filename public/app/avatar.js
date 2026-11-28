@@ -538,23 +538,46 @@
   }
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
      own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
-  var SHOP_COUNTRY = null,
+  /** ⭐ THE ONE SEAT RULE for "does this page ask what Counter staff may not": the api's OWN seat answer on /me (seat: { owner, money, lead, entries }, lib/seat-abilities; CBEdition keeps it for the menu), never a second derivation here.
+      A seat whose money is not its own (seat.money === false: Counter staff) is not asked the money's reads (finance, the Accounts tabs, the grants and the practice list): the worded state instead, no refused call.
+      staffSeat() → true | false | null (null = /me has not answered); seatKnown(ms) → a promise of that answer, false after the wait when /me never answers (a page then asks, as before: the server still refuses). */
+  function staffOf(me) {
+    return !!(me && me.seat && me.seat.money === false);
+  }
+  var SEAT_WAITERS = [], SEAT_WAIT_MS = 10000; /* /me that never answers must not hide a page for ever: after the wait the page asks, as before (the server still refuses) */
+  function staffSeat() {
+    return LAST_ME ? staffOf(LAST_ME) : null;
+  }
+  function seatKnown(ms) {
+    if (LAST_ME) return Promise.resolve(staffOf(LAST_ME));
+    return new Promise(function (go) {
+      var timer = root.setTimeout(function () { SEAT_WAITERS = SEAT_WAITERS.filter(function (w) { return w !== wake; }); go(false); }, ms || SEAT_WAIT_MS);
+      function wake(staff) { root.clearTimeout(timer); go(staff); }
+      SEAT_WAITERS.push(wake);
+    });
+  }
+  var LAST_ME = null, /* the last cb:me detail: a script that loads after /me answered reads it (lastMe) */
+    SHOP_COUNTRY = null,
     SHOP_LEDGER_ON; /* l16 firmhome: /me's ledger_on (true | false); null = /me answered without it; undefined = /me not answered yet. Home asks GET /books/health only when it is not true/false */
+  /** UX-221: what this seat may open is told to edition.js, which keeps it */
+  function noteSeat(entity) {
+    if (root.CBEdition) root.CBEdition.seatNote(entity && entity.seat);
+  }
   function announceShop(entity) {
+    noteSeat(entity);
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
     SHOP_LEDGER_ON = entity && typeof entity.ledger_on === 'boolean' ? entity.ledger_on : null;
     try {
-      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON, is_practice: entity && typeof entity.is_practice === 'boolean' ? entity.is_practice : null } }));
+      LAST_ME = { country: SHOP_COUNTRY, ledger_on: SHOP_LEDGER_ON, is_practice: entity && typeof entity.is_practice === 'boolean' ? entity.is_practice : null, seat: (entity && entity.seat) || null };
+      var waiting = SEAT_WAITERS; SEAT_WAITERS = [];
+      waiting.forEach(function (wake) { wake(staffOf(LAST_ME)); });
+      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: LAST_ME })); /* seat: the login's own row, for CBBooksGrantApi.readsClients (the one answer to "does this seat ask the firm's reads") */
     } catch (e) {
       if (root.console) root.console.warn('avatar: cb:me not announced', e);
     }
   }
-  function shopCountry() {
-    return SHOP_COUNTRY;
-  }
-  function ledgerOn() {
-    return SHOP_LEDGER_ON;
-  }
+  function shopCountry() { return SHOP_COUNTRY; }
+  function ledgerOn() { return SHOP_LEDGER_ON; }
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
@@ -1181,11 +1204,15 @@
     return out;
   }
 
+  /** the word for a session's role: Owner, the one outside name for staff (CBRoles), Customer, else the role as given */
+  function roleLabelOf(r) {
+    return r === 'entity' ? 'Owner' : r === 'actor' ? (root.CBRoles ? root.CBRoles.name('staff') : 'Staff') : r === 'customer' ? 'Customer' : r || '';
+  }
   /** A saved session (cb_sess) or the app's SESSION → the `person` the menu wants. Owner = the shop's own session (routes/books.js isOwner). */
   function personOf(s) {
     if (!s || typeof s !== 'object') return null;
     var r = s.role,
-      label = r === 'entity' ? 'Owner' : r === 'actor' ? 'Co-assist' : r === 'customer' ? 'Customer' : r || '';
+      label = roleLabelOf(r);
     var entity = entityWord(s.entity);
     return { name: s.name || '', role: label + (entity ? ' · ' + entity : ''), entity: entity, owner: r === 'entity', token: s.token || '' };
   }
@@ -1243,6 +1270,10 @@
     FS_BASE: FS_BASE,
     fontStack: fontStack,
     shopCountry: shopCountry,
+    lastMe: function () { return LAST_ME; },
+    staffSeat: staffSeat,
+    seatKnown: seatKnown,
+    staffOf: staffOf,
     ledgerOn: ledgerOn
   };
 })(typeof window !== 'undefined' ? window : this);

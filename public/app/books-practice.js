@@ -381,7 +381,7 @@
   /** the section's head, band and the slot for the list, from the server's counts */
   function sectionHTML() {
     return (
-   (practiceKit.mineLine ? practiceKit.mineLine() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(clientCount(practiceKit.practiceState.data)) + ' ' + escapeHtml(translate('clients')) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
+   (practiceKit.mineLine ? practiceKit.mineLine() : '') + (practiceKit.addClient ? practiceKit.addClient() : '') + '<div class="bp-head"><h2>' + escapeHtml(translate('Your practice')) + ' · ' + escapeHtml(clientCount(practiceKit.practiceState.data)) + ' ' + escapeHtml(translate('clients')) + (allReadOnly() ? ' <span class="sub" data-testid="practice-readonly-all">· ' + escapeHtml(translate('Read only · auditor access')) + '</span>' : '') + '</h2>' + (practiceKit.bandShown(practiceKit.practiceState.data) ? practiceKit.pictureHTML(practiceKit.bandShown(practiceKit.practiceState.data)) : '') +
    (practiceKit.practiceState.filter ? '<button type="button" class="bp-bandtab bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + escapeHtml(translate('Show all clients')) + '</button>' : '') + '<span data-bp-flagslot="1">' + flagButton() + '</span></div>' + (practiceKit.bandShown(practiceKit.practiceState.data) && practiceKit.bandShown(practiceKit.practiceState.data).key === 'advisory' ? practiceKit.ruleHTML(practiceKit.practiceState.data.rule) : '') + practiceKit.bandHTML(practiceKit.practiceState.data) +
    (practiceKit.practiceState.data.truncated ? '<p class="sub">' + escapeHtml(translate('Some clients are not shown.')) + '</p>' : '') +
    (root.CBAssign ? root.CBAssign.slotHTML() : '') +
@@ -520,9 +520,16 @@
   /** how many clients the firm has: the server's total (a number at least the rows in hand), else the rows */
   function clientCount(data) { var rows = data.clients.length, total = data && data.total; return typeof total === 'number' && isFinite(total) && total >= rows ? total : rows; }
   function emptyFirm(answer) { return !!answer && !!answer.clients && !answer.clients.length && (meSays === true || (meSays === undefined && hintRaw() === '1')); }
+  /** ⭐ one read path, roles restrict: a staff seat (CBBooksGrantApi.readsClients: the api's own seat answer) holds no client and the api refuses it this read, so it is not asked: the shop Home, no refused call. false = this beat asks nothing (that seat; or /me has not answered yet: wait a beat, the hold ceiling still releases Home) */
+  function beatAsks(tokenNow) {
+    var asks = root.CBBooksGrantApi && root.CBBooksGrantApi.readsClients ? root.CBBooksGrantApi.readsClients() : true;
+    if (asks === false && practiceKit.practiceState.token !== tokenNow) { practiceKit.practiceState.token = tokenNow; practiceKit.practiceState.data = null; hint(false); settle(); }
+    return asks === true;
+  }
   function tick() {
     var tokenNow = token();
     if (!tokenNow) return;
+    if (!beatAsks(tokenNow)) return; /* one read path, roles restrict (below) */
     if (practiceKit.practiceState.token !== tokenNow) {
       practiceKit.practiceState.token = tokenNow;
       practiceKit.practiceState.data = null;
