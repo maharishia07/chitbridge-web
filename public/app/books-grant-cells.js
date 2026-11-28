@@ -21,7 +21,6 @@
   function compareDrawn(report) {
     var a = grantKit.viewState.answer;
     if (!a) return false;
-    if (report.k === 'pl' || report.k === 'tb') return !!a.compare;
     return report.k === 'bs' && [].concat(a.assets || [], a.liabilities || [], a.equity || []).some(function (row) { return row.change_minor != null; });
   }
   /** ASA 520: the one line that says what is highlighted, from the server's rule (nothing when last year was not read or the figures are hidden) */
@@ -64,18 +63,16 @@
   /** a cell, by its column: a kind (risk, mark, money …) or a name says how it is painted; the rest is the server's value as words */
   function figure(row, column) {
     var value = row[column[0]];
-    var onTb = (column[0] === 'change_minor' || column[0] === 'change_bp') && grantKit.current().k === 'tb' && root.CBTbChange ? root.CBTbChange.read(row) : null; /* F3: the trial balance's change on the account's own side (tb-change.js, shared with the owner's tab) */
-    if (onTb) value = onTb[column[0]];
-    var painted = kindCell(row, column, value, onTb);
+    var painted = kindCell(row, column, value);
     return painted !== undefined ? painted : plainCell(row, column, value);
   }
   /** the cells a column kind decides (undefined when the kind says nothing: the column name or the value then decides) */
-  function kindCell(row, column, value, onTb) {
+  function kindCell(row, column, value) {
     var kind = column[2];
     if (kind === 'risk') return riskCell(row);
     if (kind === 'explain') return grantKit.explainCell(row);
     if (kind === grantKit.PCT) return pctCell(value);
-    if (column[0] === 'change_minor') return changeCell(row, value, onTb && onTb.side);
+    if (column[0] === 'change_minor') return changeCell(row, value);
     if (kind === grantKit.DRCR) return isBlank(value) ? '—' : esc(drCrWords(value));
     if (kind === grantKit.MONEY) return narrowLabel(row, column, moneyCell(row, column[0], value));
     return helperCell(row, column, value);

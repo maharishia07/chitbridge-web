@@ -9,14 +9,14 @@ const asked = [];
 let box = { value: '2026-11-21' }; /* the date box on screen; the repaint replaces it, as bkTab does */
 const body = { set innerHTML(v) { box = /tb_asof/.test(v) ? { value: (/value="([^"]*)"/.exec(v) || [])[1] } : null; }, get innerHTML() { return ''; } };
 const ctx = {
-  BK: {}, bkToday: () => '2026-11-21', esc: (v) => String(v), tx: (v) => v, bkMountAttribute: () => '', bkFyFrom: () => '2026-07-01', bkQuiet() {},
+  BK: {}, URLSearchParams, Date, isNaN, location: { search: '' }, bkToday: () => '2026-11-21', esc: (v) => String(v), tx: (v) => v, bkMountAttribute: () => '', bkFyFrom: () => '2026-07-01', bkQuiet() {},
   document: { getElementById: (id) => (id === 'tb_asof' ? box : id === 'bk_body' ? body : null) },
   bkTab(t) { box = null; ctx.bkTB(body); }, /* the repaint: the old box is gone before bkTB runs */
   api: async (name, o) => { asked.push(o.query.asOf); throw new Error('stop'); },
   bkErr: () => '', bkRefused: () => ''
 };
 vm.createContext(ctx);
-vm.runInContext(slice('function bkTbShow', '/** the bar over the trial balance') + slice('async function bkTB', 'var currency = reply') + '} catch (e) {} }', ctx);
+vm.runInContext(slice('function bkTbShow', '/** the bar over the trial balance') + slice('function bkTbSeedDay', '/* the Trial balance tab') + slice('async function bkTB', 'var currency = reply') + '} catch (e) {} }', ctx);
 (async () => {
   ctx.bkTbShow; 
   box = { value: '2026-06-30' }; ctx.bkTbShow(); await new Promise((r) => setTimeout(r, 5));

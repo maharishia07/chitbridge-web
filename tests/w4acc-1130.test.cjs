@@ -9,21 +9,7 @@ let n = 0;
 const ok = (name, fn) => { fn(); n++; console.log('  ok   ' + name); };
 const src = read('public/app/books-grant-reports.js');
 const lift = (name) => { const from = src.indexOf('function ' + name + '('); return src.slice(from, src.indexOf('\n  }\n', from) + 4); };
-const body = lift('totalRows') + lift('profitRows'); /* totalRows hands the profit and loss rows to profitRows */
-const totalRows = new Function('grantKit', body + '; return totalRows;')({ words: (w) => w });
-ok('W4-16 a loss is labelled Loss and carries the size, not a minus', () => {
-  const rows = totalRows('pl', { profit_minor: -1505022 });
-  const last = rows[rows.length - 1];
-  assert.strictEqual(last.name, 'Loss');
-  assert.strictEqual(last.amount_minor, 1505022);
-});
-ok('W4-16 a profit stays Profit', () => assert.strictEqual(totalRows('pl', { profit_minor: 500 }).pop().name, 'Profit'));
-ok('W4-16 gross profit with no cost of sales says it equals sales', () => {
-  const rows = totalRows('pl', { profit_minor: -1505022, gross_profit_minor: 13699000, gross_cost_minor: 0 });
-  assert.ok(/no cost of sales/i.test(rows[0].name), rows[0].name);
-  assert.strictEqual(rows[0].amount_minor, 13699000);
-});
-ok('W4-16 gross profit with a cost of sales keeps its plain words', () => assert.strictEqual(totalRows('pl', { profit_minor: 1, gross_profit_minor: 5, gross_cost_minor: 2 })[0].name, 'Gross profit (sales less cost of sales)'));
+/* ONEP-2 PR 2: the W4-16 Profit / Loss / equals-sales wording moved with the P&L to the owner's screen; it is proved in tests/onep2-pl-one-path.test.cjs */
 const acting = read('public/app/books-acting.js');
 const fa = acting.indexOf('function clientStores(stores, held, openId)');
 const cs = new Function('roleOf', acting.slice(fa, acting.indexOf('\n  }\n', fa) + 4) + '; return clientStores;')((held, id) => ((held[String(id)] || {}).preset === 'adviser' ? 'adviser' : 'auditor'));
