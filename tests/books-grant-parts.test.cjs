@@ -52,17 +52,17 @@ const state = (over) => { kit.viewState = Object.assign({ host: null, o: { membe
 const report = (k) => kit.REPORTS.filter((r) => r.k === k)[0];
 
 t('the view exposes mount and duesVoice only', () => assert.deepStrictEqual(Object.keys(world.CBBooksGrantView).sort(), ['duesVoice', 'mount']));
-t('six reads (the tax return is on the owner screen, ONEP-1), each with its endpoint and columns', () => {
-  assert.strictEqual(kit.REPORTS.map((r) => r.k).join(), 'tb,pl,bs,daybook,dues,periods');
+t('five reads (the tax return is on the owner screen, ONEP-1), each with its endpoint and columns', () => {
+  assert.strictEqual(kit.REPORTS.map((r) => r.k).join(), 'pl,bs,daybook,dues,periods');
   kit.REPORTS.forEach((r) => assert.ok(r.ep && r.cols.length, r.k));
 });
 t('queryOf: as at the end of the period for tb, from-to for the p&l, one day for both ends of the day book', () => {
   state({ period: { from: '2026-07-01', to: '2026-09-30' } });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('tb')))), { asOf: '2026-09-30' });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('bs')))), { asOf: '2026-09-30' });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('pl')))), { from: '2026-07-01', to: '2026-09-30' });
   state({ day: '2026-08-02', period: { from: '2026-07-01', to: '2026-09-30' } });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('daybook')))), { from: '2026-08-02', to: '2026-08-02', limit: 100 });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('tb')))), { asOf: '2026-08-02' });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('bs')))), { asOf: '2026-08-02' });
 });
 /* ── batch 1132: the firm's Day book asks ONE page, "Show more" the next, the totals stay the server's ── */
 t('1132 the Day book asks ONE page in every shape of its question (period, day, after the year end, no period); the other reads ask none', () => {
@@ -76,7 +76,7 @@ t('1132 the Day book asks ONE page in every shape of its question (period, day, 
   state({ since: true, period: { from: '2026-07-01', to: '2026-09-30' } });
   assert.strictEqual(asks().limit, 500, 'the since view names its own cap');
   state({ period: { from: '2026-07-01', to: '2026-09-30' } });
-  assert.strictEqual(Object.prototype.hasOwnProperty.call(JSON.parse(JSON.stringify(kit.queryOf(report('tb')))), 'limit'), false);
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(JSON.parse(JSON.stringify(kit.queryOf(report('bs')))), 'limit'), false);
 });
 t('1132 GUARD: every read of the Day book in the firm view carries a limit (fails on the whole-range read of 27 Nov)', () => {
   ['books-grant-view.js', 'books-grant-drill.js'].forEach((name) => {
@@ -104,7 +104,7 @@ t('1132 the pager says held of total with the server Dr / Cr, offers Show more w
 });
 t('queryOf fails closed to the server default: no period and no day asks nothing', () => {
   state({});
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('tb')))), {});
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(kit.queryOf(report('bs')))), {});
 });
 t('queryOf: the since view reads the person\'s own check point, no date range, capped', () => {
   state({ since: true, period: { from: '2026-07-01', to: '2026-09-30' } });
@@ -145,13 +145,13 @@ t('the risk cell is a labelled image, never colour alone; no risk is a dash (con
 });
 t('every word goes through the string layer T(: the marking tx shows on the headings and notes', () => {
   state({ answer: { currency: 'AUD', compare: true, over_rule: { pct_bp: 1000, min_minor: 50000 } } });
-  const note = kit.cmpNote(report('tb'));
+  const note = kit.cmpNote(report('pl'));
   assert.ok(/«Highlighted»/.test(note) && /«and»/.test(note));
   assert.ok(/«Risk counts one point/.test(kit.riskNote(report('daybook'))));
 });
 t('the notes draw colours from the page theme variables (dark and the 390 phone follow the page)', () => {
   state({ answer: { currency: 'AUD', compare: true, over_rule: { pct_bp: 1000, min_minor: 50000 } } });
-  const css = kit.cmpNote(report('tb')) + kit.riskNote(report('daybook'));
+  const css = kit.cmpNote(report('pl')) + kit.riskNote(report('daybook'));
   const colours = css.match(/#[0-9a-fA-F]{3,6}\b/g) || [];
   assert.deepStrictEqual(colours, [], 'no hard-coded colour in the notes');
   assert.ok(/var\(--/.test(css));

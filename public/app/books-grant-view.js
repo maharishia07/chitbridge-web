@@ -30,13 +30,13 @@
   grantKit.drill = drill;
   grantKit.alive = alive;
   grantKit.reload = reload;
-  grantKit.viewState = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null, mk: null, period: null, range: null, choices: undefined };
+  grantKit.viewState = { host: null, o: {}, report: 'daybook', day: '', answer: null, why: null, mk: null, period: null, range: null, choices: undefined };
   /** where a reviewer lands: the auditor on the Day book (the entries are the job), the adviser on the trial balance */
   function viewKnown(k) {
     return k === grantKit.ACTIONS || grantKit.REPORTS.some(function (r) { return r.k === k; });
   }
   function homeOf(options) {
-    return options && options.member && options.member.role === 'adviser' ? 'tb' : 'daybook';
+    return 'daybook'; /* ONEP-2: the trial balance is the owner's screen now (a door), so both seats land on the Day book until it is a door too */
   }
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
@@ -216,13 +216,14 @@
       return (
         '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (grantKit.viewState.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (grantKit.viewState.report === r.k) + '">' + esc(words(r.label)) + '</button>'
       );
-    }).join('') + returnButton() + prepareButton() + bankButton();
+    }).join('') + returnButton() + tbButton() + prepareButton() + bankButton();
   }
   /** the phone's screen pick: the library Select (ui-select.js, as period-pick.js uses) with the same screens as the buttons, and the Bank / Prepare ways as its last lines; the address follows the pick (onView) */
   function tabSelect() {
     if (!phone() || grantKit.viewState.why || !root.ui || typeof root.ui.select !== 'function') return '';
     var options = grantKit.REPORTS.map(function (r) { return { value: r.k, label: words(r.label) }; });
     options.push({ value: '_return', label: words(returnWord()) });
+    options.push({ value: '_tb', label: words('Trial balance') });
     if (isAdviser()) options.push({ value: grantKit.ACTIONS, label: words('Actions') }, { value: '_prepare', label: words('Prepare a journal') });
     else options.push({ value: '_bank', label: words('Bank') });
     return '<span class="bv-tabsel" data-testid="bv-tabsel">' + root.ui.select({
@@ -231,6 +232,7 @@
         if (value === '_prepare') return openPrepare();
         if (value === '_bank') return openBank();
         if (value === '_return') return openReturn();
+        if (value === '_tb') return openTb();
         grantKit.viewState.report = value;
         tell();
         reload().then(function () { var box = $('bv_tabsel'); if (box) box.focus(); });
@@ -238,6 +240,14 @@
     }) + '</span>';
   }
   /** W15-71: the auditor's way to the client's Bank (home, kept statements, a month's lines, who matched, the sign-off) and Month lock: the books page in the auditor's seat, read only */
+  /** ONEP-2: the trial balance is the OWNER's screen (accounts.html, tab tb) opened in this seat: this view reads no trial balance of its own. The period rides in the address (E10 carry) */
+  function tbButton() {
+    return !grantKit.viewState.why ? '<button data-cbsid="NET005-B02" type="button" class="act quiet" id="bv_tb" data-testid="bv-tb-open">' + esc(words('Trial balance')) + '</button>' : '';
+  }
+  function openTb() {
+    var report = grantKit.viewState.report, carry = (report ? '&view=' + encodeURIComponent(report) : '') + (grantKit.viewState.period ? root.CBPeriodPick.toAddress(grantKit.viewState.period) : '');
+    root.location.assign(root.CBBooksActing.auditAddressOf(root.CBBooksActing.current().store, 'tb', carry, isAdviser() ? 'adviser' : 'auditor'));
+  }
   function bankButton() {
     return !isAdviser() && !grantKit.viewState.why ? '<button data-cbsid="NET005-B10" type="button" class="act quiet" id="bv_bank" data-testid="bv-bank">' + esc(words('Bank')) + '</button>' : '';
   }
@@ -297,7 +307,6 @@
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>' + pagerSlot(report) +
       (grantKit.markable(report) ? '<div id="bv_marks" class="bv-marks" data-testid="bv-marks"></div>' : '') /* fd17: the slot keeps the bar's height before its answer comes; fd1117: the marks bar (count and All queries) sits UNDER the list with the notes, so the first data row stays where the ceiling holds it */ +
       (grantKit.viewState.why ? '' : grantKit.riskNote(report) + grantKit.cmpNote(report)) /* under the list too: the first data row stays where the ceiling holds it */ +
-      (grantKit.viewState.why || report.k !== 'tb' ? '' : '<div id="bv_bank_tb">' + grantKit.bankTbLine() + '</div>') /* RANK 9: the bank agreement of the day the trial balance is drawn at: UNDER the list, so the first data row stays where the w19 ceiling holds it */;
     wirePainted(report);
   }
   /** the failure frame: a 403 the server named by a code says why and what to do and the way back to his queue (W19); anything else is the one frame as before */
@@ -314,8 +323,8 @@
     if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
     if ($('bv_bank')) $('bv_bank').onclick = openBank;
     if ($('bv_return')) $('bv_return').onclick = openReturn;
+    if ($('bv_tb')) $('bv_tb').onclick = openTb;
     wireTabButtons();
-    grantKit.wireBankTbLine();
     grantKit.wireSince();
     if (onActions()) grantKit.mountQueues();
     else if (!grantKit.viewState.why) { paintList(report); grantKit.paintMarkBar(report); }
